@@ -1,0 +1,30 @@
+
+::group::✅ Passing tests
+✅ Bottom navigation switches screens
+✅ Capture button opens the capture screen
+✅ Pomodoro counts down, pauses and resets
+✅ Adding a task from the Study tab
+✅ Dashboard greets by name and opens the Plus plans
+✅ Dashboard search opens from the search button
+✅ Start Focus on the Dashboard starts a Pomodoro
+✅ Settings opens from Profile and changes apply
+✅ Dark mode follows the Appearance setting
+✅ Color themes need tAsikaso+
+✅ Pomodoro Analysis shows the week
+✅ Suggested cards finds definitions, questions and Q/A pairs
+✅ Suggested cards ignores empty text
+✅ AppStore a finished Pomodoro counts for today and the current task
+✅ AppStore data survives saving and loading again
+✅ AppStore finished Pomodoros are kept for the analysis
+✅ AppStore recently studied sets come first
+✅ AppStore Delete All Data leaves nothing behind
+✅ AppStore choosing a task moves it to the top
+✅ AppStore the current task is listed first even after loading
+✅ AppStore deleting a task can be undone
+✅ AppStore Pomodoro presets, custom lengths and reset
+✅ AppStore a custom color is built from one hue
+✅ AppStore breaks are recorded for the focus / break split
+✅ AppStore deleting a folder removes its notes and sets
+::endgroup::
+
+🎉 25 tests passed.
