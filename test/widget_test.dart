@@ -141,7 +141,17 @@ void main() {
     await tester.tap(plus);
     await tester.pumpAndSettle();
     expect(find.byType(PlansScreen), findsOneWidget);
-    expect(find.text('Start 7-Day Free Trial'), findsOneWidget);
+    // The trial button is below the plan comparison: scroll down to it.
+    final trial = find.text('Start 7-Day Free Trial');
+    await tester.scrollUntilVisible(
+      trial,
+      300,
+      scrollable: find
+          .descendant(
+              of: find.byType(PlansScreen), matching: find.byType(Scrollable))
+          .first,
+    );
+    expect(trial, findsOneWidget);
   });
 
   testWidgets('Dashboard search opens from the search button', (tester) async {

@@ -31,7 +31,29 @@ void main() {
     );
   }
   _patchManifest(manifest);
+  _writeProguardRules(File('android/app/proguard-rules.pro'));
   stdout.writeln('Done. Now run: flutter pub get && flutter run');
+}
+
+/// ML Kit's text recognition plugin refers to optional Chinese, Devanagari,
+/// Japanese and Korean recognisers that the app doesn't include. Release
+/// builds shrink the code (R8) and stop on those missing classes unless told
+/// to ignore them. Flutter adds this file to release builds automatically.
+void _writeProguardRules(File file) {
+  const rules = '''
+# Optional ML Kit text recognisers the app doesn't use.
+-dontwarn com.google.mlkit.vision.text.chinese.**
+-dontwarn com.google.mlkit.vision.text.devanagari.**
+-dontwarn com.google.mlkit.vision.text.japanese.**
+-dontwarn com.google.mlkit.vision.text.korean.**
+''';
+  final text = file.existsSync() ? file.readAsStringSync() : '';
+  if (text.contains('mlkit.vision.text.chinese')) {
+    stdout.writeln('${file.path} already set up');
+    return;
+  }
+  file.writeAsStringSync('$text$rules');
+  stdout.writeln('Updated ${file.path}');
 }
 
 /// Java 8+ library desugaring, required by flutter_local_notifications.
