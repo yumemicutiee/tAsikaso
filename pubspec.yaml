@@ -1,0 +1,68 @@
+name: study_app
+description: Pomodoro timer + tasks, and lecture notes to PDF or flashcards.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.9.0  # Flutter 3.35 or newer
+
+dependencies:
+  flutter:
+    sdk: flutter
+  camera: '>=0.11.0 <0.13.0'   # live preview + taking photos
+  image_picker: ^1.1.2         # import photos from the gallery
+  image: ^4.2.0                # rotate, crop, resize
+  pdf: ^3.11.0                 # build the PDF
+  printing: ^5.13.0            # preview, share and print PDFs
+  path_provider: ^2.1.4        # where saved data lives on the phone
+  clock: ^1.1.1                # testable "now" for the timer and stats
+  # Google ML Kit, on the phone: automatic page edges + crop (Android) and
+  # reading text from photos (Android & iOS). Ranges let pub pick the newest
+  # version your Flutter supports (the newest need Flutter 3.44+).
+  google_mlkit_document_scanner: '>=0.4.1 <0.7.0'
+  google_mlkit_text_recognition: '>=0.15.1 <0.18.0'
+  # Timer alerts and the daily reminder (see "Android setup" in README.md).
+  flutter_local_notifications: '>=20.0.0 <23.0.0'
+  timezone: '>=0.10.0 <0.12.0'
+  wakelock_plus: '>=1.3.0 <2.0.0'   # keeps the screen on in Focus Mode
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    # Plus Jakarta Sans (headings, numbers, buttons) and Inter (body text),
+    # both SIL Open Font License 1.1 (see assets/fonts/*_OFL.txt).
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+
+    # Phosphor icons (MIT, phosphoricons.com), bundled directly instead of
+    # using the phosphor_flutter package, which doesn't build on Flutter 3.44+.
+    - family: PhosphorLight
+      fonts:
+        - asset: assets/fonts/Phosphor-Light.ttf
+    - family: PhosphorFill
+      fonts:
+        - asset: assets/fonts/Phosphor-Fill.ttf
