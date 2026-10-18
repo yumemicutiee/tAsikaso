@@ -58,8 +58,8 @@ lecture-note capture → PDF or flashcards.
   has three folder tiles that fit the width and a dismissible **tAsikaso+**
   strip that leads to the plans page. Payments aren't connected yet.
 - **Settings** (Profile, or the gear on Study): your name and daily focus
-  goal; Pomodoro presets (Classic 25·5·15, Short 15·3·10, Deep Work
-  50·10·30, or Custom, which remembers your own lengths), lengths you can type
+  goal; Pomodoro presets (Classic 25–5–15, Short 15–3–10, Deep Work
+  50–10–30, or Custom, which remembers your own lengths), lengths you can type
   or step, auto-start and **Reset to Default** (with Undo); Focus Mode (keep screen on, vibrate);
   notifications (timer alerts that sound even when the app is closed, a daily
   study reminder at a time you pick); Smart Scanner; Delete All Data; Help &
@@ -76,6 +76,12 @@ lecture-note capture → PDF or flashcards.
   Pomodoro and opens Focus Mode straight away.
 - **Stats:** Today's Progress shows real focus minutes and cards reviewed;
   the streak counts days in a row with a finished Pomodoro or reviewed cards.
+
+**tAsikaso+ prices (Philippine pesos, for students):** ₱49 / month,
+₱199 / semester (6 months) or ₱349 / year, with a 7-day free trial. Free keeps
+everything needed to study (timer, tasks, scanning to PDF, your own cards,
+search and copy, this week's analysis); Plus adds month/year analysis, app
+colours, unlimited suggested cards, and soon smart review and backup.
 
 **Not yet:** payments for tAsikaso+ (Google Play Billing), and backup/sync. The plan limits
 shown on the plans page aren't enforced yet.

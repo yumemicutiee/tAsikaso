@@ -463,7 +463,7 @@ Meeting at 10:30 today
       );
       expect(custom.preset, isNull);
       final loaded = PomodoroSettings.fromJson(custom.toJson());
-      expect(loaded.custom?.summary, '40 · 10 · 30');
+      expect(loaded.custom?.summary, '40 – 10 – 30');
 
       final reset = loaded.copyWith(dailyGoalMinutes: 90).reset();
       expect(reset.preset, PomodoroPreset.classic);

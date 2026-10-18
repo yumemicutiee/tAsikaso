@@ -81,9 +81,6 @@ class SettingsScreen extends StatelessWidget {
                   }
                 },
               ),
-              _Note(store.isPlus
-                  ? 'Buttons, charts and Focus Mode follow the color you pick.'
-                  : 'Navy is free. The other colors come with $kPlusName.'),
 
               _Heading(
                 'Pomodoro',
@@ -276,7 +273,7 @@ class SettingsScreen extends StatelessWidget {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
-        content: const Text('Pomodoro settings reset to 25 · 5 · 15.'),
+        content: const Text('Pomodoro settings reset to 25 – 5 – 15.'),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () => store.updateSettings(before),
@@ -454,7 +451,7 @@ class _Presets extends StatelessWidget {
       _PresetCard(
         title: 'Custom',
         detail: current == null
-            ? '${settings.focusMinutes} · ${settings.shortBreakMinutes} · '
+            ? '${settings.focusMinutes} – ${settings.shortBreakMinutes} – '
                 '${settings.longBreakMinutes}'
             : (custom?.summary ?? 'Your own'),
         selected: current == null,
@@ -623,6 +620,9 @@ class _Swatch extends StatelessWidget {
   /// A colour wheel instead of the two halves ("Custom", before it's used).
   final bool rainbow;
 
+  /// Fixed (not the theme colour), so every locked swatch looks the same.
+  static const _lockBadge = Color(0xFF23263A);
+
   static const _wheel = SweepGradient(colors: [
     Color(0xFFF5A3A3),
     Color(0xFFF5D7A3),
@@ -669,19 +669,19 @@ class _Swatch extends StatelessWidget {
               child: const SizedBox.expand(),
             ),
           ),
+          // The same dark badge on every locked colour, in the middle.
           if (locked)
-            Positioned(
-              right: -2,
-              bottom: -2,
+            Center(
               child: Container(
-                width: 18,
-                height: 18,
+                width: 22,
+                height: 22,
                 decoration: BoxDecoration(
-                  color: AppColors.heroTop,
+                  color: _lockBadge,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.background, width: 2),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.85), width: 1.5),
                 ),
-                child: const Icon(AppIcons.plus, size: 9, color: AppColors.gold),
+                child: const Icon(AppIcons.plus, size: 11, color: AppColors.gold),
               ),
             ),
         ],

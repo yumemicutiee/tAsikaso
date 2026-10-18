@@ -12,30 +12,48 @@ Future<void> openPlans(BuildContext context) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const PlansScreen()),
     );
 
-/// One line of the Free vs Plus comparison.
-typedef PlanFeature = ({String name, bool free, bool plus, String? freeNote});
+/// One line of the Free vs Plus comparison. [soon] marks a Plus feature
+/// that's still being built.
+typedef PlanFeature = ({
+  String name,
+  bool free,
+  String? freeNote,
+  bool soon,
+});
 
-/// What each plan includes. The core of the app (timer, tasks, scanning to
-/// PDF, writing your own cards) stays free; Plus adds the extras.
+/// What each plan includes. Everything you need to study stays free: the
+/// timer, tasks, scanning to PDF, your own flashcards and this week's
+/// analysis. tAsikaso+ adds extras and the features that cost money to run
+/// (cloud backup).
 const List<PlanFeature> planFeatures = [
-  (name: 'Pomodoro timer & unlimited tasks', free: true, plus: true, freeNote: null),
-  (name: 'Scan notes with auto-crop to PDF', free: true, plus: true, freeNote: null),
-  (name: 'Flashcards you write yourself', free: true, plus: true, freeNote: null),
-  (name: 'Search the text in your notes', free: true, plus: true, freeNote: null),
-  (name: 'Pomodoro Analysis', free: true, plus: true, freeNote: 'This week'),
-  (name: 'Suggested cards from your notes', free: true, plus: true, freeNote: '20 / month'),
-  (name: 'Full analysis history & trends', free: false, plus: true, freeNote: null),
-  (name: 'Copy & export note text', free: false, plus: true, freeNote: null),
-  (name: 'Backup & sync across devices', free: false, plus: true, freeNote: null),
-  (name: 'App color themes', free: false, plus: true, freeNote: null),
+  (name: 'Pomodoro timer, presets & unlimited tasks', free: true, freeNote: null, soon: false),
+  (name: 'Focus Mode with moving bubbles', free: true, freeNote: null, soon: false),
+  (name: 'Scan notes to PDF (auto-crop, no watermark)', free: true, freeNote: null, soon: false),
+  (name: 'Flashcards you write yourself', free: true, freeNote: null, soon: false),
+  (name: 'Search & copy the text in your notes', free: true, freeNote: null, soon: false),
+  (name: 'Light & dark mode, reminders, timer alerts', free: true, freeNote: null, soon: false),
+  (name: 'Pomodoro Analysis', free: true, freeNote: 'This week', soon: false),
+  (name: 'Suggested cards from your notes', free: true, freeNote: '20 / month', soon: false),
+  (name: 'Month & year analysis, heatmap, full timeline', free: false, freeNote: null, soon: false),
+  (name: 'App colors & your own color', free: false, freeNote: null, soon: false),
+  (name: 'Smart review (spaced repetition)', free: false, freeNote: null, soon: true),
+  (name: 'Backup & sync across devices', free: false, freeNote: null, soon: true),
 ];
 
-/// Launch prices (USD). Google Play shows local prices; the Philippine
-/// launch price is ₱69 / month or ₱499 / year.
-const _monthly = r'$2.99';
-const _yearly = r'$19.99';
-const _yearlyPerMonth = r'$1.67';
-const _yearlySaving = '44%';
+/// Prices in Philippine pesos, set for students: the monthly plan costs less
+/// than one fast-food meal, and the semester plan matches the school term.
+enum _Plan {
+  yearly('Yearly', '₱349', 'year', 'Just ₱29 a month', 'Save 41%'),
+  semester('Semester', '₱199', '6 months', 'One school term', 'Save 32%'),
+  monthly('Monthly', '₱49', 'month', 'Cancel anytime', null);
+
+  const _Plan(this.title, this.price, this.per, this.note, this.badge);
+  final String title;
+  final String price;
+  final String per;
+  final String note;
+  final String? badge;
+}
 
 class PlansScreen extends StatefulWidget {
   const PlansScreen({super.key});
@@ -45,7 +63,7 @@ class PlansScreen extends StatefulWidget {
 }
 
 class _PlansScreenState extends State<PlansScreen> {
-  bool _yearlyPicked = true;
+  _Plan _plan = _Plan.yearly;
 
   void _subscribe() {
     ScaffoldMessenger.of(context)
@@ -71,22 +89,17 @@ class _PlansScreenState extends State<PlansScreen> {
           const SizedBox(height: 20),
           const _Comparison(),
           const SizedBox(height: 20),
-          _PriceOption(
-            title: 'Yearly',
-            price: '$_yearly / year',
-            note: 'Just $_yearlyPerMonth a month',
-            badge: 'Save $_yearlySaving',
-            selected: _yearlyPicked,
-            onTap: () => setState(() => _yearlyPicked = true),
-          ),
-          const SizedBox(height: 10),
-          _PriceOption(
-            title: 'Monthly',
-            price: '$_monthly / month',
-            note: 'Cancel anytime',
-            selected: !_yearlyPicked,
-            onTap: () => setState(() => _yearlyPicked = false),
-          ),
+          for (final plan in _Plan.values) ...[
+            if (plan != _Plan.yearly) const SizedBox(height: 10),
+            _PriceOption(
+              title: plan.title,
+              price: '${plan.price} / ${plan.per}',
+              note: plan.note,
+              badge: plan.badge,
+              selected: _plan == plan,
+              onTap: () => setState(() => _plan = plan),
+            ),
+          ],
           const SizedBox(height: 18),
           SizedBox(
             height: 50,
@@ -104,9 +117,8 @@ class _PlansScreenState extends State<PlansScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            _yearlyPicked
-                ? 'Free for 7 days, then $_yearly a year. Cancel anytime in Google Play.'
-                : 'Free for 7 days, then $_monthly a month. Cancel anytime in Google Play.',
+            'Free for 7 days, then ${_plan.price} every ${_plan.per}. '
+            'Cancel anytime in Google Play.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 11, color: AppColors.textMuted),
           ),
@@ -301,8 +313,21 @@ class _Comparison extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(f.name,
-                        style: TextStyle(fontSize: 12.5, color: AppColors.ink)),
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: f.name),
+                        if (f.soon)
+                          TextSpan(
+                            text: '  Soon',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryDeep,
+                            ),
+                          ),
+                      ]),
+                      style: TextStyle(fontSize: 12.5, color: AppColors.ink),
+                    ),
                   ),
                   SizedBox(
                     width: 64,

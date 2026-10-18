@@ -432,8 +432,8 @@ class PomodoroPreset {
   /// The ready-made rhythms (not "Custom").
   static const all = [classic, short, deepWork];
 
-  /// "25 · 5 · 15"
-  String get summary => '$focus · $shortBreak · $longBreak';
+  /// "25 – 5 – 15"
+  String get summary => '$focus – $shortBreak – $longBreak';
 }
 
 int _inRange(int v, (int, int) range) {
