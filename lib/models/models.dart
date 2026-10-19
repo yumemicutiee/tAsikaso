@@ -504,6 +504,71 @@ class BreakSession {
       );
 }
 
+/// The Pomodoro timer as it was left, so a running or paused phase carries
+/// on after the app was closed (or closed by the phone).
+@immutable
+class TimerSnapshot {
+  const TimerSnapshot({
+    required this.mode,
+    required this.phaseSeconds,
+    required this.remainingSeconds,
+    this.endsAt,
+    this.completed = 0,
+    this.taskId,
+    this.taskTitle,
+  });
+
+  final TimerMode mode;
+
+  /// Length of this phase when it was started.
+  final int phaseSeconds;
+
+  /// Seconds left when paused. While running, [endsAt] is what counts.
+  final int remainingSeconds;
+
+  /// When the running phase ends; null while paused or not started.
+  final DateTime? endsAt;
+
+  /// Pomodoros finished in this sitting (for the long-break rhythm).
+  final int completed;
+
+  /// The task this Pomodoro counts for, picked when it started.
+  final String? taskId;
+  final String? taskTitle;
+
+  Json toJson() => {
+        'mode': mode.name,
+        'total': phaseSeconds,
+        'left': remainingSeconds,
+        // In UTC: the moment stays right even if the phone's time zone changes.
+        if (endsAt case final e?) 'ends': e.toUtc().toIso8601String(),
+        'done': completed,
+        'task': ?taskId,
+        'title': ?taskTitle,
+      };
+
+  factory TimerSnapshot.fromJson(Json j) {
+    final total = _int(j['total'], 25 * 60);
+    final phase = total < 1 ? 1 : total;
+    final left = _int(j['left'], phase);
+    final done = _int(j['done']);
+    return TimerSnapshot(
+      mode: TimerMode.values.firstWhere(
+        (m) => m.name == j['mode'],
+        orElse: () => TimerMode.pomodoro,
+      ),
+      phaseSeconds: phase,
+      remainingSeconds: left < 0 ? 0 : (left > phase ? phase : left),
+      endsAt: j['ends'] is String
+          ? DateTime.tryParse(j['ends'] as String)?.toLocal()
+          : null,
+      completed: done < 0 ? 0 : done,
+      taskId: j['task'] is String ? j['task'] as String : null,
+      taskTitle: j['title'] is String ? j['title'] as String : null,
+    );
+  }
+}
+
 /// Light or dark colours, or follow the phone.
 enum Appearance {
   system('System'),

@@ -122,6 +122,31 @@ Future<bool> showConfirmDialog(
   return ok ?? false;
 }
 
+/// Tells the user something they need to know, with a single OK.
+Future<void> showInfoDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title, style: AppText.sectionTitle),
+      content: Text(message, style: const TextStyle(height: 1.4)),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.onFill,
+          ),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
+}
+
 /// Result of the folder editor.
 typedef FolderDraft = ({String name, int colorValue});
 

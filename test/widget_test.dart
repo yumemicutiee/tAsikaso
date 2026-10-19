@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -502,4 +503,234 @@ Meeting at 10:30 today
       expect(store.sets, isEmpty);
     });
   });
+
+  group('Saved data is never lost', () {
+    test('unreadable records are left out, not everything', () async {
+      final store = AppStore.instance;
+      final storage = MemoryStorage();
+      final raw = jsonEncode({
+        'version': 1,
+        'folders': [
+          {'id': 'f1', 'name': 'Chemistry', 'color': 0xFFA9CFF5},
+          {'name': 'No id, so unreadable'},
+        ],
+      });
+      await storage.writeJson(raw);
+      final now = DateTime(2026, 1, 2);
+      await withClock(Clock.fixed(now), () => store.init(storage));
+
+      expect(store.folders.single.name, 'Chemistry');
+      expect(store.problem.value?.title, "Some Data Couldn't Be Loaded");
+      expect(store.problem.value?.message, startsWith('1 item'));
+      // The whole file was kept before anything was left out.
+      final copy = await storage
+          .readBytes('recovery/${now.millisecondsSinceEpoch}.json');
+      expect(utf8.decode(copy!), raw);
+    });
+
+    test('a file that can\'t be read is kept, not replaced by samples',
+        () async {
+      final store = AppStore.instance;
+      final storage = MemoryStorage();
+      await storage.writeJson('{"folders": [');
+      final now = DateTime(2026, 1, 2);
+      await withClock(Clock.fixed(now), () => store.init(storage));
+
+      expect(store.folders, isEmpty); // no sample folders
+      expect(store.activeTasks, isEmpty);
+      expect(store.problem.value?.title, "Saved Data Couldn't Be Read");
+      final copy = await storage
+          .readBytes('recovery/${now.millisecondsSinceEpoch}.json');
+      expect(utf8.decode(copy!), '{"folders": [');
+    });
+
+    test('the last copy that worked is brought back', () async {
+      final store = AppStore.instance;
+      final storage = MemoryStorage();
+      await store.init(storage); // first launch
+      store.addFolder('Chemistry', 0xFFA9CFF5);
+      await store.pendingSaves;
+      await store.init(storage); // next launch keeps a good copy
+
+      await storage.writeJson('garbage'); // the save file breaks
+      store.resetForTesting();
+      await store.init(storage);
+
+      expect(store.folders.any((f) => f.name == 'Chemistry'), isTrue);
+      expect(store.problem.value?.title, 'Data Restored');
+      await store.pendingSaves; // the restored data is saved again
+      expect(await storage.readJson(), contains('Chemistry'));
+
+      // Delete All Data removes the copies too.
+      await store.eraseEverything();
+      expect(await storage.readBytes('backup/data.json'), isNull);
+    });
+
+    test('data from a newer app version is left alone', () async {
+      final store = AppStore.instance;
+      final storage = _PersistentMemoryStorage();
+      const raw = '{"version": 99, "folders": []}';
+      await storage.writeJson(raw);
+      await store.init(storage);
+
+      expect(store.problem.value?.title, 'Update tAsikaso');
+      expect(store.isPersistent, isFalse);
+      store.addFolder('Chemistry', 0xFFA9CFF5);
+      await store.pendingSaves;
+      expect(await storage.readJson(), raw);
+    });
+
+    test('a failed save is reported, once until saving works again',
+        () async {
+      final store = AppStore.instance;
+      final storage = _FailingStorage();
+      await store.init(storage); // first launch saves, and fails
+      await store.pendingSaves;
+      expect(store.problem.value?.title, "Couldn't Save");
+
+      store.problem.value = null;
+      store.addFolder('Chemistry', 0xFFA9CFF5);
+      await store.pendingSaves;
+      expect(store.problem.value, isNull); // already told
+
+      storage.failing = false;
+      store.addFolder('Biology', 0xFFA9CFF5);
+      await store.pendingSaves;
+      expect(await storage.readJson(), contains('Chemistry'));
+
+      storage.failing = true;
+      store.addFolder('Physics', 0xFFA9CFF5);
+      await store.pendingSaves;
+      expect(store.problem.value?.title, "Couldn't Save");
+    });
+  });
+
+  group('Pomodoro timer', () {
+    test('a running Pomodoro carries on after the app is closed', () async {
+      final store = AppStore.instance;
+      final timer = PomodoroController.instance;
+      final storage = MemoryStorage();
+      await store.init(storage);
+      final start = DateTime(2026, 3, 9, 9);
+      withClock(Clock.fixed(start), timer.start);
+      await store.pendingSaves;
+
+      // The phone closes the app, which is opened again 10 minutes later.
+      timer.resetForTesting();
+      store.resetForTesting();
+      await store.init(storage);
+      withClock(Clock.fixed(start.add(const Duration(minutes: 10))),
+          timer.restore);
+
+      expect(timer.running, isTrue);
+      expect(timer.remaining, 15 * 60);
+      timer.pause();
+    });
+
+    test('a Pomodoro that ended while closed counts on the day it ended',
+        () async {
+      final store = AppStore.instance;
+      final timer = PomodoroController.instance;
+      final storage = MemoryStorage();
+      await store.init(storage);
+      final task = store.currentTask!;
+      withClock(Clock.fixed(DateTime(2026, 3, 9, 23)), timer.start);
+      await store.pendingSaves;
+
+      // Opened again after midnight.
+      timer.resetForTesting();
+      store.resetForTesting();
+      await store.init(storage);
+      withClock(Clock.fixed(DateTime(2026, 3, 10, 0, 40)), timer.restore);
+
+      expect(store.sessions.single.endedAt, DateTime(2026, 3, 9, 23, 25));
+      expect(store.focusMinutesOn(DateTime(2026, 3, 9)), 25);
+      expect(store.focusMinutesOn(DateTime(2026, 3, 10)), 0);
+      expect(store.task(task.id)!.pomodorosDone, task.pomodorosDone + 1);
+      expect(timer.mode, TimerMode.shortBreak);
+      expect(timer.running, isFalse); // the break waits for START
+      expect(timer.takePendingMessage(), contains('while tAsikaso was closed'));
+    });
+
+    testWidgets('a Pomodoro counts for the task it was started on',
+        (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      final timer = PomodoroController.instance;
+      final first = store.currentTask!;
+      await tester.pumpWidget(const StudyApp());
+
+      timer.start();
+      await tester.pump();
+      // A new task becomes current halfway through (as "Add Task" does).
+      final other = store.addTask('Read Chapter 4', 2);
+      store.selectTask(other.id);
+      await tester.pump();
+      expect(find.textContaining('still counts for "${first.title}"'),
+          findsOneWidget);
+      expect(timer.taskTitle, first.title);
+
+      await tester.pump(const Duration(minutes: 25));
+      await tester.pump();
+      expect(store.sessions.single.taskId, first.id);
+      expect(store.task(first.id)!.pomodorosDone, first.pomodorosDone + 1);
+      expect(store.task(other.id)!.pomodorosDone, 0);
+    });
+
+    testWidgets('switching mode or skipping asks before losing a Pomodoro',
+        (tester) async {
+      usePhoneSize(tester);
+      final timer = PomodoroController.instance;
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byIcon(AppTab.study.icon));
+      await tester.pumpAndSettle();
+      timer.start();
+      await tester.pump(const Duration(seconds: 3));
+
+      // The mode that's already on: nothing happens.
+      await tester.tap(find.text('Pomodoro'));
+      await tester.pump();
+      expect(timer.running, isTrue);
+      expect(timer.remaining, lessThan(25 * 60));
+
+      // Another mode asks first; Cancel keeps the Pomodoro.
+      await tester.tap(find.text('Short Break'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Switch to Short Break?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(timer.mode, TimerMode.pomodoro);
+      expect(timer.running, isTrue);
+
+      // Skip asks too.
+      await tester.tap(find.byTooltip('Skip to Break'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Skip This Pomodoro?'), findsOneWidget);
+      await tester.tap(find.text('Skip'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(timer.mode, TimerMode.shortBreak);
+      expect(AppStore.instance.sessions, isEmpty);
+    });
+  });
+}
+
+/// Memory storage that claims to be persistent, like a phone's.
+class _PersistentMemoryStorage extends MemoryStorage {
+  @override
+  bool get isPersistent => true;
+}
+
+/// Storage whose saves fail while [failing] is true (e.g. a full disk).
+class _FailingStorage extends MemoryStorage {
+  bool failing = true;
+
+  @override
+  Future<void> writeJson(String json) async {
+    if (failing) throw Exception('No space left on device');
+    await super.writeJson(json);
+  }
 }

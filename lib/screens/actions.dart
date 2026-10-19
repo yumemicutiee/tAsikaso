@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
 import '../data/app_store.dart';
+import '../data/pomodoro_controller.dart';
 import '../models/models.dart';
 import '../utils/format.dart';
 import '../widgets/dialogs.dart';
@@ -185,4 +186,44 @@ void openSettings(BuildContext context) {
   Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => const SettingsScreen()),
   );
+}
+
+// ---- Timer -------------------------------------------------------------------
+
+/// Skips the current phase, asking first when that would throw away a
+/// Pomodoro in progress.
+Future<void> skipPhase(BuildContext context) async {
+  final timer = PomodoroController.instance;
+  if (timer.isFocus && !timer.atStart) {
+    final phase = timer.phase;
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Skip This Pomodoro?',
+      message: 'It has ${timer.timeText} left. A skipped Pomodoro '
+          "doesn't count toward your focus time or your task.",
+      confirmLabel: 'Skip',
+    );
+    // It may have finished while the question was open.
+    if (!ok || timer.phase != phase) return;
+  }
+  timer.skip();
+}
+
+/// Switches the timer to [mode], asking first when that would throw away a
+/// Pomodoro in progress.
+Future<void> switchTimerMode(BuildContext context, TimerMode mode) async {
+  final timer = PomodoroController.instance;
+  if (mode == timer.mode) return;
+  if (timer.isFocus && !timer.atStart) {
+    final phase = timer.phase;
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Switch to ${mode.label}?',
+      message: 'This Pomodoro has ${timer.timeText} left. If you switch now, '
+          "it won't count toward your focus time or your task.",
+      confirmLabel: 'Switch',
+    );
+    if (!ok || timer.phase != phase) return;
+  }
+  timer.selectMode(mode);
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'app.dart';
 import 'data/app_store.dart';
+import 'data/pomodoro_controller.dart';
 import 'data/storage/local_storage.dart';
 import 'services/notification_service.dart';
 
@@ -11,6 +12,8 @@ Future<void> main() async {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final store = AppStore.instance;
   await store.init(createDeviceStorage());
+  // A Pomodoro that was running when the app was closed carries on.
+  PomodoroController.instance.restore();
   runApp(const StudyApp());
 
   // After the first frame so start-up isn't slowed down.

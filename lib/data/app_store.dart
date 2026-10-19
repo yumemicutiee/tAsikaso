@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import '../theme/app_colors.dart';
+import '../theme/brand.dart';
 import '../utils/format.dart';
 import 'seed_data.dart';
 import 'storage/local_storage.dart';
@@ -12,6 +13,15 @@ import 'storage/local_storage_memory.dart';
 
 /// A deleted task and where it was, so it can be put back.
 typedef RemovedTask = ({StudyTask task, int index, bool wasCurrent});
+
+/// Something the user needs to know about their data (it couldn't be read
+/// or saved). The app shell shows it.
+typedef StoreProblem = ({String title, String message});
+
+/// Thrown when the saved data comes from a newer version of the app.
+class _NewerDataException implements Exception {
+  const _NewerDataException();
+}
 
 /// Single source of truth for the app's data. Screens listen to it with
 /// `ListenableBuilder`; every change is saved to the device automatically.
@@ -22,10 +32,29 @@ class AppStore extends ChangeNotifier {
 
   static final AppStore instance = AppStore._();
 
+  /// Version of the save file this app writes. Files from a newer version are
+  /// never overwritten.
+  static const _dataVersion = 1;
+
+  /// The last save file that loaded without problems (updated at start-up).
+  static const _backupKey = 'backup/data.json';
+
+  /// Copies of save files that couldn't be read completely.
+  static const _recoveryPrefix = 'recovery/';
+
   LocalStorage _storage = MemoryStorage();
 
   /// False on web (for now) and in tests: data lasts until the app closes.
+  /// Also false on a phone when saving was paused because the saved data
+  /// couldn't be read, so that it stays untouched.
   bool get isPersistent => _storage.isPersistent;
+
+  /// The latest problem to tell the user about, or null. The app shell
+  /// shows it and sets this back to null.
+  final ValueNotifier<StoreProblem?> problem = ValueNotifier(null);
+
+  /// True after a save failed, until one succeeds again.
+  bool _saveFailed = false;
 
   final List<StudyFolder> _folders = [];
   final List<Note> _notes = []; // newest first
@@ -39,6 +68,7 @@ class AppStore extends ChangeNotifier {
   final List<FocusSession> _sessions = []; // oldest first
   final List<BreakSession> _breaks = []; // oldest first
   AppPrefs _prefs = const AppPrefs();
+  TimerSnapshot? _timer;
 
   /// Oldest sessions are dropped beyond this to keep the save file small.
   static const _maxSessions = 5000;
@@ -49,13 +79,17 @@ class AppStore extends ChangeNotifier {
   @visibleForTesting
   Future<void> get pendingSaves => _saveChain;
 
+  /// Starter data for a first launch: sample folders and tasks.
   void _seed() {
-    _folders
-      ..clear()
-      ..addAll(SeedData.folders);
-    _tasks
-      ..clear()
-      ..addAll(SeedData.tasks());
+    _clear();
+    _folders.addAll(SeedData.folders);
+    _tasks.addAll(SeedData.tasks());
+  }
+
+  /// No data at all.
+  void _clear() {
+    _folders.clear();
+    _tasks.clear();
     _notes.clear();
     _sets.clear();
     _settings = const PomodoroSettings();
@@ -66,76 +100,168 @@ class AppStore extends ChangeNotifier {
     _sessions.clear();
     _breaks.clear();
     _prefs = const AppPrefs();
+    _timer = null;
   }
 
   /// Loads saved data (or saves the starter data on first launch).
+  ///
+  /// Saved data is never replaced with sample data. If it can't be read, a
+  /// copy is kept, the last copy that worked is tried, and [problem] tells
+  /// the user what happened.
   Future<void> init(LocalStorage storage) async {
     _storage = storage;
+    _saveFailed = false;
+
     String? raw;
-    var loaded = false;
     try {
       raw = await storage.readJson();
-      if (raw == null) {
-        _persist(); // first launch: save the starter data
-      } else {
-        _load(jsonDecode(raw) as Map<String, Object?>);
-      }
-      loaded = true;
     } catch (e, st) {
-      debugPrint('Could not load saved data: $e\n$st');
+      // The file is there but can't be opened: leave it alone.
+      debugPrint('Could not read saved data: $e\n$st');
+      _clear();
+      _pauseSaving();
+      _report(_unreadable(kept: false));
+      notifyListeners();
+      return;
     }
 
-    if (!loaded) {
-      // Never overwrite a file we couldn't read unless a copy was kept.
-      var backedUp = false;
-      if (raw != null) {
-        try {
-          await storage.writeBytes('data.corrupt.json', utf8.encode(raw));
-          backedUp = true;
-        } catch (_) {
-          // Couldn't keep a copy; handled below.
-        }
-      }
+    if (raw == null) {
       _seed();
-      if (backedUp) {
+      _persist(); // first launch: save the starter data
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final skipped = _load(raw);
+      if (skipped == 0) {
+        await _tryWrite(_backupKey, raw); // the last copy that worked
+      } else {
+        // Keep the whole file before the unreadable parts are left out.
+        final kept = await _keepCopy(raw);
+        if (!kept) _pauseSaving();
+        _report((
+          title: "Some Data Couldn't Be Loaded",
+          message: "${plural(skipped, 'item')} in your saved data couldn't "
+              "be read, so ${skipped == 1 ? 'it was' : 'they were'} left out. "
+              'Everything else is here.'
+              '${kept ? '' : ' Changes you make now won\'t be saved, so the '
+                  'saved data stays untouched.'}',
+        ));
+      }
+    } on _NewerDataException {
+      _clear();
+      _pauseSaving();
+      _report((
+        title: 'Update $kAppName',
+        message: 'Your data was saved by a newer version of $kAppName. '
+            'Update the app to see it. Until then nothing you do here is '
+            'saved, so your data stays safe.',
+      ));
+    } catch (e, st) {
+      debugPrint('Could not load saved data: $e\n$st');
+      final kept = await _keepCopy(raw);
+      final restored = await _loadBackup(storage);
+      if (!restored) _clear();
+      if (kept) {
         _persist();
       } else {
-        // Work in memory this session so the original file stays untouched.
-        _storage = MemoryStorage();
+        _pauseSaving();
       }
-    } else {
-      for (final n in _notes) {
-        try {
-          final t = await storage.readBytes(n.thumbKey);
-          if (t != null) _thumbs[n.id] = t;
-        } catch (_) {
-          // A missing thumbnail just shows the grey placeholder.
-        }
-      }
+      _report(restored
+          ? (
+              title: 'Data Restored',
+              message: "Your latest saved data couldn't be read, so $kAppName "
+                  'brought back the copy from the last time the app opened. '
+                  'Changes made after that may be missing.'
+                  '${kept ? '' : ' Changes you make now won\'t be saved, so '
+                      'the saved data stays untouched.'}',
+            )
+          : _unreadable(kept: kept));
     }
+    await _loadThumbnails(storage);
     notifyListeners();
   }
 
-  /// Deletes every folder, note, flashcard set, task, statistic and setting,
-  /// including saved PDFs and photos. Nothing is re-added.
-  Future<void> eraseEverything() async {
+  StoreProblem _unreadable({required bool kept}) => (
+        title: "Saved Data Couldn't Be Read",
+        message: kept
+            ? "$kAppName couldn't read your saved data, so it started empty. "
+                'A copy of the old data was kept on this device.'
+            : "$kAppName couldn't read your saved data. It was left "
+                "untouched, and changes you make now won't be saved. Restart "
+                'the app to try again.',
+      );
+
+  void _report(StoreProblem p) => problem.value = p;
+
+  /// Works in memory for the rest of this session, so the saved file stays
+  /// exactly as it is.
+  void _pauseSaving() => _storage = MemoryStorage();
+
+  /// Loads the last save file that worked. Returns false if there is none
+  /// or it can't be read either.
+  Future<bool> _loadBackup(LocalStorage storage) async {
     try {
-      await _storage.deletePrefix('notes/');
-      await _storage.deletePrefix('sets/');
+      final bytes = await storage.readBytes(_backupKey);
+      if (bytes == null) return false;
+      _load(utf8.decode(bytes));
+      return true;
     } catch (e) {
-      debugPrint('Could not delete some files: $e');
+      debugPrint('Could not load the backup: $e');
+      return false;
+    }
+  }
+
+  /// Keeps [raw] as a recovery copy. Returns false if that failed.
+  Future<bool> _keepCopy(String raw) => _tryWrite(
+      '$_recoveryPrefix${clock.now().millisecondsSinceEpoch}.json', raw);
+
+  Future<bool> _tryWrite(String key, String text) async {
+    try {
+      await _storage.writeBytes(key, utf8.encode(text));
+      return true;
+    } catch (e) {
+      debugPrint('Could not write $key: $e');
+      return false;
+    }
+  }
+
+  Future<void> _loadThumbnails(LocalStorage storage) async {
+    for (final n in _notes) {
+      try {
+        final t = await storage.readBytes(n.thumbKey);
+        if (t != null) _thumbs[n.id] = t;
+      } catch (_) {
+        // A missing thumbnail just shows the grey placeholder.
+      }
+    }
+  }
+
+  /// Deletes every folder, note, flashcard set, task, statistic and setting,
+  /// including saved PDFs, photos and backup copies. Nothing is re-added.
+  Future<void> eraseEverything() async {
+    for (final prefix in ['notes/', 'sets/', 'backup/', _recoveryPrefix]) {
+      try {
+        await _storage.deletePrefix(prefix);
+      } catch (e) {
+        debugPrint('Could not delete $prefix: $e');
+      }
+    }
+    try {
+      await _storage.delete('data.corrupt.json'); // kept by older versions
+    } catch (e) {
+      debugPrint('Could not delete data.corrupt.json: $e');
     }
     // Keep the look and tAsikaso+ as they were.
     final keep = _prefs;
-    _seed();
+    _clear();
     _prefs = _prefs.copyWith(
       appearance: keep.appearance,
       palette: keep.palette,
       customHue: keep.customHue,
       plus: keep.plus,
     );
-    _folders.clear();
-    _tasks.clear();
     _persist();
     notifyListeners();
   }
@@ -145,35 +271,71 @@ class AppStore extends ChangeNotifier {
   void resetForTesting() {
     _storage = MemoryStorage();
     _saveChain = Future<void>.value();
+    _saveFailed = false;
+    problem.value = null;
     _seed();
     notifyListeners();
   }
 
   // ---- Persistence -----------------------------------------------------------
 
-  List<Map<String, Object?>> _maps(Object? list) => [
-        for (final item in (list as List<Object?>? ?? const []))
-          if (item is Map<String, Object?>) item,
-      ];
+  /// Reads [raw] into the store and returns how many records had to be left
+  /// out because they couldn't be read. Everything is parsed first and only
+  /// then replaces the current data, so a bad file can't leave the store
+  /// half-loaded. Throws if [raw] can't be used at all.
+  int _load(String raw) {
+    final Object? decoded = jsonDecode(raw);
+    if (decoded is! Map<String, Object?>) {
+      throw const FormatException('The save file is not a JSON object.');
+    }
+    final j = decoded;
+    final version = j['version'];
+    if (version is num && version > _dataVersion) {
+      throw const _NewerDataException();
+    }
 
-  /// Parses everything first and only then replaces the current data, so a
-  /// bad file can't leave the store half-loaded.
-  void _load(Map<String, Object?> j) {
-    final folders = _maps(j['folders']).map(StudyFolder.fromJson).toList();
-    final notes = _maps(j['notes']).map(Note.fromJson).toList();
-    final tasks = _maps(j['tasks']).map(StudyTask.fromJson).toList();
-    final sets = _maps(j['sets']).map(FlashcardSet.fromJson).toList();
-    final s = j['settings'];
-    final settings = s is Map<String, Object?>
-        ? PomodoroSettings.fromJson(s)
-        : const PomodoroSettings();
-    final current = j['currentTask'] as String?;
+    // One unreadable record is left out instead of losing everything.
+    var skipped = 0;
+    List<T> all<T>(Object? list, T Function(Json) parse) {
+      final out = <T>[];
+      if (list == null) return out;
+      if (list is! List) {
+        skipped++;
+        return out;
+      }
+      for (final item in list) {
+        try {
+          out.add(parse(item as Json));
+        } catch (_) {
+          skipped++;
+        }
+      }
+      return out;
+    }
+
+    T? one<T>(Object? value, T Function(Json) parse) {
+      if (value == null) return null;
+      try {
+        return parse(value as Json);
+      } catch (_) {
+        skipped++;
+        return null;
+      }
+    }
+
+    final folders = all(j['folders'], StudyFolder.fromJson);
+    final notes = all(j['notes'], Note.fromJson);
+    final tasks = all(j['tasks'], StudyTask.fromJson);
+    final sets = all(j['sets'], FlashcardSet.fromJson);
+    final settings =
+        one(j['settings'], PomodoroSettings.fromJson) ?? const PomodoroSettings();
+    final current = j['currentTask'];
     final focusLog = _intMap(j['focusLog']);
     final reviewLog = _intMap(j['reviewLog']);
-    final sessions = _maps(j['sessions']).map(FocusSession.fromJson).toList();
-    final breaks = _maps(j['breaks']).map(BreakSession.fromJson).toList();
-    final p = j['prefs'];
-    final prefs = p is Map<String, Object?> ? AppPrefs.fromJson(p) : const AppPrefs();
+    final sessions = all(j['sessions'], FocusSession.fromJson);
+    final breaks = all(j['breaks'], BreakSession.fromJson);
+    final prefs = one(j['prefs'], AppPrefs.fromJson) ?? const AppPrefs();
+    final timer = one(j['timer'], TimerSnapshot.fromJson);
 
     _folders
       ..clear()
@@ -188,7 +350,7 @@ class AppStore extends ChangeNotifier {
       ..clear()
       ..addAll(sets);
     _settings = settings;
-    _currentTaskId = current;
+    _currentTaskId = current is String ? current : null;
     _focusLog
       ..clear()
       ..addAll(focusLog);
@@ -202,7 +364,9 @@ class AppStore extends ChangeNotifier {
       ..clear()
       ..addAll(breaks);
     _prefs = prefs;
+    _timer = timer;
     _thumbs.clear();
+    return skipped;
   }
 
   Map<String, int> _intMap(Object? v) => {
@@ -212,7 +376,7 @@ class AppStore extends ChangeNotifier {
       };
 
   Map<String, Object?> _toJson() => {
-        'version': 1,
+        'version': _dataVersion,
         'folders': [for (final f in _folders) f.toJson()],
         'notes': [for (final n in _notes) n.toJson()],
         'tasks': [for (final t in _tasks) t.toJson()],
@@ -224,15 +388,30 @@ class AppStore extends ChangeNotifier {
         'sessions': [for (final s in _sessions) s.toJson()],
         'breaks': [for (final b in _breaks) b.toJson()],
         'prefs': _prefs.toJson(),
+        if (_timer case final t?) 'timer': t.toJson(),
       };
 
-  /// Saves in the background, one write at a time, in order.
+  /// Saves in the background, one write at a time, in order. Every save
+  /// writes everything, so after a failed save the next one catches up.
   void _persist() {
     final data = jsonEncode(_toJson());
     final storage = _storage;
-    _saveChain = _saveChain
-        .then((_) => storage.writeJson(data))
-        .catchError((Object e) => debugPrint('Save failed: $e'));
+    _saveChain = _saveChain.then((_) => storage.writeJson(data)).then(
+      (_) {
+        _saveFailed = false;
+      },
+      onError: (Object e) {
+        debugPrint('Save failed: $e');
+        if (_saveFailed) return; // already told the user
+        _saveFailed = true;
+        _report((
+          title: "Couldn't Save",
+          message: "$kAppName couldn't save your latest changes. Your "
+              'device may be out of storage space. Free up some space: '
+              'everything is saved again with your next change.',
+        ));
+      },
+    );
   }
 
   void _changed() {
@@ -465,6 +644,13 @@ class AppStore extends ChangeNotifier {
 
   List<StudyTask> get completedTasks => _tasks.where((t) => t.done).toList();
 
+  StudyTask? task(String? id) {
+    for (final t in _tasks) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
   /// The task the timer works on: the one the user picked, otherwise the
   /// first unfinished task.
   StudyTask? get currentTask {
@@ -542,19 +728,41 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
+  // ---- Timer -----------------------------------------------------------------
+
+  /// The timer as it was last left (see `PomodoroController.restore`).
+  TimerSnapshot? get timerSnapshot => _timer;
+
+  /// Saves the timer's state. Screens don't show it from here, so nothing
+  /// is rebuilt.
+  void saveTimer(TimerSnapshot snapshot) {
+    _timer = snapshot;
+    _persist();
+  }
+
   // ---- Stats -----------------------------------------------------------------
 
-  /// Called when a focus session finishes. Credits the current task.
-  void recordFocusSession(int minutes) {
-    final now = clock.now();
-    final key = dayKey(now);
+  /// Called when a focus session finishes, at [endedAt] (default: now).
+  ///
+  /// Credits the task the Pomodoro was started for ([taskId], with
+  /// [taskTitle] kept in case that task was deleted since), or the current
+  /// task when neither is given.
+  void recordFocusSession(
+    int minutes, {
+    DateTime? endedAt,
+    String? taskId,
+    String? taskTitle,
+  }) {
+    final end = endedAt ?? clock.now();
+    final key = dayKey(end);
     _focusLog[key] = (_focusLog[key] ?? 0) + minutes;
-    final task = currentTask;
+    final given = taskId != null || taskTitle != null;
+    final task = given ? this.task(taskId) : currentTask;
     _sessions.add(FocusSession(
-      endedAt: now,
+      endedAt: end,
       minutes: minutes,
-      taskId: task?.id,
-      taskTitle: task?.title,
+      taskId: task?.id ?? taskId,
+      taskTitle: task?.title ?? taskTitle,
     ));
     if (_sessions.length > _maxSessions) {
       _sessions.removeRange(0, _sessions.length - _maxSessions);
@@ -569,10 +777,12 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
-  /// Called when a break ends (or is skipped after at least a minute).
-  void recordBreak(int minutes, {required bool long}) {
+  /// Called when a break ends (or is skipped after at least a minute), at
+  /// [endedAt] (default: now).
+  void recordBreak(int minutes, {required bool long, DateTime? endedAt}) {
     if (minutes <= 0) return;
-    _breaks.add(BreakSession(endedAt: clock.now(), minutes: minutes, long: long));
+    _breaks.add(BreakSession(
+        endedAt: endedAt ?? clock.now(), minutes: minutes, long: long));
     if (_breaks.length > _maxSessions) {
       _breaks.removeRange(0, _breaks.length - _maxSessions);
     }

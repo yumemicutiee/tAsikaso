@@ -10,6 +10,7 @@ import '../services/screen_awake.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import 'actions.dart';
 
 /// Full-screen, distraction-free view of the running Pomodoro.
 ///
@@ -57,7 +58,7 @@ class FocusScreen extends StatelessWidget {
                     listenable: Listenable.merge([timer, store]),
                     builder: (context, _) {
                       final name = store.prefs.userName.trim();
-                      final task = store.currentTask?.title;
+                      final task = timer.taskTitle;
                       final line = timer.isFocus
                           ? _focusLines[(timer.session - 1) % _focusLines.length]
                           : 'Time for a breather,';
@@ -181,7 +182,7 @@ class FocusScreen extends StatelessWidget {
                                 _RoundButton(
                                   icon: AppIcons.skip,
                                   label: timer.isFocus ? 'Skip to Break' : 'Skip Break',
-                                  onTap: timer.skip,
+                                  onTap: () => skipPhase(context),
                                 ),
                               ],
                             ),

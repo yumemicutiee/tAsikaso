@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
@@ -230,8 +231,12 @@ class SettingsScreen extends StatelessWidget {
               _Note(store.isPersistent
                   ? 'Your folders, notes, flashcards and tasks are saved on '
                       'this device.'
-                  : 'Data is kept only while the app is open (saving on the '
-                      'web version comes later).'),
+                  : kIsWeb
+                      ? 'Data is kept only while the app is open (saving on '
+                          'the web version comes later).'
+                      : "Saving is paused because your saved data couldn't "
+                          'be read; it was left untouched. Restart the app to '
+                          'try again.'),
               const SizedBox(height: 8),
               _Group(children: [
                 _TapRow(

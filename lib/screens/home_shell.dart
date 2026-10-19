@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/app_store.dart';
 import '../data/pomodoro_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/common.dart';
+import '../widgets/dialogs.dart';
 import 'actions.dart';
 import 'capture/scan_flow.dart';
 import 'dashboard_screen.dart';
@@ -31,8 +33,17 @@ class _HomeShellState extends State<HomeShell> {
   void initState() {
     super.initState();
     // The timer can finish on any screen (even in Focus Mode), so its
-    // messages are shown from here.
-    PomodoroController.instance.onMessage = _showMessage;
+    // messages are shown from here. So are problems with saved data.
+    final timer = PomodoroController.instance;
+    timer.onMessage = _showMessage;
+    AppStore.instance.problem.addListener(_showProblem);
+    // Whatever happened while the app was starting, once the screen is up.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final message = timer.takePendingMessage();
+      if (message != null) _showMessage(message);
+      _showProblem();
+    });
   }
 
   @override
@@ -40,6 +51,7 @@ class _HomeShellState extends State<HomeShell> {
     if (PomodoroController.instance.onMessage == _showMessage) {
       PomodoroController.instance.onMessage = null;
     }
+    AppStore.instance.problem.removeListener(_showProblem);
     super.dispose();
   }
 
@@ -48,6 +60,16 @@ class _HomeShellState extends State<HomeShell> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message), showCloseIcon: true));
+  }
+
+  /// Data that couldn't be read or saved: the user must know, so it's a
+  /// dialog, not a snack bar that's easy to miss.
+  void _showProblem() {
+    final store = AppStore.instance;
+    final problem = store.problem.value;
+    if (problem == null || !mounted) return;
+    store.problem.value = null;
+    showInfoDialog(context, title: problem.title, message: problem.message);
   }
 
   void _select(AppTab tab) => setState(() => _tab = tab);

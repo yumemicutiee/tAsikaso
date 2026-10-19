@@ -245,7 +245,7 @@ class _PomodoroCard extends StatelessWidget {
                   child: _ModeTab(
                     label: m.label,
                     selected: m == mode,
-                    onTap: () => timer.selectMode(m),
+                    onTap: () => switchTimerMode(context, m),
                   ),
                 ),
             ],
@@ -331,7 +331,7 @@ class _PomodoroCard extends StatelessWidget {
             _RoundIconButton(
               icon: AppIcons.skip,
               tooltip: timer.isFocus ? 'Skip to Break' : 'Skip Break',
-              onPressed: timer.skip,
+              onPressed: () => skipPhase(context),
             ),
           ],
         ),
