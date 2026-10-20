@@ -30,8 +30,12 @@ class _StudyCardsScreenState extends State<StudyCardsScreen> {
   /// Cards answered "Got It" on the first try.
   final Set<String> _knewFirstTime = {};
 
-  /// Cards answered at least once (counts toward "Reviewed" today).
+  /// Cards answered at least once in this round.
   final Set<String> _seen = {};
+
+  /// Cards counted toward "Reviewed" today: once per visit to this screen,
+  /// however many rounds are played.
+  final Set<String> _counted = {};
   int _total = 0;
 
   @override
@@ -58,7 +62,7 @@ class _StudyCardsScreenState extends State<StudyCardsScreen> {
   void _answer({required bool knewIt}) {
     final card = _queue[_position];
     final firstTime = _seen.add(card.id);
-    if (firstTime) _store.recordCardsReviewed(1);
+    if (_counted.add(card.id)) _store.recordCardsReviewed(1);
     setState(() {
       if (knewIt) {
         if (firstTime) _knewFirstTime.add(card.id);
@@ -68,9 +72,12 @@ class _StudyCardsScreenState extends State<StudyCardsScreen> {
       _position++;
       _showBack = false;
     });
-    // Shown on the Dashboard under "Recent Flashcards".
-    _store.markSetStudied(widget.setId,
-        known: _knewFirstTime.length, seen: _seen.length);
+    // The score shown under "Recent Flashcards" is for a whole round, so
+    // stopping after one card doesn't replace it with 100% or 0%.
+    if (_finished) {
+      _store.markSetStudied(widget.setId,
+          known: _knewFirstTime.length, seen: _seen.length);
+    }
   }
 
   @override

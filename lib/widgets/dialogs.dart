@@ -159,19 +159,25 @@ Future<void> showInfoDialog(
 /// Result of the folder editor.
 typedef FolderDraft = ({String name, int colorValue});
 
-/// Create or edit a folder: name + colour.
-Future<FolderDraft?> showFolderEditor(BuildContext context, {StudyFolder? folder}) {
+/// Create or edit a folder: name + colour. When editing, [onDelete] adds a
+/// "Delete Folder" button; it runs after the sheet has closed.
+Future<FolderDraft?> showFolderEditor(
+  BuildContext context, {
+  StudyFolder? folder,
+  Future<void> Function()? onDelete,
+}) {
   return showModalBottomSheet<FolderDraft>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _FolderEditor(folder: folder),
+    builder: (_) => _FolderEditor(folder: folder, onDelete: onDelete),
   );
 }
 
 class _FolderEditor extends StatefulWidget {
-  const _FolderEditor({this.folder});
+  const _FolderEditor({this.folder, this.onDelete});
 
   final StudyFolder? folder;
+  final Future<void> Function()? onDelete;
 
   @override
   State<_FolderEditor> createState() => _FolderEditorState();
@@ -242,6 +248,21 @@ class _FolderEditorState extends State<_FolderEditor> {
               label: editing ? 'Save' : 'Create Folder',
               onPressed: _name.text.trim().isEmpty ? null : _submit,
             ),
+            if (editing && widget.onDelete != null) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    final onDelete = widget.onDelete!;
+                    Navigator.of(context).pop();
+                    onDelete();
+                  },
+                  style: TextButton.styleFrom(
+                      foregroundColor: AppColors.streakRed),
+                  child: const Text('Delete Folder'),
+                ),
+              ),
+            ],
           ],
         ),
       ),

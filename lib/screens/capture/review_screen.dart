@@ -418,10 +418,8 @@ class CropEditor extends StatelessWidget {
                         final moved = page.corners[i] +
                             Offset(d.delta.dx / w, d.delta.dy / h);
                         final updated = List<Offset>.of(page.corners);
-                        updated[i] = Offset(
-                          math.min(1.0, math.max(0.0, moved.dx)),
-                          math.min(1.0, math.max(0.0, moved.dy)),
-                        );
+                        updated[i] = CapturedPage.constrainCorner(
+                            page.corners, i, moved);
                         onChanged(updated);
                       },
                       child: Container(

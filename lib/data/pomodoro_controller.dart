@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:clock/clock.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../models/models.dart';
+import '../services/haptics.dart';
 import '../services/notification_service.dart';
 import '../theme/brand.dart';
 import 'app_store.dart';
@@ -55,6 +55,14 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   /// For noticing when another task becomes current mid-Pomodoro.
   String? _lastCurrentTaskId;
 
+  /// When the last phase ended (finished or skipped), to tell a new sitting
+  /// from a continued one.
+  DateTime? _lastPhaseEnd;
+
+  /// A pause this long between phases means a new sitting: the long-break
+  /// rhythm ("Session 1 of 4") starts over.
+  static const sittingGap = Duration(hours: 2);
+
   TimerMode get mode => _mode;
   int get remaining => _remaining;
   int get phaseTotal => _phaseTotal;
@@ -92,6 +100,10 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   void start() {
     if (running) return;
     if (isFocus && _remaining == _phaseTotal) {
+      final last = _lastPhaseEnd;
+      if (last != null && clock.now().difference(last) > sittingGap) {
+        _completed = 0; // a new sitting
+      }
       // A new Pomodoro counts for the task that's current now.
       final task = _store.currentTask;
       _taskId = task?.id;
@@ -114,6 +126,7 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   /// Back to the start of this phase, using the latest durations.
   void reset() {
     _stopTicker();
+    _recordBreakSoFar();
     _setMode(_mode);
     _save();
     notifyListeners();
@@ -124,12 +137,27 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   void selectMode(TimerMode mode) {
     if (mode == _mode) return;
     _stopTicker();
+    _recordBreakSoFar();
     _setMode(mode);
     _save();
     notifyListeners();
   }
 
+  /// A break cut short by Reset or a mode switch still counts for the time
+  /// taken, like a skipped one does.
+  void _recordBreakSoFar() {
+    if (isFocus || atStart) return;
+    _store.recordBreak((_phaseTotal - _remaining) ~/ 60,
+        long: _mode == TimerMode.longBreak);
+  }
+
   void skip() => _finish(completed: false);
+
+  /// Schedules the alert for the phase that's running, e.g. after Timer
+  /// Alerts were switched on part-way through it.
+  void refreshAlert() {
+    if (running) _scheduleAlert();
+  }
 
   /// "Start Focus": begins (or resumes) a Pomodoro. A break that is on,
   /// paused or waiting is skipped first, counting the minutes already taken.
@@ -153,6 +181,7 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
     final saved = _store.timerSnapshot;
     if (saved == null || running) return;
     _completed = saved.completed;
+    _lastPhaseEnd = saved.lastPhaseEnd;
     _lastCurrentTaskId = _store.currentTask?.id;
     final end = saved.endsAt;
     if (end == null && saved.remainingSeconds >= saved.phaseSeconds) {
@@ -224,6 +253,7 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
         remainingSeconds: _remaining,
         endsAt: _endsAt,
         completed: _completed,
+        lastPhaseEnd: _lastPhaseEnd,
         taskId: _taskId,
         taskTitle: _taskTitle,
       ));
@@ -258,13 +288,30 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
       isFocus ? 'Pomodoro done!' : 'Break over',
       isFocus ? 'Nice work. Time for a $next.' : 'Ready for the next $next?',
       isBreak: !isFocus,
+      vibrate: _store.prefs.vibrateOnFinish,
     );
     // Timer Alerts are on by default, so ask for permission the first time
     // they would be used (Android 13+ and iOS need it).
     final prefs = _store.prefs;
     if (!prefs.askedNotifications && NotificationService.isSupported) {
       _store.updatePrefs(prefs.copyWith(askedNotifications: true));
-      NotificationService.requestPermission();
+      unawaited(_askPermissionOnce());
+    }
+  }
+
+  /// The first-time permission question. A "no" switches Timer Alerts off,
+  /// so the setting never claims alerts that can't be shown.
+  Future<void> _askPermissionOnce() async {
+    if (!await NotificationService.requestPermission()) {
+      _store.updatePrefs(_store.prefs.copyWith(timerAlerts: false));
+      await NotificationService.cancelTimerEnd();
+      _say("Timer alerts are off because notifications aren't allowed for "
+          "$kAppName. You can allow them in your phone's settings.");
+      return;
+    }
+    if (!await NotificationService.exactTimingAllowed()) {
+      _say('Alerts may arrive a little late on this phone. To fix that, '
+          'allow exact timing in Settings → Notifications.');
     }
   }
 
@@ -289,6 +336,7 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
     bool whileClosed = false,
   }) {
     _stopTicker(cancelAlert: !completed);
+    _lastPhaseEnd = endedAt ?? clock.now();
     final wasFocus = isFocus;
     if (wasFocus && completed) {
       _completed++;
@@ -328,7 +376,7 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
               'Ready for the next Pomodoro?');
       return;
     }
-    if (_store.prefs.vibrateOnFinish) HapticFeedback.heavyImpact();
+    if (_store.prefs.vibrateOnFinish) unawaited(Haptics.timeIsUp());
     _say(wasFocus
         ? 'Pomodoro done! Time for a ${next.label}.'
         : 'Break over. Ready for the next Pomodoro?');

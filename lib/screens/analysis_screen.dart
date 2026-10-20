@@ -949,17 +949,25 @@ class _ByTask extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Grouped by task, not by name: a renamed task stays one row (under
+    // its current name) and two tasks that share a name stay apart.
+    final store = AppStore.instance;
     final totals = <String, int>{};
+    final names = <String, String>{};
     for (final s in sessions) {
-      final name = s.taskTitle ?? 'No task';
-      totals[name] = (totals[name] ?? 0) + s.minutes;
+      final key = s.taskId ?? 'title:${s.taskTitle ?? ''}';
+      totals[key] = (totals[key] ?? 0) + s.minutes;
+      names[key] = (s.taskId == null ? null : store.task(s.taskId)?.title) ??
+          s.taskTitle ??
+          'No task';
     }
     if (totals.isEmpty) {
       return Text('Finish a Pomodoro to see where your time goes.',
           style: AppText.statLabel);
     }
-    final rows = totals.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final rows = [
+      for (final e in totals.entries) MapEntry(names[e.key]!, e.value),
+    ]..sort((a, b) => b.value.compareTo(a.value));
     final shown = rows.take(5).toList();
     final most = shown.first.value;
 

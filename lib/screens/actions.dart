@@ -145,8 +145,17 @@ Future<void> createFolder(BuildContext context) async {
   if (draft != null) _store.addFolder(draft.name, draft.colorValue);
 }
 
-Future<void> editFolder(BuildContext context, StudyFolder folder) async {
-  final draft = await showFolderEditor(context, folder: folder);
+/// Edits a folder; the sheet also offers to delete it. [onDeleted] runs
+/// after a deletion (e.g. to close the folder's screen).
+Future<void> editFolder(BuildContext context, StudyFolder folder,
+    {VoidCallback? onDeleted}) async {
+  final draft = await showFolderEditor(
+    context,
+    folder: folder,
+    onDelete: () async {
+      if (await deleteFolder(context, folder)) onDeleted?.call();
+    },
+  );
   if (draft != null) {
     _store.updateFolder(
         folder.copyWith(name: draft.name, colorValue: draft.colorValue));
@@ -213,6 +222,24 @@ Future<void> skipPhase(BuildContext context) async {
     if (!ok || timer.phase != phase) return;
   }
   timer.skip();
+}
+
+/// Starts the phase over, asking first when that would throw away a
+/// Pomodoro in progress.
+Future<void> resetTimer(BuildContext context) async {
+  final timer = PomodoroController.instance;
+  if (timer.isFocus && !timer.atStart) {
+    final phase = timer.phase;
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Reset This Pomodoro?',
+      message: 'It has ${timer.timeText} left and will start over. The time '
+          "so far won't count toward your focus time or your task.",
+      confirmLabel: 'Reset',
+    );
+    if (!ok || timer.phase != phase) return;
+  }
+  timer.reset();
 }
 
 /// Switches the timer to [mode], asking first when that would throw away a

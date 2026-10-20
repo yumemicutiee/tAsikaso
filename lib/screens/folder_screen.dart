@@ -59,7 +59,8 @@ class FolderScreen extends StatelessWidget {
             ),
             actions: [
               ActionsMenu(actions: {
-                'Edit Folder': () => editFolder(context, folder),
+                'Edit Folder': () => editFolder(context, folder,
+                    onDeleted: () => Navigator.of(context).pop()),
                 'New Flashcard Set': () => createSet(context, folderId: folder.id),
                 'Delete Folder': () async {
                   final deleted = await deleteFolder(context, folder);

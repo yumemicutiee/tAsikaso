@@ -166,7 +166,9 @@ class FocusScreen extends StatelessWidget {
                                 _RoundButton(
                                   icon: AppIcons.reset,
                                   label: 'Reset',
-                                  onTap: timer.atStart ? null : timer.reset,
+                                  onTap: timer.atStart
+                                      ? null
+                                      : () => resetTimer(context),
                                 ),
                                 const SizedBox(width: 20),
                                 _RoundButton(

@@ -291,7 +291,7 @@ class _PomodoroCard extends StatelessWidget {
             _RoundIconButton(
               icon: AppIcons.reset,
               tooltip: 'Reset Timer',
-              onPressed: atStart ? null : timer.reset,
+              onPressed: atStart ? null : () => resetTimer(context),
             ),
             const SizedBox(width: 20),
             Flexible(

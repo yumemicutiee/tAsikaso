@@ -216,6 +216,8 @@ class SettingsScreen extends StatelessWidget {
                   value: p.timerAlerts,
                   onChanged: (v) => _setTimerAlerts(context, v),
                 ),
+                if (p.timerAlerts && NotificationService.isSupported)
+                  const _ExactTimingRow(),
                 _Switch(
                   label: 'Daily Study Reminder',
                   value: p.dailyReminder,
@@ -348,7 +350,12 @@ class SettingsScreen extends StatelessWidget {
     final store = AppStore.instance;
     if (on && !await _askPermission(context)) return;
     store.updatePrefs(store.prefs.copyWith(timerAlerts: on));
-    if (!on) await NotificationService.cancelTimerEnd();
+    if (on) {
+      // Covers the phase that's already running.
+      PomodoroController.instance.refreshAlert();
+    } else {
+      await NotificationService.cancelTimerEnd();
+    }
   }
 
   static Future<void> _setReminder(BuildContext context, {required bool on}) async {
@@ -838,6 +845,57 @@ class _TapRow extends StatelessWidget {
 }
 
 /// A label with a [NumberField] you can type into or nudge with − / +.
+/// "Allow Exact Timing": shown only while the phone (Android 14+) would
+/// deliver alerts late. Tapping it opens the phone's own setting.
+class _ExactTimingRow extends StatefulWidget {
+  const _ExactTimingRow();
+
+  @override
+  State<_ExactTimingRow> createState() => _ExactTimingRowState();
+}
+
+class _ExactTimingRowState extends State<_ExactTimingRow>
+    with WidgetsBindingObserver {
+  bool _allowed = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _check();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Back from the phone's settings page: see what was chosen.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _check();
+  }
+
+  Future<void> _check() async {
+    final allowed = await NotificationService.exactTimingAllowed();
+    if (mounted && allowed != _allowed) setState(() => _allowed = allowed);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_allowed) return const SizedBox.shrink();
+    return _TapRow(
+      label: 'Allow Exact Timing',
+      value: 'Alerts may be late',
+      onTap: () async {
+        await NotificationService.requestExactTiming();
+        await _check();
+      },
+    );
+  }
+}
+
 /// Scrolls itself into view once, right after it is first built, so another
 /// screen can open Settings at a particular section.
 class _RevealOnce extends StatefulWidget {

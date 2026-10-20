@@ -521,6 +521,7 @@ class TimerSnapshot {
     required this.remainingSeconds,
     this.endsAt,
     this.completed = 0,
+    this.lastPhaseEnd,
     this.taskId,
     this.taskTitle,
   });
@@ -539,6 +540,9 @@ class TimerSnapshot {
   /// Pomodoros finished in this sitting (for the long-break rhythm).
   final int completed;
 
+  /// When the last phase ended, so a long pause starts a new sitting.
+  final DateTime? lastPhaseEnd;
+
   /// The task this Pomodoro counts for, picked when it started.
   final String? taskId;
   final String? taskTitle;
@@ -550,6 +554,7 @@ class TimerSnapshot {
         // In UTC: the moment stays right even if the phone's time zone changes.
         if (endsAt case final e?) 'ends': e.toUtc().toIso8601String(),
         'done': completed,
+        if (lastPhaseEnd case final l?) 'lastEnd': l.toUtc().toIso8601String(),
         'task': ?taskId,
         'title': ?taskTitle,
       };
@@ -570,6 +575,9 @@ class TimerSnapshot {
           ? DateTime.tryParse(j['ends'] as String)?.toLocal()
           : null,
       completed: done < 0 ? 0 : done,
+      lastPhaseEnd: j['lastEnd'] is String
+          ? DateTime.tryParse(j['lastEnd'] as String)?.toLocal()
+          : null,
       taskId: j['task'] is String ? j['task'] as String : null,
       taskTitle: j['title'] is String ? j['title'] as String : null,
     );

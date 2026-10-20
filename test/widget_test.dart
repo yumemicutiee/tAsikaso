@@ -14,12 +14,15 @@ import 'package:study_app/data/storage/local_storage_memory.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/screens/analysis_screen.dart';
 import 'package:study_app/screens/capture/capture_screen.dart';
+import 'package:study_app/screens/capture/captured_page.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/capture/scan_flow.dart';
 import 'package:study_app/screens/dashboard_screen.dart';
+import 'package:study_app/screens/flashcards/study_cards_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/screens/plans_screen.dart';
 import 'package:study_app/screens/settings_screen.dart';
+import 'package:study_app/services/haptics.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/screen_awake.dart';
 import 'package:study_app/theme/app_colors.dart';
@@ -33,6 +36,7 @@ void main() {
 
   setUp(() {
     ScreenAwake.enabled = false;
+    Haptics.enabled = false;
     AppColors.useDark(false);
     AppColors.usePalette(Palette.navy);
     AppStore.instance.resetForTesting();
@@ -109,8 +113,14 @@ void main() {
     expect(PomodoroController.instance.running, isFalse);
     expect(find.text('RESUME'), findsOneWidget);
 
+    // Reset asks first, since the Pomodoro would start over.
     await tester.tap(find.byTooltip('Reset Timer'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Reset This Pomodoro?'), findsOneWidget);
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('25:00'), findsOneWidget);
     expect(find.text('START'), findsOneWidget);
   });
@@ -987,6 +997,181 @@ Meeting at 10:30 today
       );
       expect(task.estimatedMinutes(25), 200);
       expect(task.estimatedMinutes(1), 101); // not "101 / 8"
+    });
+  });
+
+  group('Phase 2 fixes', () {
+    testWidgets('the long-break rhythm starts over after a long pause',
+        (tester) async {
+      final store = AppStore.instance;
+      final timer = PomodoroController.instance;
+      store.updateSettings(store.settings.copyWith(focusMinutes: 1));
+      await tester.pumpWidget(const StudyApp());
+
+      timer.start();
+      await tester.pump(const Duration(seconds: 61));
+      expect(timer.session, 2); // one Pomodoro done, break waiting
+
+      // Back the same evening: still the same sitting.
+      await tester.pump(const Duration(minutes: 30));
+      timer.selectMode(TimerMode.pomodoro);
+      timer.start();
+      expect(timer.session, 2);
+      timer.pause();
+
+      // The next morning: a fresh sitting.
+      await tester.pump(const Duration(hours: 10));
+      timer.reset();
+      timer.start();
+      expect(timer.session, 1);
+      timer.pause();
+    });
+
+    testWidgets('a break cut short by Reset still counts for the time taken',
+        (tester) async {
+      final store = AppStore.instance;
+      final timer = PomodoroController.instance;
+      await tester.pumpWidget(const StudyApp());
+      timer.selectMode(TimerMode.shortBreak);
+      timer.start();
+      await tester.pump(const Duration(minutes: 2));
+
+      timer.reset();
+      expect(store.breaks.single.minutes, 2);
+      expect(timer.mode, TimerMode.shortBreak);
+      expect(timer.atStart, isTrue);
+
+      // The same when switching mode part-way through a break.
+      timer.start();
+      await tester.pump(const Duration(minutes: 1));
+      timer.selectMode(TimerMode.pomodoro);
+      expect(store.breaks.length, 2);
+      expect(store.breaks.last.minutes, 1);
+    });
+
+    test('the timer remembers when its last phase ended', () {
+      final end = DateTime(2026, 3, 9, 9, 25);
+      final json = const TimerSnapshot(
+        mode: TimerMode.shortBreak,
+        phaseSeconds: 300,
+        remainingSeconds: 300,
+        completed: 1,
+      ).toJson();
+      expect(json.containsKey('lastEnd'), isFalse);
+      final back = TimerSnapshot.fromJson(TimerSnapshot(
+        mode: TimerMode.shortBreak,
+        phaseSeconds: 300,
+        remainingSeconds: 300,
+        completed: 1,
+        lastPhaseEnd: end,
+      ).toJson());
+      expect(back.lastPhaseEnd, end);
+    });
+
+    test('crop corners cannot cross each other', () {
+      final corners = [
+        const Offset(0, 0),
+        const Offset(0.5, 0),
+        const Offset(0.5, 1),
+        const Offset(0, 1),
+      ];
+      // Top-left dragged past top-right stops short of it.
+      final tl = CapturedPage.constrainCorner(corners, 0, const Offset(0.8, 0));
+      expect(tl.dx, closeTo(0.5 - CapturedPage.minCropGap, 1e-9));
+      // Bottom-right dragged above top-right stays below it.
+      final br = CapturedPage.constrainCorner(corners, 2, const Offset(0.5, -0.2));
+      expect(br.dy, closeTo(CapturedPage.minCropGap, 1e-9));
+      // Ordinary moves inside the page are left alone.
+      final bl = CapturedPage.constrainCorner(corners, 3, const Offset(0.1, 0.9));
+      expect(bl, const Offset(0.1, 0.9));
+    });
+
+    testWidgets('Focus by Task keeps a renamed task as one row',
+        (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      final task = store.currentTask!;
+      store.recordFocusSession(10, taskId: task.id, taskTitle: task.title);
+      store.updateTask(task.copyWith(title: 'Certifications, Renamed'));
+      store.recordFocusSession(5, taskId: task.id, taskTitle: 'Certifications, Renamed');
+
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.text('This Week'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AnalysisScreen), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Focus by Task'), 300,
+          scrollable: find
+              .descendant(
+                of: find.byType(AnalysisScreen),
+                matching: find.byType(Scrollable),
+              )
+              .first);
+      await tester.pumpAndSettle();
+      expect(find.text('Certifications, Renamed'), findsOneWidget);
+      expect(find.text(task.title), findsNothing);
+      expect(find.text('15m'), findsWidgets);
+    });
+
+    testWidgets('a folder can be deleted from its edit sheet', (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byIcon(AppTab.library.icon));
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('Biology'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit Folder'), findsOneWidget);
+      await tester.tap(find.text('Delete Folder'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete "Biology"?'), findsOneWidget);
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(store.folders.any((f) => f.name == 'Biology'), isFalse);
+      expect(find.text('Folders (4)'), findsOneWidget);
+    });
+
+    testWidgets('the flashcard score is for a whole round, counted once',
+        (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      final folder = store.folders.first;
+      final deck = await store.addSet(
+        title: 'Bonds',
+        folderId: folder.id,
+        cards: const [
+          Flashcard(id: 'c1', front: 'Ionic', back: 'Transfer'),
+          Flashcard(id: 'c2', front: 'Covalent', back: 'Share'),
+        ],
+      );
+      await tester.pumpWidget(MaterialApp(home: StudyCardsScreen(setId: deck.id)));
+
+      await tester.tap(find.text('Show Answer'));
+      await tester.pump();
+      await tester.tap(find.text('Got It'));
+      await tester.pump();
+      // One card in: counted as reviewed, but no score yet.
+      expect(store.cardsReviewedToday, 1);
+      expect(store.setById(deck.id)!.lastStudiedAt, isNull);
+
+      await tester.tap(find.text('Show Answer'));
+      await tester.pump();
+      await tester.tap(find.text('Got It'));
+      await tester.pump();
+      expect(find.text('Set complete!'), findsOneWidget);
+      expect(store.setById(deck.id)!.lastKnown, 2);
+      expect(store.setById(deck.id)!.lastSeen, 2);
+
+      // Another round doesn't count the same cards as reviewed again.
+      await tester.tap(find.text('Study Again (Shuffled)'));
+      await tester.pump();
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.text('Show Answer'));
+        await tester.pump();
+        await tester.tap(find.text('Again'));
+        await tester.pump();
+      }
+      expect(store.cardsReviewedToday, 2);
     });
   });
 }

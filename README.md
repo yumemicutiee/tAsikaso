@@ -62,8 +62,9 @@ lecture-note capture → PDF or flashcards.
   50–10–30, or Custom, which remembers your own lengths), lengths you can type
   or step, auto-start and **Reset to Default** (with Undo); Focus Mode (keep screen on, vibrate);
   notifications (timer alerts that sound even when the app is closed, a daily
-  study reminder at a time you pick); Smart Scanner; Delete All Data; Help &
-  FAQ.
+  study reminder at a time you pick, and on Android 14+ an **Allow Exact
+  Timing** row while the phone would deliver alerts late); Smart Scanner;
+  Delete All Data; Help & FAQ.
 - **Dark mode:** Settings → Appearance: System (follows the phone), Light or
   Dark. It switches instantly, on every screen.
 - **App colours (tAsikaso+):** Settings → App Color: Navy (free), Teal, Plum,

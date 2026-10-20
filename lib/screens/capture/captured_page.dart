@@ -47,6 +47,34 @@ class CapturedPage {
 
   void resetCrop() => corners = List.of(fullFrame);
 
+  /// Corners can't come closer than this (as a fraction of the page).
+  static const double minCropGap = 0.05;
+
+  /// Where corner [i] may go when dragged to [wanted]: inside the page, and
+  /// never past the corner beside it or the one below/above it, so the crop
+  /// can't twist into a bow tie or collapse to nothing.
+  static Offset constrainCorner(List<Offset> corners, int i, Offset wanted) {
+    const gap = minCropGap;
+    var x = math.min(1.0, math.max(0.0, wanted.dx));
+    var y = math.min(1.0, math.max(0.0, wanted.dy));
+    final (tl, tr, br, bl) = (corners[0], corners[1], corners[2], corners[3]);
+    switch (i) {
+      case 0: // top-left
+        x = math.min(x, tr.dx - gap);
+        y = math.min(y, bl.dy - gap);
+      case 1: // top-right
+        x = math.max(x, tl.dx + gap);
+        y = math.min(y, br.dy - gap);
+      case 2: // bottom-right
+        x = math.max(x, bl.dx + gap);
+        y = math.max(y, tr.dy + gap);
+      case 3: // bottom-left
+        x = math.min(x, br.dx - gap);
+        y = math.max(y, tl.dy + gap);
+    }
+    return Offset(x, y);
+  }
+
   /// Rotates 90° clockwise, carrying the crop corners along.
   void rotateClockwise() {
     Offset turn(Offset p) => Offset(1 - p.dy, p.dx);

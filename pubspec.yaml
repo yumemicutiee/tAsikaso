@@ -25,6 +25,7 @@ dependencies:
   flutter_local_notifications: '>=20.0.0 <23.0.0'
   timezone: '>=0.10.0 <0.12.0'
   wakelock_plus: '>=1.3.0 <2.0.0'   # keeps the screen on in Focus Mode
+  vibration: ^3.2.1
 
 dev_dependencies:
   flutter_test:
