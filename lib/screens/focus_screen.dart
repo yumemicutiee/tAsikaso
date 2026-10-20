@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import '../data/app_store.dart';
 import '../data/pomodoro_controller.dart';
-import '../models/models.dart';
 import '../services/screen_awake.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
@@ -438,11 +437,7 @@ Future<void> openFocusScreen(BuildContext context, Offset origin) {
 /// Starts a Pomodoro (unless the timer is already running) and opens Focus
 /// Mode growing out of the widget that [from] belongs to (e.g. a button).
 void startFocusFrom(BuildContext from) {
-  final timer = PomodoroController.instance;
-  if (!timer.running) {
-    if (!timer.isFocus && timer.atStart) timer.selectMode(TimerMode.pomodoro);
-    timer.start();
-  }
+  PomodoroController.instance.startFocus();
   final box = from.findRenderObject() as RenderBox?;
   // Relative to the navigator, which is centred (not at 0,0) on wide screens.
   final nav = Navigator.of(from).context.findRenderObject() as RenderBox?;

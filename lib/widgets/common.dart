@@ -168,13 +168,17 @@ class AddFab extends StatelessWidget {
           ),
         ],
       ),
-      child: Material(
-        color: AppColors.primary,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onPressed,
-          child: const Icon(AppIcons.add, size: 28, color: AppColors.onFill),
+      child: Semantics(
+        button: true,
+        label: 'Add',
+        child: Material(
+          color: AppColors.primary,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: const Icon(AppIcons.add, size: 28, color: AppColors.onFill),
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_icons.dart';
+import '../../utils/format.dart';
 import 'captured_page.dart';
 import 'review_screen.dart';
 
@@ -22,6 +23,15 @@ class CaptureScreen extends StatefulWidget {
   @visibleForTesting
   static Future<List<CameraDescription>> Function() loadCameras =
       availableCameras;
+
+  /// Picks photos from the gallery, downscaled by the picker so huge photos
+  /// don't have to be decoded here. Tests replace this.
+  @visibleForTesting
+  static Future<List<XFile>> Function() pickImages =
+      () => ImagePicker().pickMultiImage(
+            maxWidth: CapturedPage.maxSide.toDouble(),
+            maxHeight: CapturedPage.maxSide.toDouble(),
+          );
 
   @override
   State<CaptureScreen> createState() => _CaptureScreenState();
@@ -199,11 +209,7 @@ class _CaptureScreenState extends State<CaptureScreen>
     if (_busy) return;
     final List<XFile> files;
     try {
-      // Downscaled by the picker so huge photos don't have to be decoded here.
-      files = await ImagePicker().pickMultiImage(
-        maxWidth: CapturedPage.maxSide.toDouble(),
-        maxHeight: CapturedPage.maxSide.toDouble(),
-      );
+      files = await CaptureScreen.pickImages();
     } catch (_) {
       _showMessage("Couldn't open your gallery.");
       return;
@@ -213,15 +219,20 @@ class _CaptureScreenState extends State<CaptureScreen>
     setState(() => _busy = true);
     await WidgetsBinding.instance.endOfFrame;
     final imported = <CapturedPage>[];
-    try {
-      for (final f in files) {
+    var failed = 0;
+    for (final f in files) {
+      // One photo that can't be read (an unusual format, say) must not
+      // stop the photos after it.
+      try {
         imported.add(await CapturedPage.fromPhoto(_nextId++, await f.readAsBytes()));
+      } catch (e) {
+        failed++;
+        debugPrint('Could not open a photo: $e');
       }
-    } catch (_) {
-      _showMessage('Some photos could not be opened.');
     }
     if (!mounted) return;
     setState(() => _busy = false);
+    if (failed > 0) _showMessage("${plural(failed, 'photo')} couldn't be opened.");
     if (imported.isEmpty) return;
 
     final all = [..._pages, ...imported];

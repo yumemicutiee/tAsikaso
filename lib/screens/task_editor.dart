@@ -64,7 +64,11 @@ class _TaskEditorState extends State<_TaskEditor> {
       final created = store.addTask(title, _pomodoros);
       store.selectTask(created.id);
     } else {
-      store.updateTask(task.copyWith(title: title, pomodorosTotal: _pomodoros));
+      // Start from the task as it is now: a Pomodoro may have finished for
+      // it while the sheet was open, and that progress must not be undone.
+      final current = store.task(task.id) ?? task;
+      store.updateTask(
+          current.copyWith(title: title, pomodorosTotal: _pomodoros));
     }
     Navigator.of(context).pop();
   }

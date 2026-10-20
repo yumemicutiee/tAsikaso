@@ -34,7 +34,7 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 
 ## Scanning notes (needs a real phone)
 - [ ] Camera button → Smart Scanner opens (Google's scanner UI). It finds page edges.
-- [ ] Scan 3 pages; after closing the scanner, how long until the review screen shows? ________ s (no progress indicator — known bug).
+- [ ] Scan 3 pages; after closing the scanner a "Preparing your pages…" box shows until the review screen appears. How long? ________ s
 - [ ] Save as PDF into a folder → the note opens; share and print work.
 - [ ] Open the note → "View Text" shows the recognised text; Copy works.
 - [ ] Settings → turn Smart Scanner OFF → camera button opens the app's own camera.
@@ -53,7 +53,7 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 
 ## Dashboard, Profile, Analysis
 - [ ] Today's Focus ring, This Week bars, Continue card, Start Focus all respond.
-- [ ] tAsikaso+ strip: is there any way to dismiss it? (Expected: no — known bug.)
+- [ ] tAsikaso+ strip: the × hides it, and it stays hidden after reopening the app.
 - [ ] Profile: edit name, stats, streak.
 - [ ] Analysis: Week / Month / Year, step back, all six sections draw without errors.
 

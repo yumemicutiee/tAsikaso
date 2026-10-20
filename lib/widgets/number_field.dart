@@ -18,6 +18,7 @@ class NumberField extends StatefulWidget {
     required this.min,
     required this.max,
     required this.onChanged,
+    this.onCommitted,
     this.step = 1,
     this.label,
     this.compact = false,
@@ -27,7 +28,14 @@ class NumberField extends StatefulWidget {
   final int min;
   final int max;
   final int step;
+
+  /// Called with each valid number while typing (and for the buttons).
   final ValueChanged<int> onChanged;
+
+  /// Called once the number is settled: the box loses focus, Done is
+  /// pressed, or a button is used. "25" typed as "2" then "25" fires
+  /// [onChanged] twice but this only once.
+  final VoidCallback? onCommitted;
 
   /// Read out by screen readers, e.g. "Focus minutes".
   final String? label;
@@ -82,6 +90,7 @@ class _NumberFieldState extends State<NumberField> {
     final next = v == null ? widget.value : _clamp(v);
     if (next != widget.value) widget.onChanged(next);
     _text.text = '$next';
+    widget.onCommitted?.call();
   }
 
   void _nudge(int by) {
@@ -89,6 +98,7 @@ class _NumberFieldState extends State<NumberField> {
     final next = _clamp(widget.value + by);
     _text.text = '$next';
     if (next != widget.value) widget.onChanged(next);
+    widget.onCommitted?.call();
   }
 
   @override

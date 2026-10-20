@@ -40,7 +40,12 @@ Future<void> shareNote(BuildContext context, Note note) async {
     _toast(context, "This note's PDF couldn't be found.");
     return;
   }
-  await Printing.sharePdf(bytes: bytes, filename: pdfFileName(note.title));
+  try {
+    await Printing.sharePdf(bytes: bytes, filename: pdfFileName(note.title));
+  } catch (e) {
+    debugPrint('Could not share the PDF: $e');
+    if (context.mounted) _toast(context, "This PDF couldn't be shared.");
+  }
 }
 
 /// [onDeleted] runs after the note is deleted (e.g. to close its screen).
@@ -182,9 +187,10 @@ Widget setTile(BuildContext context, FlashcardSet deck) => SetTile(
 
 // ---- Settings ----------------------------------------------------------------
 
-void openSettings(BuildContext context) {
+/// Opens Settings, scrolled to [section] if given.
+void openSettings(BuildContext context, {SettingsSection? section}) {
   Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    MaterialPageRoute(builder: (_) => SettingsScreen(section: section)),
   );
 }
 

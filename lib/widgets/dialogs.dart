@@ -7,13 +7,15 @@ import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import 'common.dart';
 
-/// Asks for a single line of text. Returns null if cancelled or empty.
+/// Asks for a single line of text. Returns null if cancelled, and also if
+/// the text is empty unless [allowEmpty] (then '' means "cleared").
 Future<String?> showTextInputDialog(
   BuildContext context, {
   required String title,
   String initial = '',
   String hint = '',
   String confirmLabel = 'Save',
+  bool allowEmpty = false,
 }) {
   return showDialog<String>(
     context: context,
@@ -22,6 +24,7 @@ Future<String?> showTextInputDialog(
       initial: initial,
       hint: hint,
       confirmLabel: confirmLabel,
+      allowEmpty: allowEmpty,
     ),
   );
 }
@@ -32,12 +35,14 @@ class _TextInputDialog extends StatefulWidget {
     required this.initial,
     required this.hint,
     required this.confirmLabel,
+    required this.allowEmpty,
   });
 
   final String title;
   final String initial;
   final String hint;
   final String confirmLabel;
+  final bool allowEmpty;
 
   @override
   State<_TextInputDialog> createState() => _TextInputDialogState();
@@ -54,23 +59,27 @@ class _TextInputDialogState extends State<_TextInputDialog> {
 
   void _submit() {
     final text = _controller.text.trim();
-    Navigator.of(context).pop(text.isEmpty ? null : text);
+    Navigator.of(context).pop(text.isEmpty && !widget.allowEmpty ? null : text);
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.title, style: AppText.sectionTitle),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.sentences,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) => _submit(),
-        decoration: InputDecoration(
-          hintText: widget.hint,
-          border: const OutlineInputBorder(),
-          isDense: true,
+      content: Semantics(
+        // The field has no label of its own; the title says what it's for.
+        label: widget.title,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            border: const OutlineInputBorder(),
+            isDense: true,
+          ),
         ),
       ),
       actions: [

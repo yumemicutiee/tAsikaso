@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
+import 'package:image_picker/image_picker.dart';
 
 import 'package:study_app/app.dart';
 import 'package:study_app/data/app_store.dart';
@@ -11,9 +14,13 @@ import 'package:study_app/data/storage/local_storage_memory.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/screens/analysis_screen.dart';
 import 'package:study_app/screens/capture/capture_screen.dart';
+import 'package:study_app/screens/capture/review_screen.dart';
+import 'package:study_app/screens/capture/scan_flow.dart';
+import 'package:study_app/screens/dashboard_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/screens/plans_screen.dart';
 import 'package:study_app/screens/settings_screen.dart';
+import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/screen_awake.dart';
 import 'package:study_app/theme/app_colors.dart';
 import 'package:study_app/utils/card_suggestions.dart';
@@ -714,6 +721,272 @@ Meeting at 10:30 today
       await tester.pump(const Duration(milliseconds: 300));
       expect(timer.mode, TimerMode.shortBreak);
       expect(AppStore.instance.sessions, isEmpty);
+    });
+  });
+
+  group('Phase 1 fixes', () {
+    Finder settingsScrollable() => find
+        .descendant(
+          of: find.byType(SettingsScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    testWidgets('typing a length keeps the saved Custom rhythm',
+        (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byIcon(AppTab.profile.icon));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Focus'), 200,
+          scrollable: settingsScrollable());
+      await tester.pumpAndSettle();
+      final focusField = find.descendant(
+        of: find.ancestor(of: find.text('Focus'), matching: find.byType(Row)).first,
+        matching: find.byType(TextField),
+      );
+      await tester.ensureVisible(focusField);
+      await tester.pumpAndSettle();
+
+      // "40", one key at a time, then Done.
+      await tester.enterText(focusField, '4');
+      await tester.enterText(focusField, '40');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(store.settings.custom?.focus, 40);
+
+      // "25" passes through "2" on the way, and lands on Classic. The
+      // custom rhythm must still be 40.
+      await tester.enterText(focusField, '2');
+      await tester.enterText(focusField, '25');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(store.settings.preset, PomodoroPreset.classic);
+      expect(store.settings.custom?.focus, 40);
+
+      // The Custom card is above the lengths (and may not be built yet).
+      await tester.scrollUntilVisible(find.text('40 – 5 – 15'), -200,
+          scrollable: settingsScrollable());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('40 – 5 – 15'));
+      await tester.pump();
+      expect(store.settings.focusMinutes, 40);
+    });
+
+    testWidgets('the Plus strip can be hidden and is not shown to members',
+        (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      await tester.pumpWidget(const StudyApp());
+      final dashboard = find
+          .descendant(
+            of: find.byType(DashboardScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(find.text('Try tAsikaso+ free'), 200,
+          scrollable: dashboard);
+      await tester.pumpAndSettle();
+      expect(find.text('Try tAsikaso+ free'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Hide'));
+      await tester.pump();
+      expect(find.text('Try tAsikaso+ free'), findsNothing);
+      expect(store.prefs.hidePlusBanner, isTrue);
+
+      // Members never see it, hidden or not.
+      store.updatePrefs(store.prefs.copyWith(hidePlusBanner: false, plus: true));
+      await tester.pump();
+      expect(find.text('Try tAsikaso+ free'), findsNothing);
+    });
+
+    testWidgets('Start Focus during a paused break starts a Pomodoro',
+        (tester) async {
+      final store = AppStore.instance;
+      final timer = PomodoroController.instance;
+      await tester.pumpWidget(const StudyApp());
+      timer.selectMode(TimerMode.shortBreak);
+      timer.start();
+      await tester.pump(const Duration(minutes: 2));
+      timer.pause();
+      expect(timer.mode, TimerMode.shortBreak);
+
+      timer.startFocus();
+      expect(timer.mode, TimerMode.pomodoro);
+      expect(timer.running, isTrue);
+      // The two minutes of break taken still count.
+      expect(store.breaks.single.minutes, 2);
+      timer.pause();
+    });
+
+    test('Delete All Data also clears a save file that could not be read',
+        () async {
+      final store = AppStore.instance;
+      final storage = _PersistentMemoryStorage();
+      await storage.writeJson('{"version": 99, "folders": []}');
+      await storage.writeBytes('notes/old.pdf', Uint8List.fromList([1, 2, 3]));
+      await store.init(storage);
+      expect(store.isPersistent, isFalse); // saving is paused
+
+      expect(await store.eraseEverything(), isTrue);
+      expect(await storage.readBytes('notes/old.pdf'), isNull);
+      // A clean slate: saving works again.
+      expect(store.isPersistent, isTrue);
+      store.addFolder('Chemistry', 0xFFA9CFF5);
+      await store.pendingSaves;
+      expect(await storage.readJson(), contains('Chemistry'));
+    });
+
+    test('saved PDFs still open while saving is paused', () async {
+      final store = AppStore.instance;
+      final storage = _PersistentMemoryStorage();
+      final pdf = Uint8List.fromList([37, 80, 68, 70]);
+      await storage.writeJson('{"version": 99}');
+      await storage.writeBytes('notes/n1.pdf', pdf);
+      await store.init(storage);
+      expect(store.isPersistent, isFalse);
+
+      final note = Note(
+          id: 'n1', title: 'Notes', folderId: 'f', createdAt: DateTime(2026));
+      expect(await store.readPdf(note), pdf);
+    });
+
+    testWidgets('editing a task keeps a Pomodoro finished meanwhile',
+        (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      final task = store.currentTask!;
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byIcon(AppTab.study.icon));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('More').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit Task'));
+      await tester.pumpAndSettle();
+
+      // A Pomodoro finishes for this task while the sheet is open.
+      store.recordFocusSession(25, taskId: task.id);
+      await tester.enterText(
+          find.byType(TextField).first, 'Do More Certifications');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final saved = store.task(task.id)!;
+      expect(saved.title, 'Do More Certifications');
+      expect(saved.pomodorosDone, task.pomodorosDone + 1);
+    });
+
+    testWidgets('when the scanner cannot open, the camera opens instead',
+        (tester) async {
+      usePhoneSize(tester);
+      final original = CaptureScreen.loadCameras;
+      CaptureScreen.loadCameras = () async => [];
+      ScanService.debugScannerAvailable = true;
+      ScanService.debugScan = () async => throw Exception('No Play services');
+      addTearDown(() {
+        CaptureScreen.loadCameras = original;
+        ScanService.debugScannerAvailable = null;
+        ScanService.debugScan = null;
+      });
+
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byType(CameraButton));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.textContaining('camera opened instead'), findsOneWidget);
+      expect(find.text('Import Photos'), findsOneWidget);
+    });
+
+    test('a scanned page that cannot be read is left out, not the whole scan',
+        () async {
+      final good = img.encodePng(img.Image(width: 4, height: 4));
+      final bad = Uint8List.fromList([1, 2, 3]);
+      final (pages, failed) = await preparePages([bad, good, bad], 5);
+      expect(pages.length, 1);
+      expect(pages.single.id, 5);
+      expect(failed, 2);
+    });
+
+    testWidgets('a photo that cannot be opened does not stop the import',
+        (tester) async {
+      usePhoneSize(tester);
+      final originalCameras = CaptureScreen.loadCameras;
+      final originalPick = CaptureScreen.pickImages;
+      CaptureScreen.loadCameras = () async => [];
+      final good = img.encodePng(img.Image(width: 4, height: 4));
+      CaptureScreen.pickImages = () async => [
+            XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'bad.jpg'),
+            XFile.fromData(good, name: 'good.png'),
+          ];
+      addTearDown(() {
+        CaptureScreen.loadCameras = originalCameras;
+        CaptureScreen.pickImages = originalPick;
+      });
+
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byType(CameraButton));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Import Photos'));
+        // Decoding runs in another isolate, so give it real time.
+        for (var i = 0;
+            i < 100 && find.byType(ReviewScreen).evaluate().isEmpty;
+            i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await tester.pump();
+        }
+      });
+      await tester.pump();
+      expect(find.byType(ReviewScreen), findsOneWidget);
+      expect(find.text("1 photo couldn't be opened."), findsOneWidget);
+    });
+
+    testWidgets('Notifications & Reminders opens Settings at that section',
+        (tester) async {
+      usePhoneSize(tester);
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byIcon(AppTab.profile.icon));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Notifications & Reminders'));
+      await tester.pumpAndSettle();
+      expect(find.text('Timer Alerts').hitTestable(), findsOneWidget);
+    });
+
+    testWidgets('a name can be cleared again', (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      store.updatePrefs(store.prefs.copyWith(userName: 'Kristine'));
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byIcon(AppTab.profile.icon));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kristine'));
+      await tester.pumpAndSettle();
+      final field = find.descendant(
+          of: find.byType(AlertDialog), matching: find.byType(TextField));
+      expect(field, findsOneWidget);
+      await tester.enterText(field, '');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(store.prefs.userName, '');
+      expect(find.text('Add Your Name'), findsOneWidget);
+    });
+
+    test('the estimate never reads as less than what was done', () {
+      final task = StudyTask(
+        id: 't',
+        title: 'Read',
+        pomodorosTotal: 8,
+        createdAt: DateTime(2026),
+        pomodorosDone: 5,
+        focusMinutes: 101,
+      );
+      expect(task.estimatedMinutes(25), 200);
+      expect(task.estimatedMinutes(1), 101); // not "101 / 8"
     });
   });
 }

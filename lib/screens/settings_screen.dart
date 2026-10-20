@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../data/app_store.dart';
 import '../data/pomodoro_controller.dart';
@@ -18,16 +19,27 @@ import '../widgets/segmented_tabs.dart';
 import 'help_screen.dart';
 import 'plans_screen.dart';
 
+/// A part of Settings that another screen can open directly.
+enum SettingsSection { notifications }
+
 /// Everything adjustable in one place: you, the timer, Focus Mode,
 /// notifications, scanning and your data.
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.section});
+
+  /// Scrolls to this section when the screen opens.
+  final SettingsSection? section;
 
   @override
   Widget build(BuildContext context) {
     final store = AppStore.instance;
 
-    return Scaffold(
+    return PopScope(
+      // A length typed just before leaving still counts as settled.
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _rememberCustom();
+      },
+      child: Scaffold(
       appBar: subPageAppBar('Settings'),
       body: ListenableBuilder(
         listenable: store,
@@ -39,6 +51,10 @@ class SettingsScreen extends StatelessWidget {
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            // Build the whole list up front when a section further down has
+            // to be scrolled into view as soon as the screen opens.
+            scrollCacheExtent:
+                section == null ? null : const ScrollCacheExtent.pixels(4000),
             children: [
               const _Heading('You'),
               _Group(children: [
@@ -130,7 +146,8 @@ class SettingsScreen extends StatelessWidget {
                   unit: 'minutes',
                   min: PomodoroSettings.focusRange.$1,
                   max: PomodoroSettings.focusRange.$2,
-                  onChanged: (v) => update(_custom(s.copyWith(focusMinutes: v))),
+                  onChanged: (v) => update(s.copyWith(focusMinutes: v)),
+                  onCommitted: _rememberCustom,
                 ),
                 _StepRow(
                   label: 'Short Break',
@@ -138,8 +155,8 @@ class SettingsScreen extends StatelessWidget {
                   unit: 'minutes',
                   min: PomodoroSettings.breakRange.$1,
                   max: PomodoroSettings.breakRange.$2,
-                  onChanged: (v) =>
-                      update(_custom(s.copyWith(shortBreakMinutes: v))),
+                  onChanged: (v) => update(s.copyWith(shortBreakMinutes: v)),
+                  onCommitted: _rememberCustom,
                 ),
                 _StepRow(
                   label: 'Long Break',
@@ -147,8 +164,8 @@ class SettingsScreen extends StatelessWidget {
                   unit: 'minutes',
                   min: PomodoroSettings.breakRange.$1,
                   max: PomodoroSettings.breakRange.$2,
-                  onChanged: (v) =>
-                      update(_custom(s.copyWith(longBreakMinutes: v))),
+                  onChanged: (v) => update(s.copyWith(longBreakMinutes: v)),
+                  onCommitted: _rememberCustom,
                 ),
                 _StepRow(
                   label: 'Long Break After',
@@ -189,7 +206,10 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ]),
 
-              const _Heading('Notifications'),
+              _RevealOnce(
+                enabled: section == SettingsSection.notifications,
+                child: const _Heading('Notifications'),
+              ),
               _Group(children: [
                 _Switch(
                   label: 'Timer Alerts',
@@ -259,6 +279,7 @@ class SettingsScreen extends StatelessWidget {
           );
         },
       ),
+      ),
     );
   }
 
@@ -269,6 +290,23 @@ class SettingsScreen extends StatelessWidget {
       custom: PomodoroPreset('Custom', next.focusMinutes,
           next.shortBreakMinutes, next.longBreakMinutes),
     );
+  }
+
+  /// Remembers the current lengths as the "Custom" rhythm once they're
+  /// settled. Doing this on every keystroke would remember "2" on the way
+  /// to "25", and then "25" is Classic, so the real custom rhythm was lost.
+  static void _rememberCustom() {
+    final store = AppStore.instance;
+    final s = store.settings;
+    if (s.preset != null) return;
+    final c = s.custom;
+    if (c != null &&
+        c.focus == s.focusMinutes &&
+        c.shortBreak == s.shortBreakMinutes &&
+        c.longBreak == s.longBreakMinutes) {
+      return;
+    }
+    store.updateSettings(_custom(s));
   }
 
   static void _resetPomodoro(BuildContext context) {
@@ -300,6 +338,7 @@ class SettingsScreen extends StatelessWidget {
       context,
       title: 'Your Name',
       initial: store.prefs.userName,
+      allowEmpty: true, // clearing the name is allowed
     );
     if (name == null) return;
     store.updatePrefs(store.prefs.copyWith(userName: name.trim()));
@@ -362,14 +401,18 @@ class SettingsScreen extends StatelessWidget {
       confirmLabel: 'Delete Everything',
     );
     if (!sure) return;
-    PomodoroController.instance.reset();
+    PomodoroController.instance.restart();
     await NotificationService.cancelTimerEnd();
     await NotificationService.setDailyReminder(null);
-    await AppStore.instance.eraseEverything();
+    final clean = await AppStore.instance.eraseEverything();
     navigator.popUntil((route) => route.isFirst);
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('All data deleted.')));
+      ..showSnackBar(SnackBar(
+        content: Text(clean
+            ? 'All data deleted.'
+            : "Some files couldn't be deleted. Restart the app and try again."),
+      ));
   }
 }
 
@@ -795,6 +838,34 @@ class _TapRow extends StatelessWidget {
 }
 
 /// A label with a [NumberField] you can type into or nudge with − / +.
+/// Scrolls itself into view once, right after it is first built, so another
+/// screen can open Settings at a particular section.
+class _RevealOnce extends StatefulWidget {
+  const _RevealOnce({required this.enabled, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  State<_RevealOnce> createState() => _RevealOnceState();
+}
+
+class _RevealOnceState extends State<_RevealOnce> {
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.enabled) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(context,
+          alignment: 0, duration: const Duration(milliseconds: 300));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 class _StepRow extends StatelessWidget {
   const _StepRow({
     required this.label,
@@ -803,6 +874,7 @@ class _StepRow extends StatelessWidget {
     required this.min,
     required this.max,
     required this.onChanged,
+    this.onCommitted,
     this.step = 1,
   });
 
@@ -813,6 +885,7 @@ class _StepRow extends StatelessWidget {
   final int max;
   final int step;
   final ValueChanged<int> onChanged;
+  final VoidCallback? onCommitted;
 
   @override
   Widget build(BuildContext context) {
@@ -832,6 +905,7 @@ class _StepRow extends StatelessWidget {
             compact: true,
             label: '$label, $unit ($min to $max)',
             onChanged: onChanged,
+            onCommitted: onCommitted,
           ),
         ],
       ),

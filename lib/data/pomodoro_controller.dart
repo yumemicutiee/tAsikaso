@@ -131,6 +131,22 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
 
   void skip() => _finish(completed: false);
 
+  /// "Start Focus": begins (or resumes) a Pomodoro. A break that is on,
+  /// paused or waiting is skipped first, counting the minutes already taken.
+  void startFocus() {
+    if (!isFocus) skip();
+    if (!running) start();
+  }
+
+  /// Back to a fresh first Pomodoro, forgetting the long-break rhythm too
+  /// (after Delete All Data).
+  void restart() {
+    _stopTicker();
+    _completed = 0;
+    _setMode(TimerMode.pomodoro);
+    notifyListeners();
+  }
+
   /// Picks the timer up where it was left when the app was last closed. A
   /// phase that ran out in the meantime is counted at the time it ended.
   void restore() {

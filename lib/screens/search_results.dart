@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/app_store.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import '../utils/format.dart';
 import '../widgets/common.dart';
 import 'actions.dart';
 
@@ -35,7 +36,8 @@ List<Widget> buildSearchResults(BuildContext context, String query) {
           leading: CircleAvatar(radius: 12, backgroundColor: f.color),
           title: Text(f.name, style: AppText.itemTitle),
           subtitle: Text(
-            '${store.noteCountIn(f.id)} notes · ${store.setCountIn(f.id)} sets',
+            '${plural(store.noteCountIn(f.id), 'note')} · '
+            '${plural(store.setCountIn(f.id), 'set')}',
             style: AppText.itemMeta,
           ),
           onTap: () => openFolder(context, f),

@@ -131,10 +131,17 @@ class StudyTask {
     return p < 0 ? 0.0 : (p > 1 ? 1.0 : p);
   }
 
+  /// Minutes the estimate comes to at the current Pomodoro length, never
+  /// less than what has already been done (lengths can change over time).
+  int estimatedMinutes(int focusLength) {
+    final estimate = pomodorosTotal * focusLength;
+    return estimate < focusMinutes ? focusMinutes : estimate;
+  }
+
   /// "4 / 8 · 100 / 200 mins"
   String progressLabel(int focusLength) =>
       '$pomodorosDone / $pomodorosTotal · $focusMinutes / '
-      '${pomodorosTotal * focusLength} mins';
+      '${estimatedMinutes(focusLength)} mins';
 
   StudyTask copyWith({
     String? title,

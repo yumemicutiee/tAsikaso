@@ -44,6 +44,13 @@ class AppStore extends ChangeNotifier {
 
   LocalStorage _storage = MemoryStorage();
 
+  /// The device's storage while saving is paused (see [_pauseSaving]): still
+  /// read from, so saved PDFs and photos keep opening, but never written to.
+  LocalStorage? _paused;
+
+  /// Where PDFs, photos and thumbnails are read from.
+  LocalStorage get _files => _paused ?? _storage;
+
   /// False on web (for now) and in tests: data lasts until the app closes.
   /// Also false on a phone when saving was paused because the saved data
   /// couldn't be read, so that it stays untouched.
@@ -110,6 +117,7 @@ class AppStore extends ChangeNotifier {
   /// the user what happened.
   Future<void> init(LocalStorage storage) async {
     _storage = storage;
+    _paused = null;
     _saveFailed = false;
 
     String? raw;
@@ -197,7 +205,10 @@ class AppStore extends ChangeNotifier {
 
   /// Works in memory for the rest of this session, so the saved file stays
   /// exactly as it is.
-  void _pauseSaving() => _storage = MemoryStorage();
+  void _pauseSaving() {
+    _paused ??= _storage;
+    _storage = MemoryStorage();
+  }
 
   /// Loads the last save file that worked. Returns false if there is none
   /// or it can't be read either.
@@ -240,18 +251,24 @@ class AppStore extends ChangeNotifier {
 
   /// Deletes every folder, note, flashcard set, task, statistic and setting,
   /// including saved PDFs, photos and backup copies. Nothing is re-added.
-  Future<void> eraseEverything() async {
+  ///
+  /// Also wipes the device when saving was paused: the user asked for a
+  /// clean slate, and that removes the file that couldn't be read, so
+  /// saving starts again. Returns false if some files couldn't be deleted.
+  Future<bool> eraseEverything() async {
+    final device = _paused ?? _storage;
+    var clean = true;
     for (final prefix in ['notes/', 'sets/', 'backup/', _recoveryPrefix]) {
-      try {
-        await _storage.deletePrefix(prefix);
-      } catch (e) {
-        debugPrint('Could not delete $prefix: $e');
-      }
+      if (!await _tryDeletePrefix(prefix, from: device)) clean = false;
     }
-    try {
-      await _storage.delete('data.corrupt.json'); // kept by older versions
-    } catch (e) {
-      debugPrint('Could not delete data.corrupt.json: $e');
+    // The save file itself, and copies kept by older versions.
+    for (final key in ['data.json', 'data.json.tmp', 'data.corrupt.json']) {
+      if (!await _tryDelete(key, from: device)) clean = false;
+    }
+    if (_paused != null) {
+      _storage = device;
+      _paused = null;
+      _saveFailed = false;
     }
     // Keep the look and tAsikaso+ as they were.
     final keep = _prefs;
@@ -264,12 +281,36 @@ class AppStore extends ChangeNotifier {
     );
     _persist();
     notifyListeners();
+    return clean;
+  }
+
+  /// Deletes one file, reporting instead of throwing: a stale file is
+  /// better than a crash, and Delete All Data clears it later.
+  Future<bool> _tryDelete(String key, {LocalStorage? from}) async {
+    try {
+      await (from ?? _storage).delete(key);
+      return true;
+    } catch (e) {
+      debugPrint('Could not delete $key: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _tryDeletePrefix(String prefix, {LocalStorage? from}) async {
+    try {
+      await (from ?? _storage).deletePrefix(prefix);
+      return true;
+    } catch (e) {
+      debugPrint('Could not delete $prefix: $e');
+      return false;
+    }
   }
 
   /// Back to starter data with in-memory storage. For tests.
   @visibleForTesting
   void resetForTesting() {
     _storage = MemoryStorage();
+    _paused = null;
     _saveChain = Future<void>.value();
     _saveFailed = false;
     problem.value = null;
@@ -489,11 +530,11 @@ class AppStore extends ChangeNotifier {
     }
     _changed();
     for (final n in notes) {
-      await _storage.delete(n.pdfKey);
-      await _storage.delete(n.thumbKey);
+      await _tryDelete(n.pdfKey);
+      await _tryDelete(n.thumbKey);
     }
     for (final s in sets) {
-      await _storage.deletePrefix('sets/${s.id}/');
+      await _tryDeletePrefix('sets/${s.id}/');
     }
   }
 
@@ -507,7 +548,7 @@ class AppStore extends ChangeNotifier {
 
   Uint8List? thumbnail(String noteId) => _thumbs[noteId];
 
-  Future<Uint8List?> readPdf(Note note) => _storage.readBytes(note.pdfKey);
+  Future<Uint8List?> readPdf(Note note) => _files.readBytes(note.pdfKey);
 
   Future<Note> addNote({
     required String title,
@@ -546,8 +587,8 @@ class AppStore extends ChangeNotifier {
     final note = _notes.removeAt(i);
     _thumbs.remove(id);
     _changed();
-    await _storage.delete(note.pdfKey);
-    await _storage.delete(note.thumbKey);
+    await _tryDelete(note.pdfKey);
+    await _tryDelete(note.thumbKey);
   }
 
   // ---- Flashcard sets --------------------------------------------------------
@@ -622,11 +663,11 @@ class AppStore extends ChangeNotifier {
   Future<void> deleteSet(String id) async {
     _sets.removeWhere((s) => s.id == id);
     _changed();
-    await _storage.deletePrefix('sets/$id/');
+    await _tryDeletePrefix('sets/$id/');
   }
 
   Future<Uint8List?> readSetPhoto(FlashcardSet deck, int index) =>
-      _storage.readBytes(deck.photoKey(index));
+      _files.readBytes(deck.photoKey(index));
 
   // ---- Tasks -----------------------------------------------------------------
 

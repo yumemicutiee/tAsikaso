@@ -58,6 +58,12 @@ Notifications / Scanning / Your Data are honest.
 
 ## Bugs confirmed by running
 
+**Status (later the same day):** 1, 2, 3, 6, 7 and 8 below are fixed in the
+"Phase 1" commit, together with the data-safety bugs from the code audit
+(Delete All Data and PDFs while saving is paused, the task editor, scan and
+gallery-import errors, file-delete errors) and the name-clearing and
+accessibility-label gaps. 4 and 5 wait for Phase 3 (billing, web storage).
+
 | # | Bug | Seen |
 |---|---|---|
 | 1 | **Typing a length overwrites the saved Custom rhythm.** | Typed 40 then 25 into Focus → the Custom card reads "Custom 2 – 5 – 15". |

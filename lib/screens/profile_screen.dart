@@ -8,6 +8,7 @@ import '../theme/brand.dart';
 import '../widgets/app_header.dart';
 import '../widgets/dialogs.dart';
 import 'actions.dart';
+import 'settings_screen.dart' show SettingsSection;
 import 'analysis_screen.dart';
 import 'help_screen.dart';
 import 'plans_screen.dart';
@@ -122,8 +123,11 @@ class ProfileScreen extends StatelessWidget {
                         () => openAnalysis(context)),
                     _row(AppIcons.settings, 'Settings',
                         () => openSettings(context)),
-                    _row(AppIcons.notifications, 'Notifications & Reminders',
-                        () => openSettings(context)),
+                    _row(
+                        AppIcons.notifications,
+                        'Notifications & Reminders',
+                        () => openSettings(context,
+                            section: SettingsSection.notifications)),
                     _row(AppIcons.backup, 'Backup & Sync',
                         () => openPlans(context),
                         badge: 'Plus'),
@@ -148,6 +152,7 @@ class ProfileScreen extends StatelessWidget {
       title: 'Your Name',
       initial: store.prefs.userName,
       hint: 'Shown in greetings',
+      allowEmpty: true, // clearing the name is allowed
     );
     if (name == null) return;
     store.updatePrefs(store.prefs.copyWith(userName: name.trim()));

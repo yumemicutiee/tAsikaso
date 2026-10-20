@@ -19,6 +19,10 @@ class ScanService {
   @visibleForTesting
   static bool? debugScannerAvailable;
 
+  /// Set in tests to stand in for the scanner itself.
+  @visibleForTesting
+  static Future<List<Uint8List>?> Function()? debugScan;
+
   static bool get canScanDocuments =>
       debugScannerAvailable ?? impl.canScanDocuments;
 
@@ -27,8 +31,11 @@ class ScanService {
   /// Opens the scanner. Returns the cropped pages as JPEGs, or null if the
   /// user backed out. Throws if the scanner couldn't start (e.g. Google Play
   /// services missing), so the caller can fall back to the camera.
-  static Future<List<Uint8List>?> scanDocuments({int pageLimit = 20}) =>
-      impl.scanDocuments(pageLimit);
+  static Future<List<Uint8List>?> scanDocuments({int pageLimit = 20}) {
+    final fake = debugScan;
+    if (fake != null) return fake();
+    return impl.scanDocuments(pageLimit);
+  }
 
   /// All text found on [jpegs], pages separated by a blank line. Returns an
   /// empty string if nothing was found, it's unavailable, or it failed —

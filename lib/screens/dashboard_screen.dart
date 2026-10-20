@@ -116,6 +116,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       title: 'What Should We Call You?',
       initial: store.prefs.userName,
       hint: 'Your name',
+      allowEmpty: true, // clearing the name is allowed
     );
     if (name == null) return;
     store.updatePrefs(store.prefs.copyWith(userName: name.trim()));
@@ -237,9 +238,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
 
-      if (!store.prefs.hidePlusBanner) ...[
+      // Not for members, and not once it has been closed.
+      if (!store.isPlus && !store.prefs.hidePlusBanner) ...[
         const SizedBox(height: 20),
-        _PlusStrip(onTap: () => openPlans(context)),
+        _PlusStrip(
+          onTap: () => openPlans(context),
+          onHide: () =>
+              store.updatePrefs(store.prefs.copyWith(hidePlusBanner: true)),
+        ),
       ],
       const SizedBox(height: 24),
 
@@ -597,7 +603,7 @@ class _ContinueCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${task.pomodorosDone} of ${plural(task.pomodorosTotal, 'Pomodoro')} · '
-                      '${task.focusMinutes} / ${task.pomodorosTotal * focusLength} min',
+                      '${task.focusMinutes} / ${task.estimatedMinutes(focusLength)} min',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -752,9 +758,12 @@ class _DeckRow extends StatelessWidget {
 
 /// One-line tAsikaso+ invitation.
 class _PlusStrip extends StatelessWidget {
-  const _PlusStrip({required this.onTap});
+  const _PlusStrip({required this.onTap, required this.onHide});
 
   final VoidCallback onTap;
+
+  /// The small × at the end: the strip stays hidden from then on.
+  final VoidCallback onHide;
 
   @override
   Widget build(BuildContext context) {
@@ -765,26 +774,26 @@ class _PlusStrip extends StatelessWidget {
         decoration: BoxDecoration(gradient: PlusHero.gradient),
         child: InkWell(
           onTap: onTap,
-          child: const Stack(
+          child: Stack(
             children: [
               // Soft circles, like the big tAsikaso+ card.
-              Positioned(
+              const Positioned(
                 right: -24,
                 top: -44,
                 child: PlusBlob(size: 110, alpha: 0.08),
               ),
-              Positioned(
+              const Positioned(
                 right: 64,
                 bottom: -52,
                 child: PlusBlob(size: 84, alpha: 0.06),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(14, 12, 10, 12),
+                padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
                 child: Row(
                   children: [
-                    Icon(AppIcons.plus, size: 20, color: AppColors.gold),
-                    SizedBox(width: 12),
-                    Expanded(
+                    const Icon(AppIcons.plus, size: 20, color: AppColors.gold),
+                    const SizedBox(width: 12),
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -804,7 +813,14 @@ class _PlusStrip extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Icon(AppIcons.chevronRight, size: 16, color: Colors.white),
+                    const Icon(AppIcons.chevronRight, size: 16, color: Colors.white),
+                    IconButton(
+                      tooltip: 'Hide',
+                      onPressed: onHide,
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(AppIcons.close,
+                          size: 16, color: Colors.white70),
+                    ),
                   ],
                 ),
               ),
