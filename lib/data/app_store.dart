@@ -560,6 +560,13 @@ class AppStore extends ChangeNotifier {
   List<Note> notesIn(String folderId) =>
       _notes.where((n) => n.folderId == folderId).toList();
 
+  Note? note(String id) {
+    for (final n in _notes) {
+      if (n.id == id) return n;
+    }
+    return null;
+  }
+
   Uint8List? thumbnail(String noteId) => _thumbs[noteId];
 
   Future<Uint8List?> readPdf(Note note) => _files.readBytes(note.pdfKey);

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon for timer alerts: a clock face, white on transparent,
+     as Android requires (the app icon would show as a white blob). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M12,3a9,9 0 1,0 0.01,0z M12,5.5a6.5,6.5 0 1,1 -0.01,0z M11,7.5h2v4.3l3.2,1.9 -1,1.7 -4.2,-2.5z"/>
+</vector>

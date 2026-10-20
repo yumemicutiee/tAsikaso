@@ -32,7 +32,33 @@ void main() {
   }
   _patchManifest(manifest);
   _writeProguardRules(File('android/app/proguard-rules.pro'));
+  _writeNotificationIcon(
+      File('android/app/src/main/res/drawable/ic_stat_notify.xml'));
   stdout.writeln('Done. Now run: flutter pub get && flutter run');
+}
+
+/// The status-bar icon for timer alerts (white on transparent, as Android
+/// requires; the launcher icon would show as a white blob).
+void _writeNotificationIcon(File file) {
+  if (file.existsSync()) {
+    stdout.writeln('${file.path} already set up');
+    return;
+  }
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync('''
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M12,3a9,9 0 1,0 0.01,0z M12,5.5a6.5,6.5 0 1,1 -0.01,0z M11,7.5h2v4.3l3.2,1.9 -1,1.7 -4.2,-2.5z"/>
+</vector>
+''');
+  stdout.writeln('Wrote ${file.path}');
 }
 
 /// ML Kit's text recognition plugin refers to optional Chinese, Devanagari,
@@ -105,6 +131,29 @@ void _patchManifest(File file) {
   if (missing.isNotEmpty) {
     final i = text.indexOf('<application');
     text = '${text.substring(0, i)}${missing.join('\n')}\n    ${text.substring(i)}';
+    changed = true;
+  }
+
+  // The camera plugin asks for the microphone and makes a camera required;
+  // the app records no sound and can import photos instead. Both need the
+  // "tools" namespace.
+  if (!text.contains('xmlns:tools=')) {
+    text = text.replaceFirst('<manifest ',
+        '<manifest xmlns:tools="http://schemas.android.com/tools" ');
+    changed = true;
+  }
+  const extras = [
+    '    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>',
+    '    <uses-feature android:name="android.hardware.camera.any" android:required="false" tools:replace="android:required"/>',
+    '    <uses-feature android:name="android.hardware.camera" android:required="false"/>',
+  ];
+  final neededExtras = [
+    for (final e in extras)
+      if (!text.contains(e.trim().split(' ')[1])) e, // by android:name
+  ];
+  if (neededExtras.isNotEmpty) {
+    final i = text.indexOf('<application');
+    text = '${text.substring(0, i)}${neededExtras.join('\n')}\n    ${text.substring(i)}';
     changed = true;
   }
 

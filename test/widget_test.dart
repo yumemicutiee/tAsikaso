@@ -19,12 +19,14 @@ import 'package:study_app/screens/analysis_screen.dart';
 import 'package:study_app/screens/backup_screen.dart';
 import 'package:study_app/screens/capture/capture_screen.dart';
 import 'package:study_app/screens/capture/captured_page.dart';
+import 'package:study_app/screens/capture/notes_pdf.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/capture/scan_flow.dart';
 import 'package:study_app/screens/dashboard_screen.dart';
 import 'package:study_app/screens/flashcards/set_screen.dart';
 import 'package:study_app/screens/flashcards/study_cards_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
+import 'package:study_app/screens/note_viewer_screen.dart';
 import 'package:study_app/screens/plans_screen.dart';
 import 'package:study_app/screens/settings_screen.dart';
 import 'package:study_app/services/haptics.dart';
@@ -1128,6 +1130,9 @@ Meeting at 10:30 today
       await tester.longPress(find.text('Biology'));
       await tester.pumpAndSettle();
       expect(find.text('Edit Folder'), findsOneWidget);
+      // Each colour swatch has a name for screen readers.
+      expect(find.bySemanticsLabel('Sky color'), findsOneWidget);
+      expect(find.bySemanticsLabel('Grey color'), findsOneWidget);
       await tester.tap(find.text('Delete Folder'));
       await tester.pumpAndSettle();
       expect(find.text('Delete "Biology"?'), findsOneWidget);
@@ -1396,6 +1401,77 @@ Meeting at 10:30 today
       await tester.pumpAndSettle();
       expect(store.folders.any((f) => f.name == 'Chemistry'), isTrue);
       expect(find.text('Backup restored.'), findsOneWidget);
+    });
+  });
+
+  group('Phase 4 polish', () {
+    test('a wide photo gets a landscape PDF page, a tall one portrait',
+        () async {
+      final wide = img.encodeJpg(img.Image(width: 40, height: 20));
+      final tall = img.encodeJpg(img.Image(width: 20, height: 40));
+      final pdf = await buildNotesPdf([wide, tall], title: 'Board');
+      final text = latin1.decode(pdf, allowInvalid: true);
+      final boxes = RegExp(r'/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)')
+          .allMatches(text)
+          .map((m) => (double.parse(m[1]!), double.parse(m[2]!)))
+          .toList();
+      expect(boxes.length, 2);
+      expect(boxes[0].$1, greaterThan(boxes[0].$2)); // landscape
+      expect(boxes[1].$2, greaterThan(boxes[1].$1)); // portrait
+    });
+
+    testWidgets('the note text screen follows a rename', (tester) async {
+      final store = AppStore.instance;
+      final note = await store.addNote(
+        title: 'Old Title',
+        folderId: store.folders.first.id,
+        pdf: Uint8List(0),
+        thumbnail: Uint8List(0),
+        pageCount: 1,
+        text: 'Mitochondria make energy.',
+      );
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
+      expect(find.text('Old Title'), findsOneWidget);
+      expect(find.text('Mitochondria make energy.'), findsOneWidget);
+
+      store.updateNote(note.copyWith(title: 'New Title'));
+      await tester.pump();
+      expect(find.text('New Title'), findsOneWidget);
+      expect(find.text('Old Title'), findsNothing);
+    });
+
+    testWidgets('deleting a card asks first', (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      final deck = await store.addSet(
+        title: 'Bonds',
+        folderId: store.folders.first.id,
+        cards: const [Flashcard(id: 'c1', front: 'Ionic', back: 'Transfer')],
+      );
+      await tester.pumpWidget(MaterialApp(home: SetScreen(setId: deck.id)));
+      await tester.pump();
+
+      // The card row's menu (the app bar has one for the set itself).
+      final cardMenu = find.descendant(
+        of: find.ancestor(of: find.text('Ionic'), matching: find.byType(Row)).first,
+        matching: find.byTooltip('More'),
+      );
+      await tester.tap(cardMenu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete Card?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(store.setById(deck.id)!.cards, hasLength(1));
+
+      await tester.tap(cardMenu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(store.setById(deck.id)!.cards, isEmpty);
     });
   });
 }

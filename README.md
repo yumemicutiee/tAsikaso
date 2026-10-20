@@ -168,9 +168,11 @@ sets the notification delegate (see the flutter_local_notifications README,
 The camera and Smart Scanner need a real phone. Smart Scanner uses Google Play
 services, which downloads the scanner the first time it's used.
 The newest ML Kit plugins need Flutter 3.44+. The version ranges in
-`pubspec.yaml` let `flutter pub get` pick older ones on older Flutter. The first time
-you tap the scan button, Android asks for camera permission; the permission is
-added to the app automatically by the `camera` package.
+`pubspec.yaml` let `flutter pub get` pick older ones on older Flutter. With Smart
+Scanner on, Google's scanner handles the camera itself, so there is no permission
+prompt; the app's own camera asks for camera permission the first time it opens
+(the `camera` package declares the permission; `tool/setup_android.dart` drops
+the microphone permission it also asks for, since nothing is recorded).
 
 ## Screens
 

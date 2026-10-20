@@ -356,9 +356,10 @@ class _RoundButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = big ? 64.0 : 48.0;
+    // The tooltip is also the screen-reader label (a label here as well
+    // would be read twice).
     return Semantics(
       button: true,
-      label: label,
       child: Tooltip(
         message: label,
         child: Opacity(

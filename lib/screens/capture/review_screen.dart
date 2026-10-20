@@ -126,6 +126,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       ),
     );
 
+    StudyFolder? created; // "My Notes", made for this save alone
     try {
       // Let the progress dialog appear before the image work starts
       // (on web the work runs on the UI thread).
@@ -141,7 +142,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       final text = await ScanService.readText(jpegs);
 
       final folder = request.folder ??
-          store.addFolder('My Notes', AppColors.folderPalette.first);
+          (created = store.addFolder('My Notes', AppColors.folderPalette.first));
 
       if (asCards) {
         final suggestions = suggestCards(text);
@@ -194,6 +195,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
           ),
         );
     } catch (_) {
+      // Don't leave an empty folder behind for a save that didn't happen.
+      if (created != null &&
+          store.noteCountIn(created.id) == 0 &&
+          store.setCountIn(created.id) == 0) {
+        store.deleteFolder(created.id).ignore();
+      }
       navigator.pop(); // progress dialog
       messenger.showSnackBar(
         SnackBar(

@@ -81,7 +81,7 @@ class _NoteViewerScreenState extends State<NoteViewerScreen> {
                   tooltip: 'View Text',
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => NoteTextScreen(note: note),
+                      builder: (_) => NoteTextScreen(noteId: note.id),
                     ),
                   ),
                   icon: const Icon(AppIcons.text, size: 22),
@@ -126,52 +126,68 @@ class _NoteViewerScreenState extends State<NoteViewerScreen> {
 }
 
 /// The text read from a note's pages, selectable, with a Copy button.
+/// Reads the note from the store, so a rename shows here too.
 class NoteTextScreen extends StatelessWidget {
-  const NoteTextScreen({super.key, required this.note});
+  const NoteTextScreen({super.key, required this.noteId});
 
-  final Note note;
+  final String noteId;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: subPageAppBar('Note Text', actions: [
-        IconButton(
-          tooltip: 'Copy All',
-          icon: const Icon(AppIcons.copy, size: 22),
-          onPressed: () async {
-            await Clipboard.setData(ClipboardData(text: note.text));
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(const SnackBar(content: Text('Text copied')));
-          },
-        ),
-      ]),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
-        children: [
-          Text(note.title, style: AppText.sectionTitle),
-          const SizedBox(height: 4),
-          Text(
-            'Read automatically from your photos, so check names and numbers.',
-            style: AppText.itemMeta,
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
+    final store = AppStore.instance;
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        final note = store.note(noteId);
+        if (note == null) {
+          return Scaffold(
+            appBar: subPageAppBar('Note Text'),
+            body: const Center(child: Text('This note was deleted.')),
+          );
+        }
+        return Scaffold(
+          appBar: subPageAppBar('Note Text', actions: [
+            IconButton(
+              tooltip: 'Copy All',
+              icon: const Icon(AppIcons.copy, size: 22),
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: note.text));
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                      const SnackBar(content: Text('Text copied')));
+              },
             ),
-            child: SelectableText(
-              note.text,
-              style: TextStyle(
-                  fontSize: 14, height: 1.5, color: AppColors.textPrimary),
-            ),
+          ]),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+            children: [
+              Text(note.title, style: AppText.sectionTitle),
+              const SizedBox(height: 4),
+              Text(
+                'Read automatically from your photos, so check names and '
+                'numbers.',
+                style: AppText.itemMeta,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: SelectableText(
+                  note.text,
+                  style: TextStyle(
+                      fontSize: 14, height: 1.5, color: AppColors.textPrimary),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

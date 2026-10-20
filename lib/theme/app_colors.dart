@@ -167,6 +167,12 @@ class AppColors {
     0xFFD5D9E3, // grey
   ];
 
+  /// The names of [folderPalette], in order, for screen readers.
+  static const folderPaletteNames = <String>[
+    'Sky', 'Mint', 'Butter', 'Peach', 'Pink',
+    'Lavender', 'Aqua', 'Lime', 'Sand', 'Grey',
+  ];
+
   // ---- Light / dark ----------------------------------------------------------
 
   /// Navy in light mode, pale sky in dark: links, numbers, the selected tab,

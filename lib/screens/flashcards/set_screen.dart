@@ -174,12 +174,20 @@ class SetScreen extends StatelessWidget {
                     onTap: () => showCardEditor(context, deck, card: card),
                     actions: {
                       'Edit': () => showCardEditor(context, deck, card: card),
-                      'Delete': () => store.updateSet(deck.copyWith(
-                            cards: [
-                              for (final c in deck.cards)
-                                if (c.id != card.id) c,
-                            ],
-                          )),
+                      'Delete': () async {
+                        final ok = await showConfirmDialog(
+                          context,
+                          title: 'Delete Card?',
+                          message: '"${card.front}" will be deleted.',
+                        );
+                        if (!ok) return;
+                        store.updateSet(deck.copyWith(
+                          cards: [
+                            for (final c in deck.cards)
+                              if (c.id != card.id) c,
+                          ],
+                        ));
+                      },
                     },
                   ),
             ],

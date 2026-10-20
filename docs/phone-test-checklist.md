@@ -25,6 +25,7 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 - [ ] Vibrate When Time Is Up ON: a real two-buzz vibration when the timer ends (app open), and the notification vibrates.
       OFF: no vibration from either.
 - [ ] Refuse the notification permission on first START (fresh install): Timer Alerts switches itself off with a message.
+- [ ] The alert's status-bar icon is a small clock glyph, not a white square.
 - [ ] Reset during a running Pomodoro asks "Reset This Pomodoro?".
 - [ ] Skip during a Pomodoro asks first; skip during a break goes to the next Pomodoro.
 - [ ] Long break after 4 Pomodoros (set Focus/breaks to 1 min to test quickly).
@@ -40,7 +41,9 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 ## Scanning notes (needs a real phone)
 - [ ] Camera button → Smart Scanner opens (Google's scanner UI). It finds page edges.
 - [ ] Scan 3 pages; after closing the scanner a "Preparing your pages…" box shows until the review screen appears. How long? ________ s
-- [ ] Save as PDF into a folder → the note opens; share and print work.
+- [ ] Save as PDF into a folder → the note opens; share and print work. A wide (whiteboard) photo gets a
+      landscape page.
+- [ ] Android app info → Permissions: no Microphone permission is listed.
 - [ ] Open the note → "View Text" shows the recognised text; Copy works.
 - [ ] Settings → turn Smart Scanner OFF → camera button opens the app's own camera.
       Single / Multiple, flash, gallery import, rotate, four-corner crop.

@@ -235,11 +235,13 @@ class _FolderEditorState extends State<_FolderEditor> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                for (final c in AppColors.folderPalette)
+                for (var i = 0; i < AppColors.folderPalette.length; i++)
                   _ColorDot(
-                    color: Color(c),
-                    selected: c == _color,
-                    onTap: () => setState(() => _color = c),
+                    color: Color(AppColors.folderPalette[i]),
+                    name: AppColors.folderPaletteNames[i],
+                    selected: AppColors.folderPalette[i] == _color,
+                    onTap: () =>
+                        setState(() => _color = AppColors.folderPalette[i]),
                   ),
               ],
             ),
@@ -273,11 +275,13 @@ class _FolderEditorState extends State<_FolderEditor> {
 class _ColorDot extends StatelessWidget {
   const _ColorDot({
     required this.color,
+    required this.name,
     required this.selected,
     required this.onTap,
   });
 
   final Color color;
+  final String name;
   final bool selected;
   final VoidCallback onTap;
 
@@ -286,7 +290,7 @@ class _ColorDot extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: 'Folder color',
+      label: '$name color',
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(

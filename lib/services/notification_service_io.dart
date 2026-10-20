@@ -59,7 +59,9 @@ Future<void> init() async {
   if (_ready) return;
   await _plugin.initialize(
     settings: const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      // A white-on-transparent glyph (res/drawable/ic_stat_notify.xml); the
+      // launcher icon would show as a white blob in the status bar.
+      android: AndroidInitializationSettings('ic_stat_notify'),
       // Permission is asked for from Settings, when the user turns alerts on.
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
