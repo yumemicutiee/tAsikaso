@@ -56,6 +56,15 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 ## Flashcards
 - [ ] Study a set: tap to flip, Again brings the card back, Got It moves on, summary at the end.
 - [ ] Dashboard "Recent Flashcards": tap studies, long-press opens; score ring shows last result.
+- [ ] Smart review: after a round, the set says "All caught up"; change the phone's date to tomorrow and
+      it shows "N cards due" / "Review N Cards Due" plus "Study all".
+
+## Backup & restore
+- [ ] Profile → Backup & Sync → Back Up Now: the share sheet opens; choose Google Drive; the file lands in Drive
+      and "Last backup" updates.
+- [ ] Settings → Your Data → Delete All Data, then Backup & Restore → Restore from Backup → pick the file from
+      Drive: everything comes back (folders, notes open, flashcards, tasks, analysis).
+- [ ] Pick a file that isn't a backup: a clear message, nothing changed.
 
 ## Dashboard, Profile, Analysis
 - [ ] Today's Focus ring, This Week bars, Continue card, Start Focus all respond.
