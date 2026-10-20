@@ -36,8 +36,8 @@ const List<PlanFeature> planFeatures = [
   (name: 'Suggested cards from your notes', free: true, freeNote: '20 / month', soon: false),
   (name: 'Month & year analysis, heatmap, full timeline', free: false, freeNote: null, soon: false),
   (name: 'App colors & your own color', free: false, freeNote: null, soon: false),
-  (name: 'Smart review (spaced repetition)', free: false, freeNote: null, soon: true),
-  (name: 'Backup & sync across devices', free: false, freeNote: null, soon: true),
+  (name: 'Smart review (spaced repetition)', free: false, freeNote: null, soon: false),
+  (name: 'Backup & restore (Google Drive or any file)', free: false, freeNote: null, soon: false),
 ];
 
 /// Prices in Philippine pesos, set for students: the monthly plan costs less

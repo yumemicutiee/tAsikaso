@@ -33,6 +33,7 @@ class SetScreen extends StatelessWidget {
           );
         }
         final folder = store.folder(deck.folderId);
+        final due = store.dueCards(deck);
         final menu = setActions(context, deck, onDeleted: () {
           if (context.mounted) Navigator.of(context).pop();
         })
@@ -74,9 +75,29 @@ class SetScreen extends StatelessWidget {
               AccentButton(
                 label: deck.cards.isEmpty
                     ? 'Add cards to start studying'
-                    : 'Study ${plural(deck.cards.length, 'Card')}',
+                    : due.isNotEmpty && due.length < deck.cards.length
+                        ? 'Review ${plural(due.length, 'Card')} Due'
+                        : 'Study ${plural(deck.cards.length, 'Card')}',
                 onPressed: deck.cards.isEmpty ? null : () => studySet(context, deck),
               ),
+              if (deck.cards.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Center(
+                    child: due.isEmpty
+                        ? Text('All caught up, nothing is due today.',
+                            style: AppText.itemMeta)
+                        : due.length < deck.cards.length
+                            ? TextButton(
+                                onPressed: () =>
+                                    studySet(context, deck, dueOnly: false),
+                                child: Text(
+                                    'Study all ${plural(deck.cards.length, 'card')}'),
+                              )
+                            : Text('${plural(due.length, 'card')} due today',
+                                style: AppText.itemMeta),
+                  ),
+                ),
               if (deck.photoCount > 0) ...[
                 const SizedBox(height: 24),
                 Text('Your Photos', style: AppText.sectionTitle),

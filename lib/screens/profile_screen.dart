@@ -10,6 +10,7 @@ import '../widgets/dialogs.dart';
 import 'actions.dart';
 import 'settings_screen.dart' show SettingsSection;
 import 'analysis_screen.dart';
+import 'backup_screen.dart';
 import 'help_screen.dart';
 import 'plans_screen.dart';
 
@@ -129,7 +130,7 @@ class ProfileScreen extends StatelessWidget {
                         () => openSettings(context,
                             section: SettingsSection.notifications)),
                     _row(AppIcons.backup, 'Backup & Sync',
-                        () => openPlans(context),
+                        () => openBackup(context),
                         badge: 'Plus'),
                   ]),
                   const SizedBox(height: 16),

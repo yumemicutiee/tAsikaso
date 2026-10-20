@@ -4,20 +4,25 @@ import 'dart:typed_data';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:idb_shim/idb_client_memory.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
 import 'package:study_app/app.dart';
 import 'package:study_app/data/app_store.dart';
+import 'package:study_app/data/backup.dart';
 import 'package:study_app/data/pomodoro_controller.dart';
+import 'package:study_app/data/storage/local_storage_idb.dart';
 import 'package:study_app/data/storage/local_storage_memory.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/screens/analysis_screen.dart';
+import 'package:study_app/screens/backup_screen.dart';
 import 'package:study_app/screens/capture/capture_screen.dart';
 import 'package:study_app/screens/capture/captured_page.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/capture/scan_flow.dart';
 import 'package:study_app/screens/dashboard_screen.dart';
+import 'package:study_app/screens/flashcards/set_screen.dart';
 import 'package:study_app/screens/flashcards/study_cards_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/screens/plans_screen.dart';
@@ -27,6 +32,7 @@ import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/screen_awake.dart';
 import 'package:study_app/theme/app_colors.dart';
 import 'package:study_app/utils/card_suggestions.dart';
+import 'package:study_app/utils/spaced_review.dart';
 import 'package:study_app/widgets/bottom_nav.dart';
 
 void main() {
@@ -1172,6 +1178,224 @@ Meeting at 10:30 today
         await tester.pump();
       }
       expect(store.cardsReviewedToday, 2);
+    });
+  });
+
+  group('Phase 3: saving on web', () {
+    test('IndexedDB storage keeps files and the JSON document', () async {
+      final storage = IdbStorage(newIdbFactoryMemory());
+      expect(storage.isPersistent, isTrue);
+      expect(await storage.readJson(), isNull);
+
+      await storage.writeJson('{"version": 1}');
+      await storage.writeBytes('notes/a.pdf', Uint8List.fromList([1, 2]));
+      await storage.writeBytes('notes/a.jpg', Uint8List.fromList([3]));
+      await storage.writeBytes('sets/s/0.jpg', Uint8List.fromList([4]));
+
+      expect(await storage.readJson(), '{"version": 1}');
+      expect(await storage.readBytes('notes/a.pdf'), [1, 2]);
+      expect((await storage.list('notes/'))..sort(), ['notes/a.jpg', 'notes/a.pdf']);
+      expect(await storage.list(''), isNot(contains('data.json')));
+
+      await storage.delete('notes/a.jpg');
+      expect(await storage.readBytes('notes/a.jpg'), isNull);
+      await storage.deletePrefix('sets/');
+      expect(await storage.list('sets/'), isEmpty);
+      expect(await storage.readBytes('notes/a.pdf'), [1, 2]);
+    });
+  });
+
+  group('Phase 3: smart review', () {
+    test('a known card comes back later and later, a missed one tomorrow', () {
+      expect(nextInterval(0, knewIt: true), 1);
+      expect(nextInterval(1, knewIt: true), 3);
+      expect(nextInterval(3, knewIt: true), 7);
+      expect(nextInterval(180, knewIt: true), 180);
+      expect(nextInterval(30, knewIt: false), 1);
+    });
+
+    test('cards are due on their day, and new cards are always due', () {
+      final today = DateTime(2026, 10, 20);
+      const fresh = Flashcard(id: 'a', front: 'f', back: 'b');
+      expect(fresh.isDue(today), isTrue);
+      final later = fresh.scheduled(interval: 3, due: DateTime(2026, 10, 23));
+      expect(later.isDue(today), isFalse);
+      expect(later.isDue(DateTime(2026, 10, 23)), isTrue);
+      // The schedule survives saving.
+      final back = Flashcard.fromJson(later.toJson());
+      expect(back.interval, 3);
+      expect(back.due, DateTime(2026, 10, 23));
+    });
+
+    test('answering schedules the card and the set counts what is due',
+        () async {
+      final store = AppStore.instance;
+      final folder = store.folders.first;
+      final deck = await store.addSet(
+        title: 'Bonds',
+        folderId: folder.id,
+        cards: const [
+          Flashcard(id: 'c1', front: 'Ionic', back: 'Transfer'),
+          Flashcard(id: 'c2', front: 'Covalent', back: 'Share'),
+        ],
+      );
+      final now = DateTime(2026, 10, 20, 9);
+      withClock(Clock.fixed(now), () {
+        store.scheduleCard(deck.id, 'c1', knewIt: true);
+        store.scheduleCard(deck.id, 'c2', knewIt: false);
+        final updated = store.setById(deck.id)!;
+        expect(updated.cards[0].due, DateTime(2026, 10, 21));
+        expect(updated.cards[1].due, DateTime(2026, 10, 21));
+        expect(store.dueCards(updated), isEmpty);
+      });
+      withClock(Clock.fixed(DateTime(2026, 10, 21, 8)), () {
+        expect(store.dueCards(store.setById(deck.id)!).length, 2);
+      });
+    });
+
+    testWidgets('a set offers to review just the cards that are due',
+        (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      final folder = store.folders.first;
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final deck = await store.addSet(
+        title: 'Bonds',
+        folderId: folder.id,
+        cards: [
+          const Flashcard(id: 'c1', front: 'Ionic', back: 'Transfer'),
+          const Flashcard(id: 'c2', front: 'Covalent', back: 'Share')
+              .scheduled(interval: 3, due: tomorrow),
+        ],
+      );
+      await tester.pumpWidget(MaterialApp(home: SetScreen(setId: deck.id)));
+      await tester.pump();
+      expect(find.text('Review 1 Card Due'), findsOneWidget);
+      expect(find.text('Study all 2 cards'), findsOneWidget);
+
+      await tester.tap(find.text('Review 1 Card Due'));
+      await tester.pumpAndSettle();
+      expect(find.text('0 of 1 seen'), findsOneWidget);
+      expect(find.text('Ionic'), findsOneWidget);
+    });
+  });
+
+  group('Phase 3: backup & restore', () {
+    test('a backup file holds the data and every file, and reads back',
+        () {
+      final zip = packBackup(
+        json: '{"version": 1, "folders": []}',
+        files: {
+          'notes/a.pdf': Uint8List.fromList([1, 2, 3]),
+          'sets/s/0.jpg': Uint8List.fromList([4]),
+          'backup/data.json': Uint8List.fromList([9]), // never included
+        },
+        createdAt: DateTime(2026, 10, 20),
+        appVersion: '0.1.0',
+      );
+      final back = unpackBackup(zip);
+      expect(back.json, '{"version": 1, "folders": []}');
+      expect(back.files.keys.toList()..sort(), ['notes/a.pdf', 'sets/s/0.jpg']);
+      expect(back.files['notes/a.pdf'], [1, 2, 3]);
+      expect(backupFileName(DateTime(2026, 10, 5)),
+          'tAsikaso-backup-2026-10-05.zip');
+    });
+
+    test('something that is not a backup is refused', () {
+      expect(() => unpackBackup(Uint8List.fromList([1, 2, 3])),
+          throwsFormatException);
+    });
+
+    test('everything comes back after a restore, even on a fresh device',
+        () async {
+      final store = AppStore.instance;
+      final storage = MemoryStorage();
+      await store.init(storage);
+      final folder = store.addFolder('Chemistry', 0xFFA9CFF5);
+      final pdf = Uint8List.fromList([37, 80, 68, 70]);
+      final note = await store.addNote(
+        title: 'Bonds',
+        folderId: folder.id,
+        pdf: pdf,
+        thumbnail: Uint8List.fromList([1]),
+        pageCount: 1,
+      );
+      store.addTask('Read Chapter 4', 2);
+      final zip = await store.createBackup();
+
+      // A new phone: nothing but the sample data.
+      store.resetForTesting();
+      final fresh = MemoryStorage();
+      await store.init(fresh);
+      expect(store.notes, isEmpty);
+
+      await store.restoreBackup(zip);
+      expect(store.folders.any((f) => f.name == 'Chemistry'), isTrue);
+      expect(store.notes.single.title, 'Bonds');
+      expect(await store.readPdf(note), pdf);
+      expect(store.thumbnail(note.id), [1]);
+      expect(store.activeTasks.any((t) => t.title == 'Read Chapter 4'), isTrue);
+      await store.pendingSaves;
+      expect(await fresh.readJson(), contains('Chemistry'));
+    });
+
+    test('a backup from a newer version is refused and nothing changes',
+        () async {
+      final store = AppStore.instance;
+      await store.init(MemoryStorage());
+      store.addFolder('Chemistry', 0xFFA9CFF5);
+      final zip = packBackup(
+        json: '{"version": 99}',
+        files: const {},
+        createdAt: DateTime(2026),
+        appVersion: '9.0.0',
+      );
+      await expectLater(store.restoreBackup(zip), throwsFormatException);
+      expect(store.folders.any((f) => f.name == 'Chemistry'), isTrue);
+    });
+
+    testWidgets('Back Up Now hands over a file; Restore brings it back',
+        (tester) async {
+      usePhoneSize(tester);
+      final store = AppStore.instance;
+      final originalShare = BackupScreen.share;
+      final originalPick = BackupScreen.pickFile;
+      Uint8List? shared;
+      BackupScreen.share = (bytes, name) async {
+        shared = bytes;
+        expect(name, endsWith('.zip'));
+        return true;
+      };
+      BackupScreen.pickFile = () async => shared;
+      addTearDown(() {
+        BackupScreen.share = originalShare;
+        BackupScreen.pickFile = originalPick;
+      });
+
+      store.addFolder('Chemistry', 0xFFA9CFF5);
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byIcon(AppTab.profile.icon));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Backup & Sync'));
+      await tester.pumpAndSettle();
+      expect(find.text('Never'), findsOneWidget);
+
+      await tester.tap(find.text('Back Up Now'));
+      await tester.pumpAndSettle();
+      expect(shared, isNotNull);
+      expect(store.prefs.lastBackupAt, isNotNull);
+      expect(find.text('Never'), findsNothing);
+
+      // Lose everything, then restore it.
+      await store.eraseEverything();
+      await tester.pump();
+      expect(store.folders, isEmpty);
+      await tester.tap(find.text('Restore from Backup'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose File'));
+      await tester.pumpAndSettle();
+      expect(store.folders.any((f) => f.name == 'Chemistry'), isTrue);
+      expect(find.text('Backup restored.'), findsOneWidget);
     });
   });
 }

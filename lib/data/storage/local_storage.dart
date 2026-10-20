@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import 'local_storage_memory.dart'
-    if (dart.library.io) 'local_storage_io.dart' as platform;
+    if (dart.library.io) 'local_storage_io.dart'
+    if (dart.library.js_interop) 'local_storage_web.dart' as platform;
 
 /// Where the app keeps its data: one JSON document for everything small
 /// (folders, notes, tasks, settings, stats) plus binary files (PDFs, photos,
@@ -17,10 +18,13 @@ abstract class LocalStorage {
   /// Deletes every file whose key starts with [prefix] (e.g. `sets/abc/`).
   Future<void> deletePrefix(String prefix);
 
+  /// The keys of every file that starts with [prefix] (for backups).
+  Future<List<String>> list(String prefix);
+
   /// True when data survives an app restart.
   bool get isPersistent;
 }
 
-/// Files in the app's documents folder on Android/iOS/desktop. On web, data
-/// is kept in memory for now.
+/// Files in the app's documents folder on Android/iOS/desktop, IndexedDB in
+/// the browser, and memory everywhere else (tests).
 LocalStorage createDeviceStorage() => platform.createStorage();

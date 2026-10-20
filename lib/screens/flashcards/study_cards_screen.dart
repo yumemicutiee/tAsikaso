@@ -10,11 +10,13 @@ import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
 
 /// Flip through a set: tap to see the answer, then "Again" (card comes back
-/// later) or "Got It".
+/// later) or "Got It". With [dueOnly], just the cards due today (all of
+/// them if none are due).
 class StudyCardsScreen extends StatefulWidget {
-  const StudyCardsScreen({super.key, required this.setId});
+  const StudyCardsScreen({super.key, required this.setId, this.dueOnly = false});
 
   final String setId;
+  final bool dueOnly;
 
   @override
   State<StudyCardsScreen> createState() => _StudyCardsScreenState();
@@ -45,7 +47,12 @@ class _StudyCardsScreenState extends State<StudyCardsScreen> {
   }
 
   void _load({required bool shuffle}) {
-    final cards = List.of(_store.setById(widget.setId)?.cards ?? const <Flashcard>[]);
+    final deck = _store.setById(widget.setId);
+    var cards = List.of(deck?.cards ?? const <Flashcard>[]);
+    if (widget.dueOnly && deck != null) {
+      final due = _store.dueCards(deck);
+      if (due.isNotEmpty) cards = due;
+    }
     if (shuffle) cards.shuffle(math.Random());
     _queue = cards;
     _total = cards.length;
@@ -63,6 +70,8 @@ class _StudyCardsScreenState extends State<StudyCardsScreen> {
     final card = _queue[_position];
     final firstTime = _seen.add(card.id);
     if (_counted.add(card.id)) _store.recordCardsReviewed(1);
+    // Smart review: the first answer decides when the card comes back.
+    if (firstTime) _store.scheduleCard(widget.setId, card.id, knewIt: knewIt);
     setState(() {
       if (knewIt) {
         if (firstTime) _knewFirstTime.add(card.id);

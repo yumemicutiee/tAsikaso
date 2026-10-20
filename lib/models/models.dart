@@ -183,21 +183,55 @@ class StudyTask {
 
 @immutable
 class Flashcard {
-  const Flashcard({required this.id, required this.front, required this.back});
+  const Flashcard({
+    required this.id,
+    required this.front,
+    required this.back,
+    this.interval = 0,
+    this.due,
+  });
 
   final String id;
   final String front;
   final String back;
 
-  Flashcard copyWith({String? front, String? back}) =>
-      Flashcard(id: id, front: front ?? this.front, back: back ?? this.back);
+  /// Smart review: days between the last review and the next one (0 for a
+  /// card never reviewed), and the day it is next due (null = due now).
+  final int interval;
+  final DateTime? due;
 
-  Json toJson() => {'id': id, 'front': front, 'back': back};
+  /// Due for review on [day] (midnight). New cards are always due.
+  bool isDue(DateTime day) {
+    final d = due;
+    return d == null || !d.isAfter(day);
+  }
+
+  Flashcard copyWith({String? front, String? back}) => Flashcard(
+        id: id,
+        front: front ?? this.front,
+        back: back ?? this.back,
+        interval: interval,
+        due: due,
+      );
+
+  /// The same card, next due on [due] after a gap of [interval] days.
+  Flashcard scheduled({required int interval, required DateTime due}) =>
+      Flashcard(id: id, front: front, back: back, interval: interval, due: due);
+
+  Json toJson() => {
+        'id': id,
+        'front': front,
+        'back': back,
+        if (interval > 0) 'interval': interval,
+        if (due case final d?) 'due': d.toIso8601String(),
+      };
 
   factory Flashcard.fromJson(Json j) => Flashcard(
         id: j['id'] as String,
         front: j['front'] as String? ?? '',
         back: j['back'] as String? ?? '',
+        interval: _int(j['interval']),
+        due: j['due'] is String ? DateTime.tryParse(j['due'] as String) : null,
       );
 }
 
@@ -236,6 +270,10 @@ class FlashcardSet {
   final int lastSeen;
 
   String photoKey(int index) => 'sets/$id/$index.jpg';
+
+  /// Cards due for review on [day] (midnight); see [Flashcard.isDue].
+  List<Flashcard> dueCards(DateTime day) =>
+      [for (final c in cards) if (c.isDue(day)) c];
 
   FlashcardSet copyWith({
     String? title,
@@ -612,6 +650,7 @@ class AppPrefs {
     this.palette = 'navy',
     this.customHue = 200,
     this.plus = false,
+    this.lastBackupAt,
   });
 
   /// Shown in greetings ("Hello, Budi!").
@@ -657,6 +696,9 @@ class AppPrefs {
   /// switch it on from the plans page for testing.)
   final bool plus;
 
+  /// When a backup file was last made (null = never).
+  final DateTime? lastBackupAt;
+
   AppPrefs copyWith({
     String? userName,
     bool? smartScanner,
@@ -672,6 +714,7 @@ class AppPrefs {
     String? palette,
     double? customHue,
     bool? plus,
+    DateTime? lastBackupAt,
   }) =>
       AppPrefs(
         userName: userName ?? this.userName,
@@ -688,6 +731,7 @@ class AppPrefs {
         palette: palette ?? this.palette,
         customHue: customHue ?? this.customHue,
         plus: plus ?? this.plus,
+        lastBackupAt: lastBackupAt ?? this.lastBackupAt,
       );
 
   Json toJson() => {
@@ -705,6 +749,7 @@ class AppPrefs {
         'palette': palette,
         'hue': customHue,
         'plus': plus,
+        if (lastBackupAt case final t?) 'backupAt': t.toIso8601String(),
       };
 
   factory AppPrefs.fromJson(Json j) => AppPrefs(
@@ -725,5 +770,8 @@ class AppPrefs {
         palette: j['palette'] as String? ?? 'navy',
         customHue: (j['hue'] is num ? (j['hue'] as num).toDouble() : 200.0) % 360,
         plus: _bool(j['plus']),
+        lastBackupAt: j['backupAt'] is String
+            ? DateTime.tryParse(j['backupAt'] as String)
+            : null,
       );
 }

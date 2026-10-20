@@ -37,4 +37,8 @@ class MemoryStorage implements LocalStorage {
   Future<void> deletePrefix(String prefix) async {
     _files.removeWhere((key, _) => key.startsWith(prefix));
   }
+
+  @override
+  Future<List<String>> list(String prefix) async =>
+      [for (final k in _files.keys) if (k.startsWith(prefix)) k];
 }

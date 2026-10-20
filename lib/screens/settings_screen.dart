@@ -16,6 +16,7 @@ import '../widgets/color_picker_sheet.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/number_field.dart';
 import '../widgets/segmented_tabs.dart';
+import 'backup_screen.dart';
 import 'help_screen.dart';
 import 'plans_screen.dart';
 
@@ -251,16 +252,22 @@ class SettingsScreen extends StatelessWidget {
 
               const _Heading('Your Data'),
               _Note(store.isPersistent
-                  ? 'Your folders, notes, flashcards and tasks are saved on '
-                      'this device.'
-                  : kIsWeb
-                      ? 'Data is kept only while the app is open (saving on '
-                          'the web version comes later).'
-                      : "Saving is paused because your saved data couldn't "
-                          'be read; it was left untouched. Restart the app to '
-                          'try again.'),
+                  ? kIsWeb
+                      ? 'Your folders, notes, flashcards and tasks are saved '
+                          'in this browser. Clearing its site data removes '
+                          'them, so keep a backup.'
+                      : 'Your folders, notes, flashcards and tasks are saved '
+                          'on this device.'
+                  : "Saving is paused because your saved data couldn't "
+                      'be read; it was left untouched. Restart the app to '
+                      'try again, or Delete All Data to start fresh.'),
               const SizedBox(height: 8),
               _Group(children: [
+                _TapRow(
+                  label: 'Backup & Restore',
+                  icon: AppIcons.backup,
+                  onTap: () => openBackup(context),
+                ),
                 _TapRow(
                   label: 'Delete All Data',
                   danger: true,
@@ -275,7 +282,7 @@ class SettingsScreen extends StatelessWidget {
                   icon: AppIcons.help,
                   onTap: () => openHelp(context),
                 ),
-                const _TapRow(label: 'Version', value: '0.1.0'),
+                const _TapRow(label: 'Version', value: kAppVersion),
               ]),
             ],
           );

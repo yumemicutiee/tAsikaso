@@ -668,6 +668,7 @@ class _DeckRow extends StatelessWidget {
     final studied = deck.lastStudiedAt;
     final seen = deck.lastSeen;
     final scored = studied != null && seen > 0;
+    final due = AppStore.instance.dueCards(deck).length;
     final score = scored ? deck.lastKnown / seen : 0.0;
     final deep = Color.lerp(color, AppColors.ink, 0.35)!;
 
@@ -704,7 +705,8 @@ class _DeckRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${plural(deck.cards.length, 'card')} · '
+                      '${plural(deck.cards.length, 'card')}'
+                      '${due > 0 ? ' · $due due' : ''} · '
                       '${studied == null ? 'Not studied yet' : formatAgo(studied, now)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

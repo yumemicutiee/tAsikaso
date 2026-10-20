@@ -3,3 +3,6 @@ const kAppName = 'tAsikaso';
 
 /// The paid plan.
 const kPlusName = 'tAsikaso+';
+
+/// Shown in Settings and written into backup files.
+const kAppVersion = '0.1.0';

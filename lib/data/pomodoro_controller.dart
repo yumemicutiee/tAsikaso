@@ -171,7 +171,9 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   void restart() {
     _stopTicker();
     _completed = 0;
+    _lastPhaseEnd = null;
     _setMode(TimerMode.pomodoro);
+    _save(); // so a restored or erased file holds a fresh timer too
     notifyListeners();
   }
 

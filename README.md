@@ -6,7 +6,15 @@ lecture-note capture → PDF or flashcards.
 **What works**
 - **Saved on the phone:** folders, notes (PDFs), flashcards, tasks, settings
   and stats are stored in the app's documents folder and survive restarts.
-  (On web, data is kept only while the page is open for now.)
+  On the web they are saved in the browser (IndexedDB).
+- **Backup & restore:** Profile → Backup & Sync (or Settings → Your Data)
+  makes one `.zip` with everything in it and opens the share sheet, so it can
+  go to Google Drive or anywhere else; on the web it downloads. Restore from
+  Backup picks the file and replaces everything on the device. Automatic
+  sync isn't built yet.
+- **Smart review (spaced repetition):** each card comes back after a growing
+  gap when you know it (1, 3, 7, 14, 30… days) and tomorrow when you miss it.
+  A set shows how many cards are due and offers to review just those, or all.
 - **Smart Scanner (Android):** the camera button opens Google's document
   scanner (ML Kit), the same kind CamScanner uses. It finds the page edges, crops and
   straightens each page, offers filters, scans many pages, and can import from
@@ -84,8 +92,8 @@ everything needed to study (timer, tasks, scanning to PDF, your own cards,
 search and copy, this week's analysis); Plus adds month/year analysis, app
 colours, unlimited suggested cards, and soon smart review and backup.
 
-**Not yet:** payments for tAsikaso+ (Google Play Billing), and backup/sync. The plan limits
-shown on the plans page aren't enforced yet.
+**Not yet:** payments for tAsikaso+ (Google Play Billing) and automatic sync
+between devices. The plan limits shown on the plans page aren't enforced yet.
 
 A first launch starts with five sample folders and five sample tasks so the
 app isn't empty. They can be edited or deleted.
@@ -205,8 +213,7 @@ assets/fonts/                  Plus Jakarta Sans (headings, numbers), Inter (tex
 ## Next (functionality)
 
 - Google Play Billing for Plus (e.g. `in_app_purchase`), then enforce limits
-- Saving on web (IndexedDB), backup & sync
-- Spaced repetition (show hard cards more often across days)
+- Automatic sync (Google Drive app folder) on top of the backup file
 
 Fonts: Plus Jakarta Sans (Tokotype) and Inter (Rasmus Andersson), SIL Open Font License 1.1.
 Icons: Phosphor Icons, MIT License (assets/fonts/PHOSPHOR_LICENSE.txt).

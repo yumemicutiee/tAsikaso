@@ -7,6 +7,8 @@ import '../models/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/brand.dart';
 import '../utils/format.dart';
+import '../utils/spaced_review.dart';
+import 'backup.dart';
 import 'seed_data.dart';
 import 'storage/local_storage.dart';
 import 'storage/local_storage_memory.dart';
@@ -82,9 +84,14 @@ class AppStore extends ChangeNotifier {
 
   Future<void> _saveChain = Future.value();
 
-  /// Completes when all pending saves are written. For tests.
-  @visibleForTesting
-  Future<void> get pendingSaves => _saveChain;
+  /// True while no save is in progress. A new chain then starts from a fresh
+  /// future, so it never hangs off one created in another zone (tests run
+  /// under fake time; a future made before that would complete outside it).
+  bool _saveIdle = true;
+
+  /// Completes when all pending saves are written.
+  Future<void> get pendingSaves =>
+      _saveIdle ? Future<void>.value() : _saveChain;
 
   /// Starter data for a first launch: sample folders and tasks.
   void _seed() {
@@ -312,6 +319,7 @@ class AppStore extends ChangeNotifier {
     _storage = MemoryStorage();
     _paused = null;
     _saveChain = Future<void>.value();
+    _saveIdle = true;
     _saveFailed = false;
     problem.value = null;
     _seed();
@@ -437,7 +445,10 @@ class AppStore extends ChangeNotifier {
   void _persist() {
     final data = jsonEncode(_toJson());
     final storage = _storage;
-    _saveChain = _saveChain.then((_) => storage.writeJson(data)).then(
+    final previous = _saveIdle ? Future<void>.value() : _saveChain;
+    _saveIdle = false;
+    late final Future<void> run;
+    run = previous.then((_) => storage.writeJson(data)).then(
       (_) {
         _saveFailed = false;
       },
@@ -452,7 +463,10 @@ class AppStore extends ChangeNotifier {
               'everything is saved again with your next change.',
         ));
       },
-    );
+    ).whenComplete(() {
+      if (identical(_saveChain, run)) _saveIdle = true;
+    });
+    _saveChain = run;
   }
 
   void _changed() {
@@ -646,6 +660,31 @@ class AppStore extends ChangeNotifier {
       lastKnown: known,
       lastSeen: seen,
     );
+    _changed();
+  }
+
+  /// Cards in [deck] due for review today (new cards included).
+  List<Flashcard> dueCards(FlashcardSet deck) =>
+      deck.dueCards(startOfDay(clock.now()));
+
+  /// Smart review: after the first answer for a card in a round, decides
+  /// when it comes back (tomorrow if missed, later and later if known).
+  void scheduleCard(String setId, String cardId, {required bool knewIt}) {
+    final i = _sets.indexWhere((s) => s.id == setId);
+    if (i < 0) return;
+    final deck = _sets[i];
+    final today = startOfDay(clock.now());
+    _sets[i] = deck.copyWith(cards: [
+      for (final c in deck.cards)
+        if (c.id == cardId)
+          c.scheduled(
+            interval: nextInterval(c.interval, knewIt: knewIt),
+            due: today.add(
+                Duration(days: nextInterval(c.interval, knewIt: knewIt))),
+          )
+        else
+          c,
+    ]);
     _changed();
   }
 
@@ -879,6 +918,66 @@ class AppStore extends ChangeNotifier {
           _matches(s.title, q) ||
           s.cards.any((c) => _matches(c.front, q) || _matches(c.back, q)))
       .toList();
+
+  // ---- Backup ----------------------------------------------------------------
+
+  /// Everything, as one backup file (see `backup.dart`).
+  Future<Uint8List> createBackup() async {
+    await pendingSaves; // include the latest change
+    final files = <String, Uint8List>{};
+    for (final prefix in ['notes/', 'sets/']) {
+      for (final key in await _files.list(prefix)) {
+        final bytes = await _files.readBytes(key);
+        if (bytes != null) files[key] = bytes;
+      }
+    }
+    return packBackup(
+      json: jsonEncode(_toJson()),
+      files: files,
+      createdAt: clock.now(),
+      appVersion: kAppVersion,
+    );
+  }
+
+  /// Replaces everything on this device with the backup in [zip]. Throws a
+  /// [FormatException] if it isn't a backup this version can read; nothing
+  /// is changed in that case.
+  Future<void> restoreBackup(Uint8List zip) async {
+    final contents = unpackBackup(zip);
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(contents.json);
+    } catch (_) {
+      throw const FormatException("This backup's data can't be read.");
+    }
+    if (decoded is! Map<String, Object?>) {
+      throw const FormatException("This backup's data can't be read.");
+    }
+    final version = decoded['version'];
+    if (version is num && version > _dataVersion) {
+      throw const FormatException(
+          'This backup was made by a newer version of $kAppName. '
+          'Update the app to restore it.');
+    }
+
+    // A restore is a clean slate, so it also ends a paused state (the
+    // unreadable file is replaced).
+    final device = _paused ?? _storage;
+    await pendingSaves; // no older save may land on top of the restore
+    for (final prefix in ['notes/', 'sets/']) {
+      await _tryDeletePrefix(prefix, from: device);
+    }
+    for (final entry in contents.files.entries) {
+      await device.writeBytes(entry.key, entry.value);
+    }
+    await device.writeJson(contents.json);
+    _paused = null;
+    await init(device);
+  }
+
+  /// Remembers that a backup file was just made.
+  void markBackedUp() =>
+      updatePrefs(_prefs.copyWith(lastBackupAt: clock.now()));
 
   // ---- Preferences -----------------------------------------------------------
 

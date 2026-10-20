@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../data/app_store.dart';
 import '../models/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
@@ -114,6 +115,7 @@ class SetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final f = folder;
+    final due = AppStore.instance.dueCards(deck).length;
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -149,7 +151,8 @@ class SetTile extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          plural(deck.cards.length, 'card'),
+                          '${plural(deck.cards.length, 'card')}'
+                          '${due > 0 ? ' · $due due' : ''}',
                           style: AppText.itemMeta,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

@@ -51,9 +51,18 @@ class HelpScreen extends StatelessWidget {
           'makes them exact.',
     ),
     (
+      'How does Smart Review work?',
+      'Each flashcard comes back when you are about to forget it. A card '
+          'you know comes back after a growing gap (1, 3, 7, 14 days and '
+          'so on); a card you miss comes back tomorrow. A set shows how '
+          'many cards are due today, and you can always study all of them.',
+    ),
+    (
       'Where is my data saved?',
-      'Everything is saved on this phone. Deleting the app deletes your '
-          'data. Backup & sync across devices is coming with tAsikaso+.',
+      'Everything is saved on this phone; deleting the app deletes it. To '
+          'keep a copy, open Profile → Backup & Sync and tap Back Up Now, '
+          'then save the file to Google Drive. Restore it on any phone from '
+          'the same screen.',
     ),
   ];
 

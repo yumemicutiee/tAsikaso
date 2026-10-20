@@ -79,14 +79,19 @@ void openSet(BuildContext context, FlashcardSet deck) {
   );
 }
 
-void studySet(BuildContext context, FlashcardSet deck) {
+/// Studies [deck]: just the cards due today when some (but not all) are
+/// due, otherwise every card. [dueOnly] overrides that.
+void studySet(BuildContext context, FlashcardSet deck, {bool? dueOnly}) {
   if (deck.cards.isEmpty) {
     _toast(context, 'Add some cards first.');
     openSet(context, deck);
     return;
   }
+  final due = _store.dueCards(deck).length;
+  final reviewDue = dueOnly ?? (due > 0 && due < deck.cards.length);
   Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => StudyCardsScreen(setId: deck.id)),
+    MaterialPageRoute(
+        builder: (_) => StudyCardsScreen(setId: deck.id, dueOnly: reviewDue)),
   );
 }
 

@@ -74,4 +74,18 @@ class FileStorage implements LocalStorage {
       await target.delete();
     }
   }
+
+  @override
+  Future<List<String>> list(String prefix) async {
+    final root = await _dir();
+    final keys = <String>[];
+    await for (final entity in root.list(recursive: true)) {
+      if (entity is! File) continue;
+      final key = entity.path
+          .substring(root.path.length + 1)
+          .replaceAll(Platform.pathSeparator, '/');
+      if (key.startsWith(prefix)) keys.add(key);
+    }
+    return keys;
+  }
 }
