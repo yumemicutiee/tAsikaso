@@ -19,8 +19,13 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 - [ ] Put the app in the background for 2 minutes, come back: the countdown is still right.
 - [ ] Close the app completely (swipe away) while running, reopen: the timer carries on.
 - [ ] Set Focus to 1 minute in Settings, start, lock the phone: a notification with sound arrives when it ends.
-      Note how late it is: ________ seconds. (Android 14+ phones are expected to be late — known bug.)
-- [ ] Vibrate When Time Is Up: can you feel anything when the timer ends? (Expected: barely — known bug.)
+      Note how late it is: ________ seconds.
+- [ ] Android 14+: Settings → Notifications shows "Allow Exact Timing" with "Alerts may be late"; tapping it opens the
+      phone's Alarms & reminders page; after allowing, the row disappears and the next alert is on time.
+- [ ] Vibrate When Time Is Up ON: a real two-buzz vibration when the timer ends (app open), and the notification vibrates.
+      OFF: no vibration from either.
+- [ ] Refuse the notification permission on first START (fresh install): Timer Alerts switches itself off with a message.
+- [ ] Reset during a running Pomodoro asks "Reset This Pomodoro?".
 - [ ] Skip during a Pomodoro asks first; skip during a break goes to the next Pomodoro.
 - [ ] Long break after 4 Pomodoros (set Focus/breaks to 1 min to test quickly).
 - [ ] Auto-start breaks / Pomodoros works when switched on.
@@ -43,7 +48,8 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 - [ ] Save as Flashcards → suggested cards appear; Add / Skip / Add All.
 
 ## Library, folders, search
-- [ ] New folder with a colour; open it; edit it (long-press); delete it from its ⋮ menu (deletes its notes too, with a warning).
+- [ ] New folder with a colour; open it; edit it (long-press); delete it from its ⋮ menu or from the long-press sheet's
+      "Delete Folder" (deletes its notes too, with a warning).
 - [ ] Rename, move and delete a note.
 - [ ] Search finds a folder, a note title, text inside a scanned note, and a card.
 
