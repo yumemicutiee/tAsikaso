@@ -49,9 +49,13 @@ lecture-note capture → PDF or flashcards.
   back the notes **typed up cleanly**, a summary, the **key concepts**, a set
   of **flashcards** and a **quiz**. Key concepts show on the note's text
   screen and on the set; "Make Cards with AI" and "New Quiz" work on
-  existing sets, and any note's text can become a set. Needs internet; when
-  the server can't be reached the app falls back to the offline behaviour
-  and says so. The photos themselves never leave the phone.
+  existing sets, any note's text can become a set, and **Type Up with AI**
+  (on a note's text screen) types up a note that was saved offline. Every
+  wait has **Cancel**, which drops the request so the server stops the
+  Claude call too. Needs internet; when the server can't be reached the app
+  falls back to the offline behaviour and says so, and server errors end
+  with a short "Ref" code that finds the request in the server's log. Only
+  text leaves the phone — never the photos.
 - **Save Notes As:** choose **Scan PDF** (the pages as photos, text
   selectable), **Text PDF** (the notes typed up, with the key concepts at
   the end; needs text recognition) or **Flashcards**, a title and a folder,
@@ -59,8 +63,9 @@ lecture-note capture → PDF or flashcards.
 - **Library & folders:** create folders with a colour, open a folder to see
   its notes and sets, edit or delete folders (long-press a folder too).
   Notes can be opened, shared, renamed, moved or deleted.
-- **Search:** Dashboard and Library search folders, notes, set titles and
-  card text.
+- **Search:** Dashboard and Library search folders, notes (title, text as
+  read or typed up, summary, key concepts), set titles, card text, and
+  sets' summaries and concepts.
 - **Flashcards:** create sets (from the + button or from scanned photos),
   write cards while looking at your photos, then study: tap to flip, "Again"
   brings a card back later, "Got It" moves on; a summary at the end.
@@ -70,8 +75,10 @@ lecture-note capture → PDF or flashcards.
   at the end. Questions come from the study server when it's on, otherwise
   they're made from the cards themselves. Typed answers are judged on the
   phone (spelling slips and word order forgiven) or, with the server, by
-  meaning. Right answers count like "Got It" and wrong ones like "Again"
-  for smart review.
+  meaning; a partly right answer counts as half. **New Quiz** asks how many
+  questions and which types. The set screen lists the saved quiz's
+  questions so a bad one can be deleted. Right answers count like "Got It"
+  and wrong ones like "Again" for smart review.
 - **Pomodoro:** START opens **Focus Mode**: a circle grows out of the
   button into a full-screen view with the task, "Focus on the process, *name*!",
   a big timer and a tick-mark dial. The controls are pause, reset and skip.

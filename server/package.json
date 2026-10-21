@@ -5,14 +5,14 @@
   "type": "module",
   "description": "tAsikaso's study server: turns lecture notes into clean notes, key concepts, flashcards and quizzes with Claude.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "node --import tsx --test --test-timeout=60000 \"test/**/*.test.ts\"",
     "try": "tsx scripts/try.ts"
   },
   "dependencies": {

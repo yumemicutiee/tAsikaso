@@ -31,11 +31,16 @@ class FolderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tint = AppColors.tint(folder.color, 0.3);
+    final contents = '${plural(noteCount, 'note')} · ${plural(setCount, 'set')}';
     return AspectRatio(
       aspectRatio: aspectRatio,
+      // One label with everything, so the name isn't read twice.
       child: Semantics(
         button: true,
-        label: '${folder.name} folder',
+        label: '${folder.name} folder, $contents',
+        excludeSemantics: true,
+        onTap: onTap,
+        onLongPress: onLongPress,
         child: Material(
           color: tint,
           borderRadius: BorderRadius.circular(radius),
@@ -83,7 +88,7 @@ class FolderCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${plural(noteCount, 'note')} · ${plural(setCount, 'set')}',
+                        contents,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -117,6 +122,8 @@ class NewFolderCard extends StatelessWidget {
       child: Semantics(
         button: true,
         label: 'New Folder',
+        excludeSemantics: true, // the text under the icon says it again
+        onTap: onTap,
         child: GestureDetector(
           onTap: onTap,
           child: CustomPaint(

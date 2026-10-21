@@ -64,23 +64,47 @@ export const AnswerCheck = z.object({
 });
 export type AnswerCheck = z.infer<typeof AnswerCheck>;
 
-// What the app sends.
+// What the app sends. Every text has a cap: input tokens are billed, so the
+// size of a request is the size of its bill.
+
+/** The most text one request may send, about 40k tokens. */
+export const MAX_INPUT_CHARS = 120_000;
 
 export const StudyKitRequest = z.object({
-  text: z.string().trim().min(20).max(120_000),
+  text: z.string().trim().min(20).max(MAX_INPUT_CHARS),
   title: z.string().trim().max(200).optional(),
-  maxCards: z.number().int().min(1).max(60).optional(),
+  /** 0 asks for no flashcards (cheaper, e.g. only typing up the notes). */
+  maxCards: z.number().int().min(0).max(60).optional(),
   quizCount: z.number().int().min(0).max(40).optional(),
 });
 export type StudyKitRequest = z.infer<typeof StudyKitRequest>;
 
-export const QuizRequest = z.object({
-  title: z.string().trim().max(200).optional(),
-  cards: z.array(Card).min(1).max(200),
-  concepts: z.array(Concept).max(50).optional(),
-  count: z.number().int().min(1).max(40).optional(),
-  types: z.array(QuestionType).min(1).optional(),
+const RequestCard = z.object({
+  front: z.string().max(2_000),
+  back: z.string().max(4_000),
 });
+const RequestConcept = z.object({
+  term: z.string().max(500),
+  explanation: z.string().max(2_000),
+});
+
+export const QuizRequest = z
+  .object({
+    title: z.string().trim().max(200).optional(),
+    cards: z.array(RequestCard).min(1).max(200),
+    concepts: z.array(RequestConcept).max(50).optional(),
+    count: z.number().int().min(1).max(40).optional(),
+    types: z.array(QuestionType).min(1).optional(),
+  })
+  .refine(
+    (q) => {
+      let chars = 0;
+      for (const c of q.cards) chars += c.front.length + c.back.length;
+      for (const c of q.concepts ?? []) chars += c.term.length + c.explanation.length;
+      return chars <= MAX_INPUT_CHARS;
+    },
+    { message: "too much text for one quiz; use fewer cards", path: ["cards"] },
+  );
 export type QuizRequest = z.infer<typeof QuizRequest>;
 
 export const CheckAnswerRequest = z.object({

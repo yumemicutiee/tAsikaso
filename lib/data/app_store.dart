@@ -479,7 +479,10 @@ class AppStore extends ChangeNotifier {
             if (e.value is num) e.key: (e.value as num).toInt(),
       };
 
-  Map<String, Object?> _toJson() => {
+  /// Everything small, as saved on the device. [forExport] (backup files and
+  /// the copy on Google Drive, which can be shared) leaves out the study
+  /// server's app token: it stays on this device.
+  Map<String, Object?> _toJson({bool forExport = false}) => {
         'version': _dataVersion,
         'folders': [for (final f in _folders) f.toJson()],
         'notes': [for (final n in _notes) n.toJson()],
@@ -492,7 +495,7 @@ class AppStore extends ChangeNotifier {
         if (_suggestedLog.isNotEmpty) 'suggestedLog': _suggestedLog,
         'sessions': [for (final s in _sessions) s.toJson()],
         'breaks': [for (final b in _breaks) b.toJson()],
-        'prefs': _prefs.toJson(),
+        'prefs': (forExport ? _prefs.copyWith(aiToken: '') : _prefs).toJson(),
         if (_timer case final t?) 'timer': t.toJson(),
       };
 
@@ -983,17 +986,28 @@ class AppStore extends ChangeNotifier {
   List<StudyFolder> searchFolders(String q) =>
       _folders.where((f) => _matches(f.name, q)).toList();
 
+  bool _inConcepts(List<Concept> concepts, String q) => concepts
+      .any((c) => _matches(c.term, q) || _matches(c.explanation, q));
+
+  /// Notes whose title, text (as read or typed up), summary, key concepts
+  /// or folder name contain [q].
   List<Note> searchNotes(String q) => _notes
       .where((n) =>
           _matches(n.title, q) ||
           _matches(n.text, q) ||
+          _matches(n.cleanText, q) ||
+          _matches(n.summary, q) ||
+          _inConcepts(n.concepts, q) ||
           _matches(folder(n.folderId)?.name ?? '', q))
       .toList();
 
+  /// Sets whose title, cards, summary or key concepts contain [q].
   List<FlashcardSet> searchSets(String q) => _sets
       .where((s) =>
           _matches(s.title, q) ||
-          s.cards.any((c) => _matches(c.front, q) || _matches(c.back, q)))
+          s.cards.any((c) => _matches(c.front, q) || _matches(c.back, q)) ||
+          _matches(s.summary, q) ||
+          _inConcepts(s.concepts, q))
       .toList();
 
   // ---- Backup ----------------------------------------------------------------
@@ -1009,7 +1023,7 @@ class AppStore extends ChangeNotifier {
       }
     }
     return packBackup(
-      json: jsonEncode(_toJson()),
+      json: exportJson(),
       files: files,
       createdAt: clock.now(),
       appVersion: kAppVersion,
@@ -1024,8 +1038,9 @@ class AppStore extends ChangeNotifier {
     await restoreFrom(json: contents.json, files: contents.files);
   }
 
-  /// Everything small, as the JSON that is saved, backed up and synced.
-  String exportJson() => jsonEncode(_toJson());
+  /// Everything small, as the JSON that is backed up and synced: what is
+  /// saved, without the study server's app token.
+  String exportJson() => jsonEncode(_toJson(forExport: true));
 
   /// Keys of every PDF, photo and thumbnail on this device, and the
   /// profile photo.
@@ -1068,9 +1083,12 @@ class AppStore extends ChangeNotifier {
 
     // The plan and this month's suggested-card count belong to this device
     // and account, not to the data being restored: an old backup mustn't
-    // end (or start) a plan, or hand back used-up suggestions.
+    // end (or start) a plan, or hand back used-up suggestions. So does the
+    // study server set up here (backups carry no app token).
     final keepPlan = _prefs.subscription;
     final keepSuggested = Map.of(_suggestedLog);
+    final keepServerUrl = _prefs.aiServerUrl;
+    final keepToken = _prefs.aiToken;
 
     // A restore is a clean slate, so it also ends a paused state (the
     // unreadable file is replaced).
@@ -1091,8 +1109,15 @@ class AppStore extends ChangeNotifier {
     _paused = null;
     await init(device);
 
+    // A server set up on this device wins; a new phone with none takes the
+    // backup's address (not a secret) so Smart Study keeps working, plus
+    // the token only if the backup is old enough to still carry one.
     _prefs = _prefs.copyWith(
-        subscription: keepPlan, clearSubscription: keepPlan == null);
+      subscription: keepPlan,
+      clearSubscription: keepPlan == null,
+      aiServerUrl: keepServerUrl.isNotEmpty ? keepServerUrl : null,
+      aiToken: keepServerUrl.isNotEmpty || keepToken.isNotEmpty ? keepToken : null,
+    );
     for (final e in keepSuggested.entries) {
       final restored = _suggestedLog[e.key] ?? 0;
       if (e.value > restored) _suggestedLog[e.key] = e.value;

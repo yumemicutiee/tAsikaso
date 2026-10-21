@@ -14,13 +14,23 @@ import '../actions.dart';
 
 /// A quiz on a set, one question at a time: multiple choice, true or
 /// false, fill in the blank and typed answers. After each answer the right
-/// one and an explanation show; the score comes at the end. Right answers
-/// count like "Got It" and wrong ones like "Again" for smart review.
+/// one and an explanation show; the score comes at the end, a partly right
+/// answer counting as half. Right answers count like "Got It", and wrong or
+/// partly right ones like "Again", for smart review.
 class QuizScreen extends StatefulWidget {
-  const QuizScreen({super.key, required this.setId, required this.questions});
+  const QuizScreen({
+    super.key,
+    required this.setId,
+    required this.questions,
+    this.notice,
+  });
 
   final String setId;
   final List<QuizQuestion> questions;
+
+  /// Something to tell the user about how the quiz was made (e.g. the study
+  /// server couldn't be reached), shown at the top until it's closed.
+  final String? notice;
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -42,6 +52,7 @@ class _QuizScreenState extends State<QuizScreen> {
   final _store = AppStore.instance;
 
   late List<QuizQuestion> _questions = List.of(widget.questions);
+  late String? _notice = widget.notice;
   int _index = 0;
   int? _picked;
   final _typed = TextEditingController();
@@ -132,9 +143,10 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-  void _restart(List<QuizQuestion> questions) {
+  void _restart(List<QuizQuestion> questions, {String? notice}) {
     setState(() {
       _questions = questions;
+      _notice = notice;
       _index = 0;
       _picked = null;
       _typed.clear();
@@ -146,9 +158,9 @@ class _QuizScreenState extends State<QuizScreen> {
   Future<void> _newQuiz() async {
     final deck = _store.setById(widget.setId);
     if (deck == null) return;
-    final made = await makeQuiz(context, deck);
+    final made = await newQuiz(context, deck);
     if (made == null || !mounted) return;
-    _restart(made);
+    _restart(made.questions, notice: made.notice);
   }
 
   @override
@@ -172,17 +184,28 @@ class _QuizScreenState extends State<QuizScreen> {
         ),
       ),
       body: SafeArea(
-        child: _questions.isEmpty
-            ? const Center(child: Text('This quiz has no questions.'))
-            : _finished
-                ? _Summary(
-                    answers: _answers,
-                    onRetry: () =>
-                        _restart(List.of(_questions)..shuffle(math.Random())),
-                    onNewQuiz: _newQuiz,
-                    onDone: () => Navigator.of(context).pop(),
-                  )
-                : _buildQuestion(),
+        child: Column(
+          children: [
+            if (_notice case final notice?)
+              _NoticeBanner(
+                text: notice,
+                onClose: () => setState(() => _notice = null),
+              ),
+            Expanded(
+              child: _questions.isEmpty
+                  ? const Center(child: Text('This quiz has no questions.'))
+                  : _finished
+                      ? _Summary(
+                          answers: _answers,
+                          onRetry: () => _restart(
+                              List.of(_questions)..shuffle(math.Random())),
+                          onNewQuiz: _newQuiz,
+                          onDone: () => Navigator.of(context).pop(),
+                        )
+                      : _buildQuestion(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -333,6 +356,52 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 }
 
+/// The quiz score in percent: a right answer is a point, a partly right
+/// one half a point.
+int quizPercent({required int correct, required int partly, required int of}) =>
+    of <= 0 ? 0 : ((correct + partly / 2) * 100 / of).round();
+
+/// What to know about how the quiz was made, at the top of the screen
+/// (a toast would cover the Check button).
+class _NoticeBanner extends StatelessWidget {
+  const _NoticeBanner({required this.text, required this.onClose});
+
+  final String text;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+      padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(AppIcons.warning, size: 18, color: AppColors.primaryDeep),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text,
+                style: TextStyle(
+                    fontSize: 12.5, height: 1.35, color: AppColors.ink)),
+          ),
+          IconButton(
+            tooltip: 'Close',
+            onPressed: onClose,
+            icon: const Icon(AppIcons.close, size: 16),
+            color: AppColors.textSecondary,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 enum _OptionState { idle, picked, right, wrong, dim }
 
 class _OptionTile extends StatelessWidget {
@@ -473,11 +542,14 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) {
     final correct =
         answers.where((a) => a.verdict == AnswerVerdict.correct).length;
+    final partly =
+        answers.where((a) => a.verdict == AnswerVerdict.partly).length;
     final missed = [
       for (final a in answers)
         if (a.verdict != AnswerVerdict.correct) a,
     ];
-    final percent = answers.isEmpty ? 0 : (correct * 100 / answers.length).round();
+    final percent = quizPercent(correct: correct, partly: partly, of: answers.length);
+    final total = plural(answers.length, 'question');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
@@ -496,10 +568,20 @@ class _Summary extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'You got $correct of ${plural(answers.length, 'question')} right.',
+          partly == 0
+              ? 'You got $correct of $total right.'
+              : 'You got $correct right and $partly partly right of $total.',
           textAlign: TextAlign.center,
           style: AppText.statLabel.copyWith(fontSize: 14),
         ),
+        if (partly > 0) ...[
+          const SizedBox(height: 2),
+          Text(
+            'A partly right answer counts as half.',
+            textAlign: TextAlign.center,
+            style: AppText.itemMeta,
+          ),
+        ],
         const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,

@@ -1,0 +1,13 @@
+# Only package*.json, tsconfig.json and src/ go into the image.
+node_modules
+dist
+.env
+.env.*
+test
+scripts
+*.md
+Dockerfile
+.dockerignore
+render.yaml
+tsconfig.test.json
+npm-debug.log*

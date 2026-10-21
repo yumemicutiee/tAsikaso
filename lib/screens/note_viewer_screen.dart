@@ -4,6 +4,7 @@ import 'package:printing/printing.dart';
 
 import '../data/app_store.dart';
 import '../models/models.dart';
+import '../services/study_ai.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -131,8 +132,9 @@ class _NoteViewerScreenState extends State<NoteViewerScreen> {
 
 /// A note's text: typed up by the study server when it was (with the
 /// summary and key concepts), or as read from the pages. Selectable, with
-/// Copy, and a button to make flashcards from it. Reads the note from the
-/// store, so a rename shows here too.
+/// Copy, and a button to make flashcards from it. With Smart Study on, the
+/// text as read can be typed up (again). Reads the note from the store, so
+/// a rename shows here too.
 class NoteTextScreen extends StatefulWidget {
   const NoteTextScreen({super.key, required this.noteId});
 
@@ -162,6 +164,12 @@ class _NoteTextScreenState extends State<NoteTextScreen> {
         final typedUp = note.cleanText.isNotEmpty;
         final showTyped = typedUp && !_asRead;
         final text = showTyped ? note.cleanText : note.text;
+        final canTypeUp = StudyAi.isOn && note.text.trim().isNotEmpty;
+        final linkStyle = TextButton.styleFrom(
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        );
 
         return Scaffold(
           appBar: subPageAppBar('Note Text', actions: [
@@ -198,21 +206,30 @@ class _NoteTextScreenState extends State<NoteTextScreen> {
                         'and numbers.',
                 style: AppText.itemMeta,
               ),
-              if (typedUp)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      textStyle: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    onPressed: () => setState(() => _asRead = !_asRead),
-                    child: Text(_asRead
-                        ? 'Show the typed-up notes'
-                        : 'Show the text as read'),
-                  ),
+              if (typedUp || canTypeUp)
+                Wrap(
+                  spacing: 16,
+                  children: [
+                    if (typedUp)
+                      TextButton(
+                        style: linkStyle,
+                        onPressed: () => setState(() => _asRead = !_asRead),
+                        child: Text(_asRead
+                            ? 'Show the typed-up notes'
+                            : 'Show the text as read'),
+                      ),
+                    if (canTypeUp)
+                      TextButton.icon(
+                        style: linkStyle,
+                        onPressed: () async {
+                          final done = await typeUpNote(context, note);
+                          if (done && mounted) setState(() => _asRead = false);
+                        },
+                        icon: const Icon(AppIcons.suggest, size: 15),
+                        label: Text(
+                            typedUp ? 'Type Up Again' : 'Type Up with AI'),
+                      ),
+                  ],
                 ),
               if (showTyped && note.summary.isNotEmpty) ...[
                 const SizedBox(height: 12),

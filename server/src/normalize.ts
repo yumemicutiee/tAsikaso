@@ -1,4 +1,4 @@
-import type { Card, Concept, QuizQuestion, StudyKit } from "./schemas.js";
+import type { Card, Concept, QuestionType, QuizQuestion, StudyKit } from "./schemas.js";
 
 // Tidies what the model returned so the app can rely on it: trimmed text,
 // no empty or duplicate cards, every question playable.
@@ -15,20 +15,40 @@ function cleanNotes(s: string): string {
     .trim();
 }
 
-export function normalizeCards(cards: Card[], max: number): Card[] {
-  const seen = new Set<string>();
+/**
+ * Cleans [cards] and keeps at most [max]. [map] says where each input card
+ * ended up (its new index, or -1 if it was dropped), so a question's
+ * cardIndex can follow its card.
+ */
+export function normalizeCardsMapped(
+  cards: Card[],
+  max: number,
+): { cards: Card[]; map: number[] } {
+  const seen = new Map<string, number>();
   const out: Card[] = [];
+  const map: number[] = [];
   for (const c of cards) {
     const front = clean(c.front);
     const back = clean(c.back);
-    if (!front || !back) continue;
     const key = front.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({ front, back });
-    if (out.length >= max) break;
+    if (!front || !back) {
+      map.push(-1);
+    } else if (seen.has(key)) {
+      // A duplicate: questions about it point at the card that was kept.
+      map.push(seen.get(key)!);
+    } else if (out.length >= max) {
+      map.push(-1);
+    } else {
+      seen.set(key, out.length);
+      map.push(out.length);
+      out.push({ front, back });
+    }
   }
-  return out;
+  return { cards: out, map };
+}
+
+export function normalizeCards(cards: Card[], max: number): Card[] {
+  return normalizeCardsMapped(cards, max).cards;
 }
 
 export function normalizeConcepts(concepts: Concept[]): Concept[] {
@@ -48,10 +68,22 @@ export function normalizeConcepts(concepts: Concept[]): Concept[] {
 
 const BLANK = /_{3,}/;
 
+const TRUE_WORDS = new Set(["true", "tama", "totoo", "t", "yes", "oo"]);
+const FALSE_WORDS = new Set(["false", "mali", "f", "no", "hindi"]);
+
+/** true / false for a word such as "True", "Mali." or "F"; null if it's neither. */
+function truthOf(s: string | undefined): boolean | null {
+  const word = clean(s ?? "").toLowerCase().replace(/[.!]+$/, "");
+  if (TRUE_WORDS.has(word)) return true;
+  if (FALSE_WORDS.has(word)) return false;
+  return null;
+}
+
 /**
  * Returns the question made playable, or null if it can't be. A choice
- * question whose answerIndex is off is repaired from the answer text; a
- * fill_blank without a blank becomes a typed question.
+ * question's answer is found from its answer text when that names an
+ * option, else from answerIndex (following the option through the clean-up);
+ * a fill_blank without a blank becomes a typed question.
  */
 export function normalizeQuestion(
   q: QuizQuestion,
@@ -69,14 +101,32 @@ export function normalizeQuestion(
 
   switch (q.type) {
     case "multiple_choice": {
-      const options = [...new Set(q.options.map(clean).filter(Boolean))];
-      if (options.length < 3) return null;
-      let answerIndex = q.answerIndex;
-      if (answerIndex < 0 || answerIndex >= options.length) {
-        answerIndex = options.findIndex(
-          (o) => o.toLowerCase() === answer.toLowerCase(),
-        );
+      // Clean and de-duplicate the options, remembering where each one went,
+      // so dropping an empty or repeated option doesn't shift the answer.
+      const options: string[] = [];
+      const moved: number[] = [];
+      for (const raw of q.options) {
+        const o = clean(raw);
+        if (!o) {
+          moved.push(-1);
+          continue;
+        }
+        let at = options.findIndex((x) => x.toLowerCase() === o.toLowerCase());
+        if (at < 0) {
+          at = options.length;
+          options.push(o);
+        }
+        moved.push(at);
       }
+      if (options.length < 3) return null;
+      const byText = answer
+        ? options.findIndex((o) => o.toLowerCase() === answer.toLowerCase())
+        : -1;
+      const byIndex =
+        Number.isInteger(q.answerIndex) && q.answerIndex >= 0 && q.answerIndex < moved.length
+          ? moved[q.answerIndex]!
+          : -1;
+      const answerIndex = byText >= 0 ? byText : byIndex;
       if (answerIndex < 0) return null;
       return {
         type: "multiple_choice",
@@ -90,12 +140,8 @@ export function normalizeQuestion(
       };
     }
     case "true_false": {
-      const text = (answer || q.options[q.answerIndex] || "").toLowerCase();
-      const isTrue =
-        text === "true" || text === "tama" || text === "t" || text === "yes";
-      const isFalse =
-        text === "false" || text === "mali" || text === "f" || text === "no";
-      if (!isTrue && !isFalse) return null;
+      const isTrue = truthOf(answer) ?? truthOf(q.options[q.answerIndex]);
+      if (isTrue === null) return null;
       return {
         type: "true_false",
         prompt,
@@ -148,21 +194,33 @@ export function normalizeQuestion(
   }
 }
 
+export interface QuestionOptions {
+  /** Question types the student asked for; others are dropped. */
+  allowed?: readonly QuestionType[];
+  /** Where each card the model saw ended up (see normalizeCardsMapped). */
+  cardMap?: readonly number[];
+}
+
 export function normalizeQuestions(
   questions: QuizQuestion[],
   cardCount: number,
   max: number,
+  opts: QuestionOptions = {},
 ): QuizQuestion[] {
   const seen = new Set<string>();
   const out: QuizQuestion[] = [];
   for (const raw of questions) {
-    const q = normalizeQuestion(raw, cardCount);
+    if (out.length >= max) break;
+    const cardIndex = opts.cardMap
+      ? (opts.cardMap[raw.cardIndex] ?? -1)
+      : raw.cardIndex;
+    const q = normalizeQuestion({ ...raw, cardIndex }, cardCount);
     if (!q) continue;
+    if (opts.allowed && !opts.allowed.includes(q.type)) continue;
     const key = q.prompt.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(q);
-    if (out.length >= max) break;
   }
   return out;
 }
@@ -171,13 +229,13 @@ export function normalizeKit(
   kit: StudyKit,
   opts: { maxCards: number; quizCount: number; fallbackTitle?: string },
 ): StudyKit {
-  const cards = normalizeCards(kit.cards, opts.maxCards);
+  const { cards, map } = normalizeCardsMapped(kit.cards, opts.maxCards);
   return {
     title: clean(kit.title) || clean(opts.fallbackTitle ?? "") || "Notes",
     summary: clean(kit.summary),
     notes: cleanNotes(kit.notes),
     concepts: normalizeConcepts(kit.concepts),
     cards,
-    quiz: normalizeQuestions(kit.quiz, cards.length, opts.quizCount),
+    quiz: normalizeQuestions(kit.quiz, cards.length, opts.quizCount, { cardMap: map }),
   };
 }

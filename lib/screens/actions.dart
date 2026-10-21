@@ -17,6 +17,7 @@ import '../utils/quiz_builder.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/list_items.dart';
 import 'capture/notes_pdf.dart';
+import 'flashcards/quiz_options.dart';
 import 'flashcards/quiz_screen.dart';
 import 'flashcards/set_screen.dart';
 import 'flashcards/study_cards_screen.dart';
@@ -109,7 +110,8 @@ void studySet(BuildContext context, FlashcardSet deck, {bool? dueOnly}) {
 }
 
 /// Opens a quiz on [deck]: the one it already has, or a new one. With
-/// [fresh], a new one is written even if the set has a quiz.
+/// [fresh], a new one is written even if the set has a quiz, after asking
+/// how many questions and which types ([newQuiz]).
 Future<void> quizSet(BuildContext context, FlashcardSet deck,
     {bool fresh = false}) async {
   if (deck.cards.length < 2) {
@@ -124,52 +126,91 @@ Future<void> quizSet(BuildContext context, FlashcardSet deck,
           for (final q in deck.quiz)
             if (q.cardId == null || ids.contains(q.cardId)) q,
         ];
+  String? notice;
   if (questions.isEmpty) {
-    final made = await makeQuiz(context, deck);
+    final made =
+        fresh ? await newQuiz(context, deck) : await makeQuiz(context, deck);
     if (made == null) return;
-    questions = made;
+    questions = made.questions;
+    notice = made.notice;
   }
   if (!context.mounted) return;
   Navigator.of(context).push(
     MaterialPageRoute(
-        builder: (_) => QuizScreen(setId: deck.id, questions: questions)),
+        builder: (_) =>
+            QuizScreen(setId: deck.id, questions: questions, notice: notice)),
   );
 }
 
+/// A quiz that was just written, and what to tell the user about it (why
+/// the study server didn't write it), for the quiz screen to show. A toast
+/// would sit on top of the quiz's Check button.
+typedef QuizMade = ({List<QuizQuestion> questions, String? notice});
+
+/// Asks how many questions and which types, then writes a new quiz for
+/// [deck] ([makeQuiz]). Null if the user backed out or none could be made.
+Future<QuizMade?> newQuiz(BuildContext context, FlashcardSet deck) async {
+  final options = await showQuizOptions(context,
+      cardCount: deck.cards.length, withAi: StudyAi.isOn);
+  if (options == null || !context.mounted) return null;
+  return makeQuiz(context, deck, count: options.count, types: options.types);
+}
+
 /// Writes a new quiz for [deck] — by the study server when it's on, else
-/// from the cards themselves — keeps it on the set, and returns it. Null if
-/// none could be made.
-Future<List<QuizQuestion>?> makeQuiz(
-    BuildContext context, FlashcardSet deck) async {
+/// from the cards themselves — keeps it on the set, and returns it. [count]
+/// questions of the given [types] (all four when null). Null if none could
+/// be made, or the user cancelled the wait.
+Future<QuizMade?> makeQuiz(BuildContext context, FlashcardSet deck,
+    {int? count, Set<QuestionType>? types}) async {
   var questions = const <QuizQuestion>[];
   String? problem;
   if (StudyAi.isOn) {
     try {
-      questions = await runWithProgress(
+      final written = await runWithProgress(
         context,
         'Writing your quiz…',
-        () => StudyAi.makeQuiz(
-            title: deck.title, cards: deck.cards, concepts: deck.concepts),
+        (cancel) => StudyAi.makeQuiz(
+          title: deck.title,
+          cards: deck.cards,
+          concepts: deck.concepts,
+          count: count,
+          types: types,
+          cancel: cancel,
+        ),
       );
+      questions = [
+        for (final q in written)
+          if (types == null || types.contains(q.type)) q,
+      ];
     } on StudyAiException catch (e) {
+      if (e.isCancelled) return null;
       problem = e.message;
     } catch (e) {
       debugPrint('Quiz from the study server failed: $e');
       problem = "The study server's answer couldn't be read.";
     }
   }
-  if (questions.isEmpty) questions = buildLocalQuiz(deck.cards);
+  if (questions.isEmpty) {
+    questions = buildLocalQuiz(deck.cards, count: count ?? 12, types: types);
+  }
   if (!context.mounted) return null;
   if (questions.isEmpty) {
-    _toast(context, "A quiz couldn't be made from these cards.");
+    _toast(
+        context,
+        types == null || types.length == QuestionType.values.length
+            ? "A quiz couldn't be made from these cards."
+            : "These cards can't make questions of those types. Try other "
+                'types.');
     return null;
   }
   final current = _store.setById(deck.id);
   if (current != null) _store.updateSet(current.copyWith(quiz: questions));
-  if (problem != null) {
-    _toast(context, '$problem The quiz was made from your cards instead.');
-  }
-  return questions;
+  return (
+    questions: questions,
+    notice: problem == null
+        ? null
+        : '$problem The quiz was made from your cards instead.',
+  );
 }
 
 /// Cards to ask the study server for: 30, or what's left of the free
@@ -208,7 +249,7 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
     await runWithProgress(
       context,
       ai ? 'Making your flashcards…' : 'Reading your photos…',
-      () async {
+      (cancel) async {
         if (text.trim().isEmpty && deck.photoCount > 0) {
           final photos = <Uint8List>[];
           for (var i = 0; i < deck.photoCount; i++) {
@@ -219,11 +260,15 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
         }
         if (ai && text.trim().isNotEmpty) {
           kit = await StudyAi.makeStudyKit(
-              text: text, title: deck.title, maxCards: cardsToAskFor(left));
+              text: text,
+              title: deck.title,
+              maxCards: cardsToAskFor(left),
+              cancel: cancel);
         }
       },
     );
   } on StudyAiException catch (e) {
+    if (e.isCancelled) return; // nothing is saved
     problem = e.message;
   } catch (e) {
     debugPrint('Making cards failed: $e');
@@ -295,10 +340,14 @@ Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
       kit = await runWithProgress(
         context,
         'Making your flashcards…',
-        () => StudyAi.makeStudyKit(
-            text: text, title: note.title, maxCards: cardsToAskFor(left)),
+        (cancel) => StudyAi.makeStudyKit(
+            text: text,
+            title: note.title,
+            maxCards: cardsToAskFor(left),
+            cancel: cancel),
       );
     } on StudyAiException catch (e) {
+      if (e.isCancelled) return; // no set is made
       problem = e.message;
     } catch (e) {
       debugPrint('Cards from the study server failed: $e');
@@ -332,6 +381,56 @@ Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
     made = '$made $suggestionLimitNote';
   }
   _toast(context, problem == null ? made : '$problem $made');
+}
+
+/// Has the study server type up [note]'s text (as read from the pages),
+/// with a summary and key concepts, and keeps them on the note: for notes
+/// saved while the server couldn't be reached, or to try again. Makes no
+/// cards, so it doesn't use the free plan's suggested cards. Returns true
+/// if the note was typed up.
+Future<bool> typeUpNote(BuildContext context, Note note) async {
+  if (note.text.trim().isEmpty) {
+    _toast(context, 'This note has no text to type up.');
+    return false;
+  }
+  final StudyKit kit;
+  try {
+    kit = await runWithProgress(
+      context,
+      'Typing up your notes…',
+      (cancel) => StudyAi.makeStudyKit(
+        text: note.text,
+        title: note.title,
+        maxCards: 0,
+        quizCount: 0,
+        cancel: cancel,
+      ),
+    );
+  } on StudyAiException catch (e) {
+    if (!e.isCancelled && context.mounted) _toast(context, e.message);
+    return false;
+  } catch (e) {
+    debugPrint('Typing up the note failed: $e');
+    if (context.mounted) {
+      _toast(context, "The study server's answer couldn't be read.");
+    }
+    return false;
+  }
+  final current = _store.note(note.id);
+  if (current == null) return false;
+  if (kit.notes.trim().isEmpty) {
+    if (context.mounted) {
+      _toast(context, 'The study server sent back no notes. Please try again.');
+    }
+    return false;
+  }
+  _store.updateNote(current.copyWith(
+    cleanText: kit.notes,
+    summary: kit.summary,
+    concepts: kit.concepts,
+  ));
+  if (context.mounted) _toast(context, 'Your notes are typed up.');
+  return true;
 }
 
 /// [onDeleted] runs after the set is deleted (e.g. to close its screen).

@@ -84,10 +84,14 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppColors.primaryDeep : AppColors.navInactive;
+    // The label is read once: the text under the icon is left out, or
+    // screen readers say "Dashboard Dashboard".
     return Semantics(
       selected: selected,
       button: true,
       label: tab.label,
+      excludeSemantics: true,
+      onTap: onTap,
       child: InkResponse(
         onTap: onTap,
         radius: 32,

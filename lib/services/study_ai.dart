@@ -93,13 +93,38 @@ class AnswerCheck {
 class StudyAiException implements Exception {
   const StudyAiException(this.code, this.message);
 
-  /// `offline`, `timeout`, `not_set`, `bad_reply`, or the server's own code
-  /// (`unauthorized`, `rate_limited`, `declined`, `too_long`, …).
+  /// The user gave up waiting (see [CancelToken]).
+  static const cancelled = StudyAiException(
+      'cancelled', 'Cancelled. Nothing was changed.');
+
+  /// `offline`, `timeout`, `not_set`, `bad_reply`, `cancelled`, or the
+  /// server's own code (`unauthorized`, `rate_limited`, `declined`,
+  /// `too_long`, …).
   final String code;
   final String message;
 
+  /// The user cancelled: usually nothing needs saying.
+  bool get isCancelled => code == cancelled.code;
+
   @override
   String toString() => message;
+}
+
+/// Lets the user give up on a long wait. A study server request that
+/// carries one ends straight away with [StudyAiException.cancelled] once
+/// [cancel] is called, and its connection is closed, so the server sees
+/// the app has gone and can stop too.
+class CancelToken {
+  final _cancelled = Completer<void>();
+
+  bool get isCancelled => _cancelled.isCompleted;
+
+  /// Completes when [cancel] is called.
+  Future<void> get whenCancelled => _cancelled.future;
+
+  void cancel() {
+    if (!_cancelled.isCompleted) _cancelled.complete();
+  }
 }
 
 /// Talks to the study server in `server/`, which asks Claude for clean
@@ -153,6 +178,7 @@ class StudyAi {
     String? title,
     int maxCards = 30,
     int quizCount = 12,
+    CancelToken? cancel,
   }) async {
     final trimmedTitle = title?.trim();
     final j = await _post('/v1/study-kit', {
@@ -160,18 +186,22 @@ class StudyAi {
       'title': ?(trimmedTitle == null || trimmedTitle.isEmpty ? null : trimmedTitle),
       'maxCards': maxCards,
       'quizCount': quizCount,
-    });
+    }, cancel: cancel);
     final kit = j['kit'];
     if (kit is! Map<String, Object?>) throw _badReply;
     return StudyKit.fromJson(kit);
   }
 
-  /// A quiz on [cards]; each question points at its card by id.
+  /// A quiz on [cards]; each question points at its card by id. [count]
+  /// questions (the server picks when null), of the given [types] only
+  /// (all four when null).
   static Future<List<QuizQuestion>> makeQuiz({
     required String title,
     required List<Flashcard> cards,
     List<Concept> concepts = const [],
     int? count,
+    Set<QuestionType>? types,
+    CancelToken? cancel,
   }) async {
     final j = await _post('/v1/quiz', {
       'title': title,
@@ -181,7 +211,9 @@ class StudyAi {
       if (concepts.isNotEmpty)
         'concepts': [for (final c in concepts) c.toJson()],
       'count': ?count,
-    });
+      if (types != null && types.isNotEmpty)
+        'types': [for (final t in QuestionType.values) if (types.contains(t)) t.key],
+    }, cancel: cancel);
     final quiz = j['quiz'];
     if (quiz is! Map<String, Object?>) throw _badReply;
     return StudyKit.questionsFromServer(quiz['questions'], cards);
@@ -208,6 +240,10 @@ class StudyAi {
     );
   }
 
+  /// How long [ping] waits. A server on a free host sleeps when unused and
+  /// takes up to about a minute to wake on the first request.
+  static const pingTimeout = Duration(seconds: 75);
+
   /// True if a study server answers at [url] (no token needed).
   static Future<bool> ping(String url) async {
     if (!isValidUrl(url)) return false;
@@ -215,7 +251,7 @@ class StudyAi {
     try {
       final res = await client
           .get(_uri(url, '/health'))
-          .timeout(const Duration(seconds: 15));
+          .timeout(pingTimeout);
       if (res.statusCode != 200) return false;
       final j = jsonDecode(utf8.decode(res.bodyBytes));
       return j is Map && j['ok'] == true;
@@ -232,15 +268,17 @@ class StudyAi {
   static Uri _uri(String base, String path) =>
       Uri.parse(base.trim().replaceFirst(RegExp(r'/+$'), '') + path);
 
-  static Future<Json> _post(String path, Json body) async {
+  static Future<Json> _post(String path, Json body,
+      {CancelToken? cancel}) async {
     final base = serverUrl;
     if (!isValidUrl(base)) {
       throw const StudyAiException('not_set',
           'No study server is set. Add its address in Settings → Smart Study.');
     }
+    if (cancel != null && cancel.isCancelled) throw StudyAiException.cancelled;
     final client = (debugClient ?? http.Client.new)();
     try {
-      final res = await client
+      var reply = client
           .post(
             _uri(base, path),
             headers: {
@@ -250,6 +288,16 @@ class StudyAi {
             body: jsonEncode(body),
           )
           .timeout(timeout);
+      if (cancel != null) {
+        // Cancel doesn't wait for the server: the request is dropped (the
+        // client is closed below, which closes the connection).
+        reply = Future.any([
+          reply,
+          cancel.whenCancelled
+              .then<http.Response>((_) => throw StudyAiException.cancelled),
+        ]);
+      }
+      final res = await reply;
 
       Object? decoded;
       try {
@@ -265,7 +313,16 @@ class StudyAi {
         final message = error is Map && error['message'] is String
             ? error['message'] as String
             : 'The study server replied with an error (${res.statusCode}).';
-        throw StudyAiException(code, message);
+        // The server's request id, shortened, so a student can quote it
+        // when reporting a problem (it finds the request in the server log).
+        final id = error is Map && error['requestId'] is String
+            ? (error['requestId'] as String).trim()
+            : '';
+        throw StudyAiException(
+            code,
+            id.isEmpty
+                ? message
+                : '$message (Ref ${id.length > 8 ? id.substring(0, 8) : id})');
       }
       if (decoded is! Map<String, Object?>) throw _badReply;
       return decoded;

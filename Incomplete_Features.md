@@ -4,6 +4,39 @@ QA pass of the app (Flutter) and the study server (`server/`), 21 October 2026.
 This is the list to continue from. Items are grouped by area; each says what
 is missing or wrong, where it lives, why it matters, and what to do.
 
+**Update — v0.4.0 sweep (21 Oct, late):** a frontend and a backend sweep
+closed most of sections 2, 3, 6, 8 and 9 (marked ✅ below). Checked with
+`flutter analyze` (clean), `flutter test` (165 pass), the server's
+`npm run typecheck` / `npm test` (57 pass, 1 live test skipped without a
+key) / `npm run build`, and a 14-step browser run where the web app talked
+to the real study server, which talked to a fake Anthropic API (same
+streaming protocol): quizzes with chosen types, a typed answer judged by
+"Claude", partly-right scoring, the quiz list, and Cancel cutting the
+connection. **What's left before and after adding the Opus 5.5 key is in
+section 0.**
+
+## 0. Next step: connecting Claude Opus 5.5 for real
+
+The server is already written for Opus 5.5 (`claude-opus-5-5`, adaptive
+thinking, effort `high`, structured JSON, refusal fallbacks); only a real key
+and a host are missing. In order:
+
+1. Get an API key at platform.claude.com, put it in `server/.env`, run
+   `npm run try` and `LIVE_CLAUDE=1 npm test` (PowerShell:
+   `$env:LIVE_CLAUDE=1; npm test`). Look at the cards and quiz it makes and
+   how long it takes. (2.1)
+2. Set a **monthly spend limit in the Claude Console** — the server's own
+   daily cap (`DAILY_BUDGET_USD`, $5 default) restarts from zero whenever the
+   server restarts or a free instance wakes up.
+3. Deploy with `server/render.yaml` (README → Deploy), with a random
+   `APP_TOKEN`. Check `https://<service>.onrender.com/health`.
+4. Point the app at it: Settings → Smart Study, or set the GitHub variable
+   `STUDY_AI_URL` and secret `STUDY_AI_TOKEN` so CI builds carry them.
+5. From two phones on different networks, call `/v1/usage`; if both show the
+   same `you.address`, set `TRUST_PROXY=2`.
+6. Phone run-through of Smart Study (section 7), then tune `CLAUDE_EFFORT`
+   and `DAILY_BUDGET_USD` from real costs (2.10).
+
 **How this was checked**
 - Code review of `lib/` and `server/src/` against the README's claims.
 - `flutter analyze` clean; `flutter test` 107/107; `server`: `npm test` 13/13, `npm run typecheck`, `npm run build`.
@@ -32,31 +65,33 @@ Status key: 🔴 blocks a feature · 🟠 feature works but is incomplete · �
 | # | Gap | Status | Where / what to do |
 |---|---|---|---|
 | 2.1 | **Never run against the real Claude API** | 🔴 | `server/src/claude.ts` is written from the current SDK typings and type-checks, but no live call was possible here. First thing: `cd server`, put a real key in `.env`, `npm run try`. Check the JSON comes back, the quiz types are sensible, and how long Opus 5.5 at `high` takes on 2–3 pages. |
-| 2.2 | **No way to add AI to a note saved offline** | 🟠 | A note saved while the server was unreachable has no typed-up text/concepts and nothing re-asks later. Sets have "Make Cards with AI"; add a "Type up with AI" action on `NoteTextScreen` (`actions.dart`) that calls `StudyAi.makeStudyKit(maxCards: 0, quizCount: 0)` and `updateNote`. |
-| 2.3 | **No Cancel while waiting** | 🟠 | The progress dialog during save (`review_screen.dart` `_ProgressDialog`) and `runWithProgress` can't be cancelled; `StudyAi.timeout` is 3 minutes. Add a Cancel that abandons the request (and on the server, abort the Anthropic call when the client disconnects, see 3.6). |
+| 2.2 | **Type up a note with AI** | ✅ v0.4.0 | "Type Up with AI" / "Type Up Again" on the note's text screen (`typeUpNote` in `actions.dart`); doesn't use suggested-card allowance. |
+| 2.3 | **Cancel while waiting** | ✅ v0.4.0 | `CancelToken` in `study_ai.dart`; every AI wait has Cancel. Cancel drops the connection, and the server then aborts the Claude call (3.6) — seen end to end. In the save flow Cancel saves without AI. |
 | 2.4 | **On the web, Smart Study can't start from a scan** | 🟠 | There is no OCR on web, so scans have no text and the server is never called. Only "Make Cards with AI" on a set that already has `sourceText` works. Either accept (document) or add a web OCR (Tesseract.js) or let the server OCR the photos (it could send images to Claude directly — costlier). |
-| 2.5 | **Quiz questions can't be viewed, edited or deleted** | 🟡 | `FlashcardSet.quiz` is only reachable through "Take a Quiz". A list with delete/edit, like the cards list in `set_screen.dart`, would help when Claude writes a bad question. |
-| 2.6 | **No choice of quiz size or types** | 🟡 | Always 12 questions mixing all four types (`StudyAi.makeQuiz` / `buildLocalQuiz`). Add a small sheet before the quiz: count + which types. |
-| 2.7 | **Summary and key concepts are not searchable** | 🟡 | `AppStore.searchNotes` matches `title`, `text` and folder; `searchSets` matches title and cards. Add `cleanText`, `summary`, `concepts` (terms). |
-| 2.8 | **A "partly right" answer counts as wrong in the score** | 🟡 | `quiz_screen.dart` shows "Partly right" but `_correct` counts only `correct`. Decide: half a point, or count it, and say so on the result card. |
-| 2.9 | **The app token lives in prefs and in backups** | 🟠 | `AppPrefs.aiToken` is saved in `data.json` and therefore inside every backup ZIP (`backup.dart`). Sharing a backup shares the token. Leave it out of backups (`_toJson` for backup) or keep it in a separate file. In web builds a `--dart-define` token is visible in the JS. |
+| 2.5 | **Quiz questions list** | ✅ v0.4.0 (delete only) | "Quiz Questions (N)" on the set screen, with delete. Editing a question's text isn't built. |
+| 2.6 | **Quiz size and types** | ✅ v0.4.0 | "New Quiz" opens a sheet (count + the four types); the server enforces the types. |
+| 2.7 | **Search summary and key concepts** | ✅ v0.4.0 | Notes and sets match typed-up text, summary and concepts. |
+| 2.8 | **Partly right** | ✅ v0.4.0 | Counts as half a point; the result says so. Smart review still treats it as not known. |
+| 2.9 | **App token in backups** | ✅ v0.4.0 (web caveat stays) | Left out of backup ZIPs and the Drive copy; a restore keeps this device's server settings (a new phone takes the backup's address, not a token). A token built into a **web** build with `--dart-define` is still visible in its JavaScript — per-user tokens (3.1) are the real fix. |
 | 2.10 | **Costs are per scan at Opus 5.5 `high`** | 🟡 | ≈ ₱9–26 per study kit (see `server/README.md`). `CLAUDE_EFFORT=medium` or Sonnet 5.5 roughly halve it. Decide before many students use it; see 1.3. |
-| 2.11 | **Toast covers the quiz's Check button** | 🟡 | Seen on web: the "server key is missing… quiz was made from your cards" snackbar floats over the Check button for ~4 s. Show it before navigating, or give the quiz screen a bottom inset while a snackbar is up. |
-| 2.12 | **Text sent to the server = text sent to Anthropic** | 🟡 | Privacy note for the user: OCR text leaves the phone (photos don't). Anthropic keeps API data 30 days by default. Worth a line in Help & FAQ and the Smart Study note. |
+| 2.11 | **Toast covers the quiz's Check button** | ✅ v0.4.0 | The quiz now shows such messages as a banner at the top; three similar toasts on the camera and review screens became on-screen text. |
+| 2.12 | **Text sent to the server = text sent to Anthropic** | ✅ v0.4.0 (retention not mentioned) | Help & FAQ and the Smart Study note say only text leaves the phone (never photos) and goes to the study server and Anthropic. Anthropic's 30-day retention isn't mentioned; add it to a privacy policy before launch. |
+| 2.13 | **Web: no OCR, so Smart Study can't start from a web scan** | 🟠 | Same as 2.4; still open. |
 
 ## 3. Backend (`server/`) — gaps
 
 | # | Gap | Status | What to do |
 |---|---|---|---|
-| 3.1 | **One shared token, no users, no quotas** | 🟠 | `APP_TOKEN` is the same for every install and extractable from an APK. The in-memory limiter is per IP per process (resets on restart; several instances don't share it). For real use: per-user tokens (accounts), a store (Redis/DB) for limits, a daily spend cap. |
-| 3.2 | **Hosts with short request limits will cut off study kits** | 🔴 | A study kit at `high` effort can take 30–120 s. Vercel/Netlify serverless functions (10–60 s) will time out; the README mentions Vercel. Use a long-running Node host (Render, Railway, a VPS) or add a job queue + polling endpoint. |
-| 3.3 | **No live/integration test** | 🟠 | `test/` covers validation, auth, limits and normalisation only. Add a test behind an env flag that calls Claude once (`scripts/try.ts` is the manual version). |
-| 3.4 | **Only console logging** | 🟡 | One line per request with token counts; no request ids, no persisted logs, no cost dashboard. Fine for a start; add a logger + request id when deploying. |
-| 3.5 | **No prompt caching** | 🟡 | System prompts are short (below the cacheable minimum), so nothing is cached. If prompts grow (examples, rubrics), add `cache_control` on the system block. |
-| 3.6 | **The Claude call keeps running after the client gives up** | 🟡 | If the app times out (3 min) or the user leaves, the server still finishes and pays. Pass an `AbortSignal` tied to `req.on('close')` into the SDK call. |
-| 3.7 | **Very long notes fail rather than split** | 🟡 | Input is capped at 120k characters; output at 32k tokens (`TooLongError` → 413). Long notebooks should be chunked server-side. |
-| 3.8 | **`/health` exposes model and effort** | 🟡 | Harmless, but remove if you don't want it public. |
-| 3.9 | **No HTTPS of its own** | 🟡 | Expected: the host terminates TLS. Release Android builds need `https://` (cleartext is only allowed in debug builds, see 6.2). |
+| 3.1 | **Shared token; limits per IP, in memory** | 🟠 partly | ✅ v0.4.0: daily per-device quota (`DAILY_LIMIT` 60, `DAILY_CHECK_LIMIT` 300), server-wide daily spend cap (`DAILY_BUDGET_USD` $5, priced from real usage), constant-time token check, `/v1/usage`. Still open: one `APP_TOKEN` for every install; limits are per IP (school Wi-Fi shares one) and in memory (reset on restart/wake-up). Real fix: per-user tokens/accounts and a shared store (Redis/DB). Set a Console spend limit meanwhile. |
+| 3.2 | **Host for long requests** | ✅ v0.4.0 | `server/render.yaml` Blueprint, `Dockerfile`, README Deploy steps; serverless hosts warned against. Graceful shutdown on SIGTERM. |
+| 3.3 | **Live test** | ✅ v0.4.0 | `test/live.test.ts`, skipped unless `LIVE_CLAUDE=1` and a key are set. All other Claude-call tests run the real SDK against a local fake API. |
+| 3.4 | **Logging** | ✅ v0.4.0 | One JSON line per request: id, route, status, model that answered, tokens, cost, fallback, duration. `X-Request-Id` header and `error.requestId`; the app shows a short "Ref" in error messages. |
+| 3.5 | **No prompt caching** | 🟡 | Unchanged: prompts are below the cacheable minimum. Revisit if prompts grow. |
+| 3.6 | **Abort when the app gives up** | ✅ v0.4.0 | The Claude stream is aborted when the client disconnects; logged as 499 with an estimated cost. |
+| 3.7 | **Very long notes** | 🟡 partly | Output ceiling raised to 64k tokens; input stays 120k characters. Splitting whole notebooks is described in `server/README.md` as future work. |
+| 3.8 | **`/health`** | ✅ v0.4.0 | `{ok:true}` only, unless `HEALTH_DETAILS=1`. |
+| 3.9 | **No HTTPS of its own** | 🟡 | Expected: the host terminates TLS. Release Android builds need `https://`. |
+| 3.10 | **Bugs fixed in the sweep** | ✅ v0.4.0 | A cut-off or refused answer came back as a 500 (the SDK parsed before the stop reason was checked); mid-answer fallback text was mixed into the JSON; multiple-choice answer index shifted when options were de-duplicated; quiz `cardIndex` pointed at the wrong card after cards were dropped; `maxCards: 0` was rejected; quiz types not enforced; unbounded quiz input; bad settings silently disabled limits; `TRUST_PROXY` could be spoofed; tag injection in student text; missing error mappings (overloaded, timeout, billing). All with tests. |
 
 ## 4. Scanning and PDFs — gaps
 
@@ -87,8 +122,8 @@ Status key: 🔴 blocks a feature · 🟠 feature works but is incomplete · �
 |---|---|---|---|
 | 6.1 | **Release APK had no INTERNET permission** | ✅ fixed | Flutter's template grants it only in debug/profile manifests, so the release APK could not reach the study server at all. Added to `android/app/src/main/AndroidManifest.xml` and to `tool/setup_android.dart` (CI regenerates the project). **Rebuild the APK** — the one built before this fix is affected. |
 | 6.2 | **Plain `http://` to a LAN server is blocked on Android 9+** | ✅ fixed (debug only) | The README's local-testing tip (`http://<PC IP>:8787`) needs cleartext traffic. Added `android:usesCleartextTraffic="true"` to the **debug** manifest only; release builds must use `https://`. |
-| 6.3 | Snackbar covers the quiz's Check button | 🟡 open | See 2.11. |
-| 6.4 | Bottom bar items read "Dashboard Dashboard" to screen readers | 🟡 open | Tooltip + label duplicated (`widgets/bottom_nav.dart`); same for other tooltips noted in `docs/web-run-through-2026-10-20.md`. |
+| 6.3 | Snackbar covers the quiz's Check button | ✅ v0.4.0 | See 2.11. |
+| 6.4 | Screen readers read some labels twice | ✅ v0.4.0 | Bottom bar, folder tiles, New Folder, colour swatches, recent sets and the save sheet's New button now read once. Section headers still merge the title with their action ("Quiz Questions (2) Show"). |
 | 6.5 | `PdfFonts` cached a Future across zones | ✅ fixed | Would have hung the second PDF in tests; now caches the loaded fonts. |
 
 Nothing crashed, no console errors on the web other than the expected 500s from the fake-key server, and all three fallbacks behaved (toast + cards from text / quiz from cards / phone-side answer check).
@@ -104,19 +139,17 @@ Run `docs/phone-test-checklist.md` on an Android phone with the study server run
 - Backup to Google Drive via the share sheet, and restore.
 - Memory/time with 10+ pages at 2000 px (page render + OCR + PDF build run one after another).
 
-## 8. Documentation and UI text out of date
+## 8. Documentation and UI text
 
-- **Help & FAQ** (`help_screen.dart`): no entry for Smart Study, quizzes, Text PDF, auto-crop, or where the text goes; "save them as a PDF or as flashcards" is now three choices; "flashcards get suggested cards" is only the offline case.
-- **tAsikaso+ copy**: Profile card and Dashboard strip say "Suggested cards, full analysis history and backup" — suggested cards and backup are free now, Smart Study isn't mentioned. `plans_screen.dart` and README's price paragraph need the real plan rules (see 1.2).
-- `docs/web-run-through-2026-10-20.md` predates Smart Study; this file is the newer status. (`server/README.md` now says the local `http://` tip is for debug builds and release needs `https://`.)
+- ✅ v0.4.0: Help & FAQ covers the three save choices, auto-crop, Smart Study (and what leaves the phone), quizzes and tAsikaso+; Plus copy matches the enforced rules (v0.3.0).
+- `docs/web-run-through-2026-10-20.md` predates Smart Study; this file is the newer status.
 
-## 9. Tests and CI gaps
+## 9. Tests and CI
 
-- **CI never fails on test or analyze errors**: `.github/workflows/build-apk.yml` runs them with `continue-on-error: true`. Make them required, and add a job for `server/` (`npm ci && npm test && npm run typecheck`).
-- No widget tests for: `makeCardsForSet`, `makeFlashcardsFromNote`, the `NoteTextScreen` typed-up/as-read toggle, the Settings ping flow, Quiz "Try Again"/"New Quiz", the auto-crop hint on the review screen.
-- No test for the save flow's "no text → Text PDF refused" path.
-- Server: no test of `claude.ts` (see 3.3); `normalize.ts` and routes are covered.
-- The browser run-through is `tool/web_qa.py` (Python + Playwright, uses the installed Chrome): serve `build/web` on :8080, run the study server on :8787, then `python tool/web_qa.py`. It isn't wired into CI.
+- ✅ v0.4.0: the APK and web workflows stop when `flutter analyze` or `flutter test` fails (they used to ignore failures); `server-ci.yml` runs typecheck, tests and build on every change under `server/`.
+- ✅ v0.4.0: tests for making cards (AI and offline), cards from a note, Type Up, the typed-up/as-read toggle, quiz Try Again / New Quiz with options, the Text PDF refusal, Cancel, quiz list delete, search, partly-right scoring, token out of backups (`test/study_tools_test.dart`); the server's Claude calls through the real SDK against a fake API.
+- Still not covered: the Settings ping flow, the auto-crop hint on the review screen.
+- Browser run-throughs (Python + Playwright, installed Chrome): `tool/web_qa.py` (helpers), `tool/plans_qa.py` (plans), `tool/sweep_qa.py` with `tool/fake_claude.mjs` and `tool/slow_server.mjs` (app → server → fake Claude, and Cancel). Not wired into CI.
 
 ## 9b. Google Drive sync — what's left (added 21 Oct, evening)
 
@@ -129,9 +162,8 @@ Run `docs/phone-test-checklist.md` on an Android phone with the study server run
 
 ## 10. Suggested order of work
 
-1. **Live Claude check** (`npm run try`), then deploy the server to a long-running host and point a **rebuilt** debug APK at it (6.1).
-2. **Phone run-through** (section 7) — this is where the biggest unknowns are.
-3. Plan rules for Smart Study and Plus (1.2, 1.3), then billing (1.1) and server accounts/quotas (3.1).
-4. "Type up with AI" for notes, Cancel on long requests, quiz list/edit (2.2, 2.3, 2.5).
-5. Docs/FAQ/Plus copy (section 8) and CI (section 9).
-6. Sync (1.4) and iOS (1.5).
+1. **Connect Opus 5.5** (section 0): live check, Console spend limit, deploy, point the app at it.
+2. **Phone run-through** (section 7) with the live server — the biggest unknowns are on a real device.
+3. Billing (1.1), then per-user tokens/accounts and shared limits on the server (3.1, 1.6).
+4. Web OCR or server-side OCR so Smart Study works from web scans (2.4).
+5. Sync merge instead of last-upload-wins (1.4), iOS (1.5).

@@ -675,10 +675,18 @@ class _DeckRow extends StatelessWidget {
     final due = store.isPlus ? store.dueCards(deck).length : 0;
     final score = scored ? deck.lastKnown / seen : 0.0;
     final deep = Color.lerp(color, AppColors.ink, 0.35)!;
+    final meta = '${plural(deck.cards.length, 'card')}'
+        '${due > 0 ? ' · $due due' : ''} · '
+        '${studied == null ? 'Not studied yet' : formatAgo(studied, now)}';
 
+    // One label with everything, so the title isn't read twice.
     return Semantics(
       button: true,
-      label: 'Study ${deck.title}',
+      label: 'Study ${deck.title}, $meta, '
+          '${scored ? '${deck.lastKnown} of $seen known last time' : 'new'}',
+      excludeSemantics: true,
+      onTap: onStudy,
+      onLongPress: onOpen,
       child: InkWell(
         onTap: onStudy,
         onLongPress: onOpen,
@@ -709,9 +717,7 @@ class _DeckRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${plural(deck.cards.length, 'card')}'
-                      '${due > 0 ? ' · $due due' : ''} · '
-                      '${studied == null ? 'Not studied yet' : formatAgo(studied, now)}',
+                      meta,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -722,22 +728,19 @@ class _DeckRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               if (scored)
-                Semantics(
-                  label: '${deck.lastKnown} of $seen known last time',
-                  child: ProgressRing(
-                    progress: score,
-                    size: 38,
-                    strokeWidth: 3.5,
-                    color: deep,
-                    trackColor: AppColors.tint(color, 0.35),
-                    child: Text(
-                      '${(score * 100).round()}%',
-                      style: TextStyle(
-                        fontFamily: kHeadingFont,
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
-                      ),
+                ProgressRing(
+                  progress: score,
+                  size: 38,
+                  strokeWidth: 3.5,
+                  color: deep,
+                  trackColor: AppColors.tint(color, 0.35),
+                  child: Text(
+                    '${(score * 100).round()}%',
+                    style: TextStyle(
+                      fontFamily: kHeadingFont,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink,
                     ),
                   ),
                 )

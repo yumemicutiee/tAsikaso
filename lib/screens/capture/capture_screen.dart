@@ -18,7 +18,12 @@ enum CaptureMode { single, multiple }
 /// Multiple: keep shooting; pages collect in a strip until "Done".
 /// Photos can also be imported from the gallery.
 class CaptureScreen extends StatefulWidget {
-  const CaptureScreen({super.key});
+  const CaptureScreen({super.key, this.notice});
+
+  /// Why this camera opened (e.g. the Smart Scanner isn't available),
+  /// shown under the top bar until the first photo; a toast would cover
+  /// the shutter.
+  final String? notice;
 
   /// Finds the device cameras. Tests replace this to run without a camera.
   @visibleForTesting
@@ -50,6 +55,8 @@ class _CaptureScreenState extends State<CaptureScreen>
 
   /// True while a photo is being taken or processed.
   bool _busy = false;
+
+  late String? _notice = widget.notice;
 
   final List<CapturedPage> _pages = [];
   int _nextId = 0;
@@ -204,7 +211,10 @@ class _CaptureScreenState extends State<CaptureScreen>
       return;
     }
     final turns = _previewTurns(context);
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _notice = null;
+    });
     try {
       final file = await c.takePicture();
       // Let the spinner paint before decoding (runs on the UI thread on web).
@@ -238,7 +248,10 @@ class _CaptureScreenState extends State<CaptureScreen>
     }
     if (files.isEmpty || !mounted) return;
 
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _notice = null;
+    });
     await WidgetsBinding.instance.endOfFrame;
     final imported = <CapturedPage>[];
     var failed = 0;
@@ -256,17 +269,23 @@ class _CaptureScreenState extends State<CaptureScreen>
     }
     if (!mounted) return;
     setState(() => _busy = false);
-    if (failed > 0) _showMessage("${plural(failed, 'photo')} couldn't be opened.");
-    if (imported.isEmpty) return;
+    final problem =
+        failed > 0 ? "${plural(failed, 'photo')} couldn't be opened." : null;
+    if (imported.isEmpty) {
+      if (problem != null) _showMessage(problem);
+      return;
+    }
 
     final all = [..._pages, ...imported];
     if (all.length > 1) setState(() => _mode = CaptureMode.multiple);
-    await _openReview(all);
+    // Said on the review screen: a toast would cover its tools.
+    await _openReview(all, notice: problem);
   }
 
-  Future<void> _openReview(List<CapturedPage> pages) async {
+  Future<void> _openReview(List<CapturedPage> pages, {String? notice}) async {
     final kept = await Navigator.of(context).push<List<CapturedPage>>(
-      MaterialPageRoute(builder: (_) => ReviewScreen(pages: pages)),
+      MaterialPageRoute(
+          builder: (_) => ReviewScreen(pages: pages, notice: notice)),
     );
     // After saving, the whole capture flow is closed and we never get here.
     // Coming back ("Add More", "Retake" or Back) keeps the remaining pages.
@@ -330,6 +349,15 @@ class _CaptureScreenState extends State<CaptureScreen>
                   ],
                 ),
               ),
+              if (_notice case final notice?)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                  child: Text(
+                    notice,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.accent, fontSize: 12),
+                  ),
+                ),
 
               // Viewfinder
               Expanded(

@@ -37,30 +37,35 @@ Future<void> startScan(BuildContext context) async {
   }
   if (!context.mounted) return;
 
+  // What to say is shown on the screen that opens, not as a toast, which
+  // would cover its buttons at the bottom.
   switch (result) {
     case _ScanUnavailable():
       // Google Play services missing or too old: the camera does the job.
-      _toast(
-          context,
-          "Smart Scanner isn't available on this phone, "
-          'so the camera opened instead.');
-      await _openCamera(context);
+      await _openCamera(context,
+          notice: "Smart Scanner isn't available on this phone, "
+              'so the camera opened instead.');
     case _ScanCancelled():
       return;
     case _ScanPages(pages: final pages) when pages.isEmpty:
       _toast(context, "The scanned pages couldn't be read. Please try again.");
-    case _ScanPages(pages: final pages):
+    case _ScanPages(:final pages, :final failed):
       await Navigator.of(context).push(
         MaterialPageRoute<List<CapturedPage>>(
           builder: (_) => ReviewScreen(
             pages: pages,
             autoCropped: true,
             addMore: (firstId) => _scanMore(context, firstId),
+            notice: failed > 0 ? _leftOut(failed) : null,
           ),
         ),
       );
   }
 }
+
+/// "2 pages couldn't be read and were left out."
+String _leftOut(int failed) => "${plural(failed, 'page')} couldn't be read "
+    "and ${failed == 1 ? 'was' : 'were'} left out.";
 
 sealed class _Scan {
   const _Scan();
@@ -76,10 +81,12 @@ class _ScanCancelled extends _Scan {
   const _ScanCancelled();
 }
 
-/// The scanned pages (empty if none of them could be read).
+/// The scanned pages (empty if none of them could be read), and how many
+/// couldn't be read.
 class _ScanPages extends _Scan {
-  const _ScanPages(this.pages);
+  const _ScanPages(this.pages, this.failed);
   final List<CapturedPage> pages;
+  final int failed;
 }
 
 /// Opens the scanner and prepares what it returns.
@@ -94,16 +101,21 @@ Future<_Scan> _scan(BuildContext context) async {
   if (jpegs == null || jpegs.isEmpty || !context.mounted) {
     return const _ScanCancelled();
   }
-  return _ScanPages(await _preparePages(context, jpegs, 0));
+  final (pages, failed) = await _preparePages(context, jpegs, 0);
+  return _ScanPages(pages, failed);
 }
 
 /// "Add More" on the review screen. Throws if the scanner couldn't open.
 Future<List<CapturedPage>?> _scanMore(BuildContext context, int firstId) async {
   final jpegs = await ScanService.scanDocuments();
   if (jpegs == null || jpegs.isEmpty || !context.mounted) return null;
-  final pages = await _preparePages(context, jpegs, firstId);
-  if (pages.isEmpty && context.mounted) {
-    _toast(context, "The scanned pages couldn't be read. Please try again.");
+  final (pages, failed) = await _preparePages(context, jpegs, firstId);
+  if (context.mounted) {
+    if (pages.isEmpty) {
+      _toast(context, "The scanned pages couldn't be read. Please try again.");
+    } else if (failed > 0) {
+      _toast(context, _leftOut(failed));
+    }
   }
   return pages;
 }
@@ -129,7 +141,7 @@ Future<(List<CapturedPage>, int)> preparePages(
 
 /// [preparePages] behind a "Preparing your pages…" dialog: decoding a stack
 /// of high-resolution pages can take a while, and the screen was blank.
-Future<List<CapturedPage>> _preparePages(
+Future<(List<CapturedPage>, int)> _preparePages(
     BuildContext context, List<Uint8List> jpegs, int firstId) async {
   final navigator = Navigator.of(context);
   var open = true;
@@ -139,22 +151,16 @@ Future<List<CapturedPage>> _preparePages(
     builder: (_) => const PopScope(canPop: false, child: _PreparingDialog()),
   ).whenComplete(() => open = false));
 
-  final (pages, failed) = await preparePages(jpegs, firstId);
+  final prepared = await preparePages(jpegs, firstId);
   if (open && navigator.mounted) navigator.pop();
-
-  if (failed > 0 && pages.isNotEmpty && context.mounted) {
-    _toast(
-        context,
-        "${plural(failed, 'page')} couldn't be read and "
-        '${failed == 1 ? 'was' : 'were'} left out.');
-  }
-  return pages;
+  return prepared;
 }
 
-Future<void> _openCamera(BuildContext context) => Navigator.of(context).push(
+Future<void> _openCamera(BuildContext context, {String? notice}) =>
+    Navigator.of(context).push(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => const CaptureScreen(),
+        builder: (_) => CaptureScreen(notice: notice),
       ),
     );
 

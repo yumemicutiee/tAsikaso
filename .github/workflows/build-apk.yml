@@ -48,17 +48,17 @@ jobs:
           set -o pipefail
           flutter pub get 2>&1 | tee ci-logs/pub-get.txt
 
+      # A failing analyze or test stops the build: no APK is published from
+      # code that doesn't pass. The logs still go to the ci-logs branch.
       - name: Analyze
         run: |
           set -o pipefail
           flutter analyze 2>&1 | tee ci-logs/analyze.txt
-        continue-on-error: true
 
       - name: Test
         run: |
           set -o pipefail
           flutter test 2>&1 | tee ci-logs/test.txt
-        continue-on-error: true
 
       - name: Release signing key (from the secrets, when set)
         if: env.HAS_KEY == 'true'

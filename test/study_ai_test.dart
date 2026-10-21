@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -139,6 +140,45 @@ void main() {
     expect((sent['cards'] as List).length, 2);
   });
 
+  test('a quiz can ask for some question types only', () async {
+    answerWith(200, {
+      'quiz': {'questions': <Object>[]},
+    });
+    await StudyAi.makeQuiz(
+      title: 'Set',
+      cards: const [Flashcard(id: 'a', front: 'A', back: 'a')],
+      count: 5,
+      types: {QuestionType.typed, QuestionType.multipleChoice},
+    );
+    final sent = jsonDecode(requests.single.body) as Map<String, Object?>;
+    expect(sent['count'], 5);
+    expect(sent['types'], ['multiple_choice', 'typed']);
+  });
+
+  test('Cancel ends a request at once and closes the connection', () async {
+    final server = _SilentServer();
+    StudyAi.debugClient = () => server;
+    final cancel = CancelToken();
+    final kit = StudyAi.makeStudyKit(text: 'x' * 40, cancel: cancel);
+    await Future<void>.delayed(Duration.zero);
+    expect(server.requests, 1);
+
+    cancel.cancel();
+    await expectLater(
+      kit,
+      throwsA(isA<StudyAiException>()
+          .having((e) => e.isCancelled, 'isCancelled', isTrue)),
+    );
+    expect(server.closed, isTrue);
+
+    // A token that was cancelled already sends nothing.
+    await expectLater(
+      StudyAi.makeQuiz(title: 'T', cards: const [], cancel: cancel),
+      throwsA(isA<StudyAiException>().having((e) => e.code, 'code', 'cancelled')),
+    );
+    expect(server.requests, 1);
+  });
+
   test('an answer check returns the verdict and feedback', () async {
     answerWith(200, {
       'check': {'verdict': 'partly', 'feedback': 'Nearly: it also needs water.'},
@@ -159,6 +199,24 @@ void main() {
       throwsA(isA<StudyAiException>()
           .having((e) => e.code, 'code', 'unauthorized')
           .having((e) => e.message, 'message', "This app isn't allowed.")),
+    );
+  });
+
+  test("the server's request id is added to its message as a short Ref",
+      () async {
+    answerWith(429, {
+      'error': {
+        'code': 'daily_limit',
+        'message': "You've reached today's limit.",
+        'requestId': '53599e15-78c4-447d-8a0e-26dbce3f7eba',
+      },
+    });
+    await expectLater(
+      StudyAi.makeStudyKit(text: 'x' * 40),
+      throwsA(isA<StudyAiException>()
+          .having((e) => e.code, 'code', 'daily_limit')
+          .having((e) => e.message, 'message',
+              "You've reached today's limit. (Ref 53599e15)")),
     );
   });
 
@@ -200,4 +258,24 @@ void main() {
     expect(await StudyAi.ping('https://study.test'), isFalse);
     expect(await StudyAi.ping('not a url'), isFalse);
   });
+}
+
+/// A study server that never answers, until the app hangs up.
+class _SilentServer extends http.BaseClient {
+  int requests = 0;
+  bool closed = false;
+  final _hangUp = Completer<void>();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requests++;
+    await _hangUp.future;
+    throw http.ClientException('Connection closed', request.url);
+  }
+
+  @override
+  void close() {
+    closed = true;
+    if (!_hangUp.isCompleted) _hangUp.complete();
+  }
 }

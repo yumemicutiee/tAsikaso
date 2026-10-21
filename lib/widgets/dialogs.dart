@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
 import '../models/models.dart';
+import '../services/study_ai.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -169,44 +171,108 @@ Future<void> showInfoDialog(
   );
 }
 
-/// Shows [text] with a spinner while [work] runs, then closes it. Returns
-/// what [work] returns; an error closes the dialog and is thrown on.
+/// Shows [text] with a spinner and a Cancel button while [work] runs, then
+/// closes it. Returns what [work] returns; an error closes the dialog and
+/// is thrown on.
+///
+/// Cancel cancels the token handed to [work] (so a study server request
+/// made with it is dropped), closes the dialog straight away and throws
+/// [StudyAiException.cancelled]; whatever [work] still returns is ignored,
+/// so callers save nothing.
 Future<T> runWithProgress<T>(
   BuildContext context,
   String text,
-  Future<T> Function() work,
+  Future<T> Function(CancelToken cancel) work,
 ) async {
   final navigator = Navigator.of(context);
+  final cancel = CancelToken();
+  final label = ValueNotifier(text);
+  final onCancel = ValueNotifier<VoidCallback?>(cancel.cancel);
   var open = true;
   unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => PopScope(
+    builder: (_) => ProgressDialog(text: label, onCancel: onCancel),
+  ).whenComplete(() => open = false));
+  try {
+    final job = work(cancel);
+    final done = await Future.any<(T,)?>([
+      job.then((value) => (value,)),
+      cancel.whenCancelled.then((_) => null),
+    ]);
+    if (done == null) throw StudyAiException.cancelled;
+    return done.$1;
+  } finally {
+    if (open && navigator.mounted) navigator.pop();
+  }
+}
+
+/// A spinner with what's happening now ([text] can change as the work goes
+/// on), and a Cancel button while [onCancel] holds a callback.
+class ProgressDialog extends StatelessWidget {
+  const ProgressDialog({super.key, required this.text, this.onCancel});
+
+  final ValueListenable<String> text;
+  final ValueListenable<VoidCallback?>? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final cancel = onCancel;
+    return PopScope(
       canPop: false,
       child: Dialog(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2.5, color: AppColors.primaryDeep),
-              ),
-              const SizedBox(width: 16),
-              Flexible(child: Text(text, style: AppText.itemTitle)),
-            ],
+          // As wide as the text needs, not the whole screen.
+          child: IntrinsicWidth(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2.5, color: AppColors.primaryDeep),
+                    ),
+                    const SizedBox(width: 16),
+                    Flexible(
+                      child: ValueListenableBuilder<String>(
+                        valueListenable: text,
+                        builder: (context, value, _) =>
+                            Text(value, style: AppText.itemTitle),
+                      ),
+                    ),
+                  ],
+                ),
+                if (cancel != null)
+                  ValueListenableBuilder<VoidCallback?>(
+                    valueListenable: cancel,
+                    builder: (context, onPressed, _) => AnimatedSize(
+                      duration: const Duration(milliseconds: 150),
+                      alignment: Alignment.topCenter,
+                      child: onPressed == null
+                          ? const SizedBox.shrink()
+                          : Align(
+                              alignment: Alignment.centerRight,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: TextButton(
+                                  onPressed: onPressed,
+                                  child: const Text('Cancel'),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  ).whenComplete(() => open = false));
-  try {
-    return await work();
-  } finally {
-    if (open && navigator.mounted) navigator.pop();
+    );
   }
 }
 

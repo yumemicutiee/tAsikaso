@@ -40,9 +40,14 @@ class ReviewScreen extends StatefulWidget {
     required this.pages,
     this.autoCropped = false,
     this.addMore,
+    this.notice,
   });
 
   final List<CapturedPage> pages;
+
+  /// Something to know about the pages (e.g. some couldn't be read), shown
+  /// above the tools; a toast would cover them.
+  final String? notice;
 
   /// The scanner already found the page edges; crop stays optional.
   final bool autoCropped;
@@ -129,11 +134,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
     final asCards = format == _SaveFormat.flashcards;
     final progress = ValueNotifier<String>(
         asCards ? 'Preparing your photos…' : 'Creating your PDF…');
+    // Cancel is offered while the study server works (the one long wait).
+    // It skips the AI step; the pages are still saved.
+    final onCancel = ValueNotifier<VoidCallback?>(null);
 
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _ProgressDialog(text: progress),
+      builder: (_) => ProgressDialog(text: progress, onCancel: onCancel),
     );
 
     void toast(String text, {SnackBarAction? action}) => messenger
@@ -173,15 +181,21 @@ class _ReviewScreenState extends State<ReviewScreen> {
       if (StudyAi.isOn && text.trim().length >= 20 && !cardsUsedUp) {
         progress.value =
             asCards ? 'Making your flashcards…' : 'Typing up your notes…';
+        final cancel = CancelToken();
+        onCancel.value = cancel.cancel;
         try {
           kit = await StudyAi.makeStudyKit(
             text: text,
             title: request.title,
             maxCards: asCards ? cardsToAskFor(left) : 0,
             quizCount: asCards ? 12 : 0,
+            cancel: cancel,
           );
         } on StudyAiException catch (e) {
-          aiProblem = e.message;
+          // Cancelled: saved as if the server couldn't be reached.
+          aiProblem = e.isCancelled ? 'The AI step was skipped.' : e.message;
+        } finally {
+          onCancel.value = null;
         }
       }
       if (format == _SaveFormat.textPdf &&
@@ -360,6 +374,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     ),
                   ),
                 ),
+                if (widget.notice case final notice?)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                    child: Text(
+                      notice,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.accent, fontSize: 11),
+                    ),
+                  ),
                 if (_page.autoDetected && !widget.autoCropped)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 8),
@@ -617,44 +640,6 @@ class _ToolButton extends StatelessWidget {
   }
 }
 
-class _ProgressDialog extends StatelessWidget {
-  const _ProgressDialog({required this.text});
-
-  /// What's happening now; it changes as the save goes on.
-  final ValueListenable<String> text;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: Dialog(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2.5, color: AppColors.primaryDeep),
-              ),
-              const SizedBox(width: 16),
-              Flexible(
-                child: ValueListenableBuilder<String>(
-                  valueListenable: text,
-                  builder: (context, value, _) =>
-                      Text(value, style: AppText.itemTitle),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Scan PDF: the pages as photos with a hidden text layer. Text PDF: the
 /// notes typed up. Flashcards: a set with the photos to write cards from.
 enum _SaveFormat { scanPdf, textPdf, flashcards }
@@ -846,15 +831,18 @@ class _SaveSheetState extends State<_SaveSheet> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6)),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(AppIcons.newFolder, size: 18),
-                        SizedBox(width: 6),
-                        Text('New',
-                            style: TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
+                    // The tooltip is the label; "New" would be read too.
+                    child: const ExcludeSemantics(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(AppIcons.newFolder, size: 18),
+                          SizedBox(width: 6),
+                          Text('New',
+                              style: TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                     ),
                   ),
                 ),

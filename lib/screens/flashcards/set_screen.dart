@@ -154,6 +154,15 @@ class SetScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                // A quiz made from two or three cards repeats itself.
+                if (deck.cards.length < 4 && !StudyAi.isOn)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Center(
+                      child: Text('Add a few more cards for a better quiz.',
+                          style: AppText.itemMeta),
+                    ),
+                  ),
               ],
               if (deck.summary.isNotEmpty) ...[
                 const SizedBox(height: 16),
@@ -258,10 +267,118 @@ class SetScreen extends StatelessWidget {
                       },
                     },
                   ),
+              if (deck.quiz.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                _QuizList(key: ValueKey('quiz-${deck.id}'), deck: deck),
+              ],
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// The set's saved quiz, folded away until opened: each question with its
+/// type and answer, and Delete for a bad one.
+class _QuizList extends StatefulWidget {
+  const _QuizList({super.key, required this.deck});
+
+  final FlashcardSet deck;
+
+  @override
+  State<_QuizList> createState() => _QuizListState();
+}
+
+class _QuizListState extends State<_QuizList> {
+  bool _open = false;
+
+  Future<void> _delete(QuizQuestion question) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Delete Question?',
+      message: '"${question.prompt.split('\n').first}" will be left out of '
+          'the quiz.',
+    );
+    if (!ok) return;
+    final store = AppStore.instance;
+    final current = store.setById(widget.deck.id);
+    if (current == null) return;
+    store.updateSet(current.copyWith(quiz: [
+      for (final q in current.quiz)
+        if (!identical(q, question)) q,
+    ]));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final quiz = widget.deck.quiz;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Quiz Questions (${quiz.length})',
+          actionLabel: _open ? 'Hide' : 'Show',
+          onViewAll: () => setState(() => _open = !_open),
+        ),
+        if (_open) ...[
+          const SizedBox(height: 8),
+          for (final q in quiz)
+            _QuestionTile(question: q, onDelete: () => _delete(q)),
+        ],
+      ],
+    );
+  }
+}
+
+class _QuestionTile extends StatelessWidget {
+  const _QuestionTile({required this.question, required this.onDelete});
+
+  final QuizQuestion question;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(question.type.label, style: AppText.itemMeta),
+                const SizedBox(height: 3),
+                Text(
+                  question.prompt,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.itemTitle.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Answer: ${question.answer}',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.statLabel,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Delete Question',
+            onPressed: onDelete,
+            icon: const Icon(AppIcons.delete, size: 18),
+            color: AppColors.textSecondary,
+          ),
+        ],
+      ),
     );
   }
 }

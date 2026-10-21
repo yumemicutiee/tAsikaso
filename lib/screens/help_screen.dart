@@ -8,6 +8,11 @@ Future<void> openHelp(BuildContext context) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const HelpScreen()),
     );
 
+/// Where Smart Study sends what, said the same way in Help and Settings.
+const kSmartStudyPrivacy = 'Only text leaves the phone, never your photos: '
+    'the text read from them, your cards and your typed quiz answers go to '
+    'your study server and on to Anthropic.';
+
 /// Short answers to the questions students ask most.
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
@@ -16,15 +21,34 @@ class HelpScreen extends StatelessWidget {
     (
       'How do I scan my notes?',
       'Tap the camera button in the middle of the bottom bar. On Android the '
-          'Smart Scanner finds the page edges for you; otherwise take a photo '
-          'and drag the four corners to crop. You can scan several pages, '
-          'then save them as a PDF or as flashcards.',
+          "Smart Scanner finds the page edges for you; the app's own camera "
+          "finds them too, and you can drag the four corners if they're off. "
+          'Scan several pages, then save them as a Scan PDF (your photos, '
+          'with the text selectable), a Text PDF (the notes typed up) or '
+          'Flashcards.',
     ),
     (
       'Can the app read the text in my photos?',
       'Yes, on phones. When you save, the text is read on your phone (no '
-          'internet needed). Notes become searchable, you can open "View '
-          'Text" to copy it, and flashcards get suggested cards to add.',
+          'internet needed). Notes become searchable, and "View Text" lets '
+          'you copy it or make flashcards. Without Smart Study, cards are '
+          'suggested from lines like "Term: definition" for you to add or skip.',
+    ),
+    (
+      'What is Smart Study?',
+      'With a study server set up in Settings → Smart Study, Claude (an AI '
+          'by Anthropic) types up your notes and writes a summary, key '
+          'concepts, flashcards and quizzes. $kSmartStudyPrivacy It needs '
+          'internet; without it, scanning, cards and quizzes still work on '
+          'the phone.',
+    ),
+    (
+      'How do quizzes work?',
+      'Any set with two or more cards has Take a Quiz: multiple choice, '
+          'true or false, fill in the blank and typed answers. New Quiz lets '
+          'you pick how many questions and which types. Typed answers forgive '
+          'spelling slips; with Smart Study on they are judged by meaning. A '
+          'partly right answer counts as half.',
     ),
     (
       'How does the Pomodoro timer work?',
@@ -70,9 +94,10 @@ class HelpScreen extends StatelessWidget {
     (
       'Where is my data saved?',
       'Everything is saved on this phone; deleting the app deletes it. To '
-          'keep a copy, open Profile → Backup & Sync and tap Back Up Now, '
-          'then save the file to Google Drive. Restore it on any phone from '
-          'the same screen.',
+          'keep a copy, open Profile → Backup & Sync: sync to your Google '
+          'Drive, or tap Back Up Now for a backup file (both tAsikaso+). '
+          'Restoring on any phone from the same screen is free. Your study '
+          "server's app token is never in a backup.",
     ),
   ];
 

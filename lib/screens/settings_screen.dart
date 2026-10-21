@@ -276,14 +276,13 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ]),
               _Note(StudyAi.hasServer
-                  ? 'When you save a scan, the text read from it goes to '
-                      'your study server, which asks Claude for clean notes, '
-                      'key concepts, flashcards and a quiz. Needs internet. '
-                      'The photos stay on this device.'
+                  ? 'When you save a scan, your study server asks Claude '
+                      'for clean notes, key concepts, flashcards and a quiz. '
+                      '$kSmartStudyPrivacy Needs internet.'
                   : 'Run the study server from the app\'s server folder '
                       '(see its README), then add its address here to get '
                       'clean notes, key concepts, flashcards and quizzes '
-                      'made for you.'),
+                      'made for you. $kSmartStudyPrivacy'),
 
               const _Heading('Your Data'),
               _Note(store.isPersistent
@@ -407,7 +406,11 @@ class SettingsScreen extends StatelessWidget {
     if (url.isEmpty) return;
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Checking the server…')));
+      ..showSnackBar(const SnackBar(
+        content: Text('Checking the server… A server that was asleep can '
+            'take up to a minute to wake up.'),
+        duration: StudyAi.pingTimeout,
+      ));
     final ok = await StudyAi.ping(url);
     messenger
       ..hideCurrentSnackBar()
@@ -724,6 +727,9 @@ class _PaletteGrid extends StatelessWidget {
               button: true,
               selected: p == selected,
               label: p.isFree || unlocked ? p.label : '${p.label}, $kPlusName',
+              // The name under the swatch would be read a second time.
+              excludeSemantics: true,
+              onTap: () => onPick(p),
               child: InkWell(
                 onTap: () => onPick(p),
                 borderRadius: BorderRadius.circular(12),

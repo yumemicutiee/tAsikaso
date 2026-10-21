@@ -4,10 +4,12 @@ import '../models/models.dart';
 
 /// Makes quiz questions from a set's own cards, for when the study server
 /// isn't set up or can't be reached. Each card gets at most one question
-/// and the types take turns.
+/// and the [types] (all four unless given) take turns; a card that can't
+/// make any of them is left out.
 List<QuizQuestion> buildLocalQuiz(
   List<Flashcard> cards, {
   int count = 12,
+  Set<QuestionType>? types,
   Random? random,
 }) {
   final rng = random ?? Random();
@@ -16,11 +18,14 @@ List<QuizQuestion> buildLocalQuiz(
       if (c.front.trim().isNotEmpty && c.back.trim().isNotEmpty) c,
   ]..shuffle(rng);
 
-  const order = [
-    QuestionType.multipleChoice,
-    QuestionType.typed,
-    QuestionType.trueFalse,
-    QuestionType.fillBlank,
+  final order = [
+    for (final t in const [
+      QuestionType.multipleChoice,
+      QuestionType.typed,
+      QuestionType.trueFalse,
+      QuestionType.fillBlank,
+    ])
+      if (types == null || types.contains(t)) t,
   ];
   final out = <QuizQuestion>[];
   var turn = 0;

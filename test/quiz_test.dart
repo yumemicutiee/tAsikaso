@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:study_app/models/models.dart';
+import 'package:study_app/screens/flashcards/quiz_options.dart';
 import 'package:study_app/utils/answer_match.dart';
 import 'package:study_app/utils/quiz_builder.dart';
 
@@ -55,6 +56,25 @@ void main() {
 
     test('cards with an empty side are skipped', () {
       expect(buildLocalQuiz([const Flashcard(id: 'x', front: '', back: 'y')]), isEmpty);
+    });
+
+    test('only the question types asked for are made', () {
+      final quiz = buildLocalQuiz(cards,
+          types: {QuestionType.trueFalse}, random: Random(4));
+      expect(quiz.length, cards.length);
+      expect(quiz.every((q) => q.type == QuestionType.trueFalse), isTrue);
+      // Two cards can't make a multiple choice (it needs two wrong answers).
+      expect(
+          buildLocalQuiz(cards.take(2).toList(),
+              types: {QuestionType.multipleChoice}),
+          isEmpty);
+    });
+
+    test('the quiz sizes offered fit the set', () {
+      expect(quizSizesFor(3, withAi: false), [3]);
+      expect(quizSizesFor(6, withAi: false), [5, 6]);
+      expect(quizSizesFor(6, withAi: true), [5, 10, 12]);
+      expect(quizSizesFor(30, withAi: false), [5, 10, 15, 20]);
     });
   });
 

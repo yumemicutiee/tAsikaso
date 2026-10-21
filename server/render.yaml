@@ -1,0 +1,41 @@
+# Render Blueprint for the study server: one long-running Node web service.
+# (A study kit can take 30-120 s; serverless functions with short time
+# limits would cut it off.)
+#
+# Render dashboard → New → Blueprint → connect this repo → set the
+# Blueprint path to server/render.yaml → fill in the two secrets.
+# See "Deploy" in server/README.md.
+services:
+  - type: web
+    name: tasikaso-study-server
+    runtime: node
+    plan: free
+    region: singapore # closest to the Philippines
+    rootDir: server
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # Secrets: Render asks for these when the Blueprint is created.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: APP_TOKEN
+        sync: false
+      # Render's proxy puts the client's address in X-Forwarded-For.
+      - key: TRUST_PROXY
+        value: "1"
+      - key: CLAUDE_MODEL
+        value: claude-opus-5-5
+      - key: CLAUDE_EFFORT
+        value: high
+      - key: DAILY_BUDGET_USD
+        value: "5"
+      - key: DAILY_LIMIT
+        value: "60"
+      - key: DAILY_CHECK_LIMIT
+        value: "300"
+      - key: DAY_TIME_ZONE
+        value: Asia/Manila

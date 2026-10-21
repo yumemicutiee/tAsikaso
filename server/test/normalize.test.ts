@@ -106,6 +106,108 @@ test("questions: duplicates by prompt are dropped and the count is capped", () =
   assert.equal(out.length, 2);
 });
 
+test("multiple choice: dropping an empty or repeated option doesn't shift the answer", () => {
+  const q = normalizeQuestion(
+    {
+      ...base,
+      type: "multiple_choice",
+      options: ["Ribosome", "", "ribosome", "Mitochondria", "Nucleus"],
+      answerIndex: 3,
+      answer: "",
+    },
+    3,
+  );
+  assert.deepEqual(q?.options, ["Ribosome", "Mitochondria", "Nucleus"]);
+  assert.equal(q?.answerIndex, 1);
+  assert.equal(q?.answer, "Mitochondria");
+});
+
+test("multiple choice: the answer text wins over a miscounted answerIndex", () => {
+  const q = normalizeQuestion(
+    {
+      ...base,
+      type: "multiple_choice",
+      options: ["Ribosome", "Mitochondria", "Nucleus", "Golgi"],
+      answerIndex: 2, // counted from 1
+      answer: "Mitochondria",
+    },
+    3,
+  );
+  assert.equal(q?.answerIndex, 1);
+});
+
+test("true/false: punctuation and Filipino answers are understood", () => {
+  for (const [answer, index] of [
+    ["True.", 0],
+    ["Totoo", 0],
+    ["mali!", 1],
+  ] as const) {
+    const q = normalizeQuestion({ ...base, type: "true_false", answer, answerIndex: -1 }, 3);
+    assert.equal(q?.answerIndex, index, answer);
+  }
+  const byIndex = normalizeQuestion(
+    { ...base, type: "true_false", options: ["True", "False"], answer: "?", answerIndex: 1 },
+    3,
+  );
+  assert.equal(byIndex?.answer, "False");
+});
+
+test("a limit of 0 gives no cards and no questions", () => {
+  assert.deepEqual(normalizeCards([{ front: "Q", back: "A" }], 0), []);
+  assert.deepEqual(normalizeQuestions([base], 3, 0), []);
+});
+
+test("questions: types the student didn't ask for are dropped", () => {
+  const out = normalizeQuestions(
+    [base, { ...base, type: "true_false", prompt: "ATP is energy.", answer: "True" }],
+    3,
+    5,
+    { allowed: ["true_false"] },
+  );
+  assert.deepEqual(
+    out.map((q) => q.type),
+    ["true_false"],
+  );
+});
+
+test("kit: a question still points at its card after cards are dropped", () => {
+  const kit = normalizeKit(
+    {
+      title: "Cells",
+      summary: "",
+      notes: "",
+      concepts: [],
+      cards: [
+        { front: "", back: "empty" }, // dropped
+        { front: "Osmosis", back: "Water moves" },
+        { front: "osmosis", back: "duplicate" }, // merged into the one above
+        { front: "ATP", back: "Energy" },
+        { front: "Extra", back: "over the limit" }, // past maxCards
+      ],
+      quiz: [
+        { ...base, prompt: "About ATP?", cardIndex: 3 },
+        { ...base, prompt: "About the duplicate?", cardIndex: 2 },
+        { ...base, prompt: "About the extra?", cardIndex: 4 },
+        { ...base, prompt: "About the empty one?", cardIndex: 0 },
+      ],
+    },
+    { maxCards: 2, quizCount: 10 },
+  );
+  assert.deepEqual(
+    kit.cards.map((c) => c.front),
+    ["Osmosis", "ATP"],
+  );
+  assert.deepEqual(
+    kit.quiz.map((q) => [q.prompt, q.cardIndex]),
+    [
+      ["About ATP?", 1],
+      ["About the duplicate?", 0],
+      ["About the extra?", -1],
+      ["About the empty one?", -1],
+    ],
+  );
+});
+
 test("kit: falls back to the student's title and tidies the notes", () => {
   const kit = normalizeKit(
     {
