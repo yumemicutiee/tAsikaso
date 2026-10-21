@@ -484,13 +484,42 @@ class DriveSync extends ChangeNotifier {
           "Google sign-in isn't available on this device.",
         GoogleSignInException(description: final d) =>
           'Google sign-in failed${d == null ? '' : ': $d'}.',
-        drive.DetailedApiRequestError(status: 401 || 403) =>
-          'Google Drive refused the request. Sign out and sign in again.',
-        drive.DetailedApiRequestError(status: 507) =>
-          'Your Google Drive is full.',
+        drive.DetailedApiRequestError() => _driveError(e),
         _ => "Couldn't reach Google Drive. Check your internet connection and "
             'try again.',
       };
+
+  /// Google's own reason for refusing, in words that say what to do.
+  static String _driveError(drive.DetailedApiRequestError e) {
+    final reasons = {for (final d in e.errors) d.reason ?? ''};
+    final message = e.message ?? '';
+    final status = e.status;
+    if (reasons.contains('accessNotConfigured') ||
+        message.contains('has not been used in project') ||
+        message.contains('is disabled')) {
+      return "The Google Drive API isn't turned on for the app's Google Cloud "
+          'project. In the console open APIs & Services → Library → Google '
+          'Drive API → Enable, wait a minute, then tap Sync Now.';
+    }
+    if (reasons.contains('insufficientPermissions') ||
+        reasons.contains('insufficientScopes') ||
+        reasons.contains('forbidden') && message.contains('scope')) {
+      return "Google didn't give the app access to Drive. Sign out, sign in "
+          'again, and allow the Drive permission when Google asks.';
+    }
+    if (status == 401 || reasons.contains('authError')) {
+      return 'Google Drive needs a fresh sign-in. Sign out and sign in again.';
+    }
+    if (status == 507 || reasons.contains('storageQuotaExceeded')) {
+      return 'Your Google Drive is full.';
+    }
+    if (status == 429 || reasons.contains('rateLimitExceeded')) {
+      return 'Google Drive is asking the app to slow down. Try again in a minute.';
+    }
+    return 'Google Drive refused the request'
+        '${status == null ? '' : ' ($status)'}'
+        '${message.isEmpty ? '.' : ': $message'}';
+  }
 
   void _setBusy(bool v) {
     if (_busy == v) return;
