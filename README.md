@@ -209,9 +209,15 @@ project (free), once:
      the key made on 21 Oct 2026 is `34:1D:FC:8F:E5:57:29:C3:A1:AC:C9:9C:C5:B5:11:E2:5A:02:66:3C`).
      Nothing to paste into the app.
    - **Web application**: Authorized JavaScript origins
-     `https://yumemicutiee.github.io` and `http://localhost:8080`. Copy the
-     client id into the build: `--dart-define=GOOGLE_CLIENT_ID=…` (GitHub:
-     repo variable `GOOGLE_CLIENT_ID`).
+     `https://yumemicutiee.github.io` and `http://localhost:8080`. Its client
+     id is built into the app (`DriveSync.clientId`, currently
+     `308120396420-…qpvh8.apps.googleusercontent.com`) and is also the
+     "server client id" the Android sign-in library needs. Another project's
+     id can be used with `--dart-define=GOOGLE_CLIENT_ID=…` (GitHub: repo
+     variable `GOOGLE_CLIENT_ID`).
+
+   Both clients must be in the same Google Cloud project. Without the
+   Android one, the Android app's sign-in fails with a configuration error.
 
 Release builds must all carry the **same signing key**, or Google rejects
 the sign-in: `android/key.properties` + `android/upload-keystore.jks` (kept

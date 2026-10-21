@@ -32,10 +32,16 @@ class DriveSync extends ChangeNotifier {
   /// Drive's "app data" scope: this app's own hidden folder, nothing else.
   static const scopes = [drive.DriveApi.driveAppdataScope];
 
-  /// The web OAuth client id, built in with `--dart-define=GOOGLE_CLIENT_ID=…`.
-  /// Android needs none in the app (its client is registered by package
-  /// name and signing key).
-  static const _clientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+  /// The project's *web* OAuth client id (a public identifier). The web app
+  /// signs in with it directly; the Android app passes it as the server
+  /// client id, which Android's sign-in needs besides the Android client
+  /// registered by package name and signing key. Another project's id can
+  /// be built in with `--dart-define=GOOGLE_CLIENT_ID=…`.
+  static const _defaultClientId =
+      '308120396420-bi7ag4e5qd7e2jsgpsiidlsti17qpvh8.apps.googleusercontent.com';
+  static const _definedClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+  static String get clientId =>
+      _definedClientId.isEmpty ? _defaultClientId : _definedClientId;
 
   /// The name of the small file on Drive; the others are named after
   /// their keys (`notes/x.pdf` → `notes__x.pdf`).
@@ -111,8 +117,10 @@ class DriveSync extends ChangeNotifier {
     if (debugStore != null) return;
 
     try {
-      await GoogleSignIn.instance
-          .initialize(clientId: _clientId.isEmpty ? null : _clientId);
+      await GoogleSignIn.instance.initialize(
+        clientId: kIsWeb ? clientId : null,
+        serverClientId: kIsWeb ? null : clientId,
+      );
       GoogleSignIn.instance.authenticationEvents.listen(
         _onAuthEvent,
         onError: (Object e) => debugPrint('Google sign-in: $e'),

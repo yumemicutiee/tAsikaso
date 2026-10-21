@@ -1,4 +1,5 @@
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -179,11 +180,30 @@ class _CaptureScreenState extends State<CaptureScreen>
 
   // ---- Capturing -------------------------------------------------------------
 
+  /// On the web, phone browsers can hand over the camera's frames sideways:
+  /// a landscape stream while the page is portrait (or the other way
+  /// round). A quarter turn of the preview and of each photo puts them
+  /// upright; the review screen's Rotate button covers the rare phone that
+  /// turns the other way.
+  int _previewTurns(BuildContext context) {
+    final c = _controller;
+    if (!kIsWeb || c == null || !c.value.isInitialized) return 0;
+    final size = c.value.previewSize;
+    if (size == null || size.width == size.height) return 0;
+    final portraitPage =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+    final landscapeStream = size.width > size.height;
+    if (portraitPage && landscapeStream) return 1; // clockwise
+    if (!portraitPage && !landscapeStream) return 3;
+    return 0;
+  }
+
   Future<void> _onShutter() async {
     final c = _controller;
     if (c == null || !c.value.isInitialized || c.value.isTakingPicture || _busy) {
       return;
     }
+    final turns = _previewTurns(context);
     setState(() => _busy = true);
     try {
       final file = await c.takePicture();
@@ -191,7 +211,7 @@ class _CaptureScreenState extends State<CaptureScreen>
       await WidgetsBinding.instance.endOfFrame;
       final page = await CapturedPage.fromPhoto(
           _nextId++, await file.readAsBytes(),
-          findEdges: true);
+          findEdges: true, quarterTurns: turns);
       if (!mounted) return;
       if (_mode == CaptureMode.single) {
         setState(() => _busy = false);
@@ -390,7 +410,18 @@ class _CaptureScreenState extends State<CaptureScreen>
     final c = _controller;
     final Widget content;
     if (c != null && c.value.isInitialized) {
-      content = Center(child: CameraPreview(c, child: const _FrameGuides()));
+      // The guides sit outside the rotation so they always read upright.
+      content = Center(
+        child: Stack(
+          children: [
+            RotatedBox(
+              quarterTurns: _previewTurns(context),
+              child: CameraPreview(c),
+            ),
+            const Positioned.fill(child: _FrameGuides()),
+          ],
+        ),
+      );
     } else if (_cameraError != null) {
       content = _CameraMessage(
         message: _cameraError!,

@@ -98,4 +98,16 @@ void main() {
     expect(found.autoDetected, isFalse);
     expect(found.corners, CapturedPage.fullFrame);
   });
+
+  test('fromPhoto can turn a sideways frame upright first', () async {
+    final wide = img.Image(width: 40, height: 30);
+    img.fill(wide, color: img.ColorRgb8(200, 200, 200));
+    // A dark strip along the top edge: after a clockwise turn it's on the right.
+    img.fillRect(wide, x1: 0, y1: 0, x2: 39, y2: 4, color: img.ColorRgb8(0, 0, 0));
+    final page = await CapturedPage.fromPhoto(1, img.encodePng(wide), quarterTurns: 1);
+    expect((page.width, page.height), (30, 40));
+    final turned = img.decodeImage(page.bytes)!;
+    expect(turned.getPixel(29, 20).r, lessThan(60)); // right edge is dark
+    expect(turned.getPixel(0, 20).r, greaterThan(150)); // left edge is light
+  });
 }

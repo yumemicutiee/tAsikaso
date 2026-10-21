@@ -98,13 +98,16 @@ class CapturedPage {
   ///
   /// With [findEdges], the page is looked for in the photo (like a document
   /// scanner does) and the crop corners start on its edges when it's found.
+  /// [quarterTurns] turns the photo clockwise first, for cameras that hand
+  /// over sideways frames (the web camera on phones).
   static Future<CapturedPage> fromPhoto(
     int id,
     Uint8List original, {
     bool findEdges = false,
+    int quarterTurns = 0,
   }) async {
     final (bytes, width, height, corners) =
-        await compute(_normalizePhoto, (original, findEdges));
+        await compute(_normalizePhoto, (original, findEdges, quarterTurns));
     final page = CapturedPage(id: id, bytes: bytes, width: width, height: height);
     if (corners != null) {
       page.corners = [
@@ -133,13 +136,16 @@ class CapturedPage {
 /// Returns the upright, scaled JPEG, its size, and the page corners found
 /// in it (as x, y fractions, 8 numbers) or null.
 (Uint8List, int, int, List<double>?) _normalizePhoto(
-    (Uint8List, bool) job) {
-  final (data, findEdges) = job;
+    (Uint8List, bool, int) job) {
+  final (data, findEdges, quarterTurns) = job;
   final decoded = img.decodeImage(data);
   if (decoded == null) {
     throw const FormatException('This photo format is not supported.');
   }
   var image = img.bakeOrientation(decoded);
+  if (quarterTurns % 4 != 0) {
+    image = img.copyRotate(image, angle: 90 * (quarterTurns % 4));
+  }
   const maxSide = CapturedPage.maxSide;
   if (image.width > maxSide || image.height > maxSide) {
     image = image.width >= image.height
