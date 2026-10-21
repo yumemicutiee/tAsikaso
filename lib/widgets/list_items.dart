@@ -115,7 +115,9 @@ class SetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final f = folder;
-    final due = AppStore.instance.dueCards(deck).length;
+    final store = AppStore.instance;
+    // Due counts are smart review (tAsikaso+).
+    final due = store.isPlus ? store.dueCards(deck).length : 0;
     return InkWell(
       onTap: onTap,
       child: Container(

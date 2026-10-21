@@ -2,14 +2,17 @@ import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
+import '../data/plans.dart';
 import '../models/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import '../theme/brand.dart';
 import '../utils/format.dart';
 import '../widgets/app_header.dart';
 import '../widgets/segmented_tabs.dart';
 import '../widgets/streak_badge.dart';
+import 'plans_screen.dart';
 
 Future<void> openAnalysis(BuildContext context) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const AnalysisScreen()),
@@ -22,6 +25,9 @@ Future<void> openAnalysis(BuildContext context) => Navigator.of(context).push(
 /// focus by task. The Heatmap and streak always show the last few months.
 ///
 /// Timeline: every Pomodoro and break, newest first.
+///
+/// The free plan shows this week: Month, Year, earlier weeks, the Heatmap
+/// and older Timeline days are tAsikaso+ ([PlusFeature.fullAnalysis]).
 class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});
 
@@ -53,16 +59,28 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         _Period.year => DateTime(start.year + by),
       };
 
-  void _setPeriod(int i) => setState(() {
-        _period = _Period.values[i];
-        _start = _startOf(_period, clock.now());
-        _picked = null;
-      });
+  void _setPeriod(int i) {
+    if (i != _Period.week.index && !_store.isPlus) {
+      showPlusPrompt(context, PlusFeature.fullAnalysis);
+      return;
+    }
+    setState(() {
+      _period = _Period.values[i];
+      _start = _startOf(_period, clock.now());
+      _picked = null;
+    });
+  }
 
-  void _move(int by) => setState(() {
-        _start = _shift(_period, _start, by);
-        _picked = null;
-      });
+  void _move(int by) {
+    if (by < 0 && !_store.isPlus) {
+      showPlusPrompt(context, PlusFeature.fullAnalysis);
+      return;
+    }
+    setState(() {
+      _start = _shift(_period, _start, by);
+      _picked = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,8 +99,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           Expanded(
             child: ListenableBuilder(
               listenable: _store,
-              builder: (context, _) =>
-                  _tab == 0 ? _overview(context) : _Timeline(store: _store),
+              builder: (context, _) => _tab == 0
+                  ? _overview(context)
+                  : _Timeline(store: _store, plus: _store.isPlus),
             ),
           ),
         ],
@@ -93,6 +112,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   Widget _overview(BuildContext context) {
     final now = clock.now();
     final today = startOfDay(now);
+    final plus = _store.isPlus;
+    // A plan that ended while this screen was open: back to this week.
+    if (!plus &&
+        (_period != _Period.week || _start != _startOf(_Period.week, now))) {
+      _period = _Period.week;
+      _start = _startOf(_Period.week, now);
+      _picked = null;
+    }
     final end = _shift(_period, _start, 1);
     final isCurrent = !today.isBefore(_start) && today.isBefore(end);
 
@@ -192,6 +219,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           labels: const ['Week', 'Month', 'Year'],
           selected: _period.index,
           dense: true,
+          locked: plus ? const {} : const {1, 2},
           onChanged: _setPeriod,
         ),
         const SizedBox(height: 6),
@@ -199,6 +227,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           title: title,
           sub: sub,
           period: _period.name,
+          prevLocked: !plus,
           onPrev: () => _move(-1),
           onNext: isCurrent ? null : () => _move(1),
         ),
@@ -257,7 +286,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         const SizedBox(height: 16),
         _Card(
           title: 'Heatmap',
-          child: _Heatmap(store: _store, today: today),
+          child: plus
+              ? _Heatmap(store: _store, today: today)
+              : _PlusLock(
+                  text: 'See every day of the last months at a glance, with '
+                      'your best streak.',
+                  onTap: () =>
+                      showPlusPrompt(context, PlusFeature.fullAnalysis),
+                ),
         ),
         const SizedBox(height: 12),
         Text(
@@ -279,6 +315,53 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 }
 
+/// A tAsikaso+ feature in place of a card's content: what it shows, a lock,
+/// and a tap to see the plans.
+class _PlusLock extends StatelessWidget {
+  const _PlusLock({required this.text, required this.onTap});
+
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primarySoft,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            children: [
+              Icon(AppIcons.locked, size: 20, color: AppColors.primaryDeep),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(text,
+                        style: AppText.statLabel.copyWith(
+                            height: 1.4, color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    Text('Part of $kPlusName · See Plans',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryDeep,
+                        )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PeriodSwitcher extends StatelessWidget {
   const _PeriodSwitcher({
     required this.title,
@@ -286,6 +369,7 @@ class _PeriodSwitcher extends StatelessWidget {
     required this.period,
     required this.onPrev,
     required this.onNext,
+    this.prevLocked = false,
   });
 
   final String title;
@@ -294,15 +378,20 @@ class _PeriodSwitcher extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback? onNext;
 
+  /// Earlier periods are tAsikaso+: the back arrow shows a lock.
+  final bool prevLocked;
+
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         IconButton(
-          tooltip: 'Previous ${period[0].toUpperCase()}${period.substring(1)}',
+          tooltip: 'Previous ${period[0].toUpperCase()}${period.substring(1)}'
+              '${prevLocked ? ' ($kPlusName)' : ''}',
           onPressed: onPrev,
-          icon: const Icon(AppIcons.chevronLeft, size: 20),
-          color: AppColors.ink,
+          icon: Icon(prevLocked ? AppIcons.locked : AppIcons.chevronLeft,
+              size: prevLocked ? 16 : 20),
+          color: prevLocked ? AppColors.textMuted : AppColors.ink,
         ),
         Expanded(
           child: Column(
@@ -1216,15 +1305,18 @@ class _HeatmapState extends State<_Heatmap> {
   }
 }
 
-/// Every Pomodoro and break, newest first, grouped by day.
+/// Every Pomodoro and break, newest first, grouped by day. Without
+/// tAsikaso+ ([plus] false), only this week.
 class _Timeline extends StatelessWidget {
-  const _Timeline({required this.store});
+  const _Timeline({required this.store, required this.plus});
 
   final AppStore store;
+  final bool plus;
 
   @override
   Widget build(BuildContext context) {
-    final items = <_Entry>[
+    final weekStart = startOfWeek(clock.now());
+    var items = <_Entry>[
       for (final s in store.sessions)
         _Entry(
           start: s.startedAt,
@@ -1242,6 +1334,31 @@ class _Timeline extends StatelessWidget {
           isBreak: true,
         ),
     ]..sort((a, b) => b.end.compareTo(a.end));
+
+    // Free plan: this week only; say so when there is more.
+    var hiddenOlder = false;
+    if (!plus) {
+      final recent = [for (final e in items) if (!e.end.isBefore(weekStart)) e];
+      hiddenOlder = recent.length < items.length;
+      items = recent;
+    }
+    final lock = hiddenOlder
+        ? _PlusLock(
+            text: 'Earlier days are part of your full timeline.',
+            onTap: () => showPlusPrompt(context, PlusFeature.fullAnalysis),
+          )
+        : null;
+
+    if (items.isEmpty && lock != null) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          Text('Nothing yet this week.', style: AppText.statLabel),
+          const SizedBox(height: 12),
+          lock,
+        ],
+      );
+    }
 
     if (items.isEmpty) {
       return Padding(
@@ -1278,8 +1395,11 @@ class _Timeline extends StatelessWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-      itemCount: days.length,
+      itemCount: days.length + (lock == null ? 0 : 1),
       itemBuilder: (context, i) {
+        if (i == days.length) {
+          return Padding(padding: const EdgeInsets.only(top: 18), child: lock);
+        }
         final group = days[i];
         final focus = group.entries
             .where((e) => !e.isBreak)

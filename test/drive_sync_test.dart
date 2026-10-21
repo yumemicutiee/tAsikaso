@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:study_app/data/app_store.dart';
+import 'package:study_app/data/plans.dart';
 import 'package:study_app/screens/backup_screen.dart';
 import 'package:study_app/screens/profile_screen.dart';
 import 'package:study_app/services/drive_store.dart';
@@ -24,6 +25,7 @@ void main() {
     AppColors.useDark(false);
     AppColors.usePalette(Palette.navy);
     store.resetForTesting();
+    store.startPlan(PlusPlan.yearly); // syncing to Drive is tAsikaso+
     drive = MemoryDriveStore();
     DriveSync.debugStore = drive;
     await sync.resetForTesting();
@@ -104,6 +106,8 @@ void main() {
       await store.restoreBackup(zip);
       expect(store.profilePhoto, jpeg);
 
+      // resetForTesting above was a fresh device: no plan, so start one.
+      store.startPlan(PlusPlan.yearly);
       await sync.debugSignIn();
       await sync.syncNow();
       expect(drive.byName.keys, contains('profile__photo.jpg'));

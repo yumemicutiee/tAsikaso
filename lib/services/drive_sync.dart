@@ -240,7 +240,7 @@ class DriveSync extends ChangeNotifier {
     _autoSync = on;
     _saveState();
     notifyListeners();
-    if (on && _dirty) _schedule();
+    if (on && _dirty && _canUpload) _schedule();
   }
 
   /// Signs in for tests, with [debugStore] standing in for Drive (its
@@ -407,6 +407,7 @@ class DriveSync extends ChangeNotifier {
   Future<String?> _upload({required bool interactive}) async {
     if (!isSignedIn) return 'Sign in with Google first.';
     final app = AppStore.instance;
+    if (!app.isPlus) return needsPlusMessage;
     try {
       final store = await _driveStore(interactive: interactive);
       try {
@@ -494,23 +495,31 @@ class DriveSync extends ChangeNotifier {
 
   // ---- When to sync --------------------------------------------------------
 
+  /// Uploading to Drive is tAsikaso+; signing in (name and photo) and
+  /// restoring what is already on Drive stay free.
+  static const needsPlusMessage =
+      'Syncing to Google Drive is part of tAsikaso+. Restoring what is '
+      'already there stays free.';
+
+  bool get _canUpload => AppStore.instance.isPlus;
+
   void _onStoreChanged() {
     if (_ignoreChanges || !isSignedIn) return;
     _dirty = true;
-    if (_autoSync) _schedule();
+    if (_autoSync && _canUpload) _schedule();
   }
 
   void _schedule() {
     _timer?.cancel();
     _timer = Timer(autoSyncDelay, () {
       _timer = null;
-      if (_dirty && isSignedIn && _autoSync) syncNow();
+      if (_dirty && isSignedIn && _autoSync && _canUpload) syncNow();
     });
   }
 
   /// The app went to the background: a good moment to upload.
   void _onHide() {
-    if (_dirty && isSignedIn && _autoSync && _running == null) {
+    if (_dirty && isSignedIn && _autoSync && _canUpload && _running == null) {
       _timer?.cancel();
       _timer = null;
       syncNow();

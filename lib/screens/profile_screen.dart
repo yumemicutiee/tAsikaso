@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../theme/brand.dart';
+import '../utils/format.dart';
 import '../utils/profile_photo.dart';
 import '../widgets/app_header.dart';
 import '../widgets/dialogs.dart';
@@ -147,8 +148,16 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   PlusHero(
-                    title: kPlusName,
-                    subtitle: 'Suggested cards, full analysis history and backup.',
+                    title: store.plan == null
+                        ? kPlusName
+                        : '$kPlusName ${store.plan!.title}',
+                    subtitle: store.plan == null
+                        ? 'Unlimited suggested cards, smart review, full '
+                            'analysis history, colors and Google Drive sync.'
+                        : store.subscription?.endsAt == null
+                            ? 'All $kPlusName features are on.'
+                            : 'All $kPlusName features are on, until '
+                                '${formatNoteDate(store.subscription!.endsAt!)}.',
                     action: SizedBox(
                       height: 34,
                       child: FilledButton(
@@ -160,8 +169,9 @@ class ProfileScreen extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text('See Plans',
-                            style: TextStyle(
+                        child: Text(
+                            store.plan == null ? 'See Plans' : 'Manage Plan',
+                            style: const TextStyle(
                                 fontSize: 12.5, fontWeight: FontWeight.w700)),
                       ),
                     ),
@@ -179,7 +189,7 @@ class ProfileScreen extends StatelessWidget {
                             section: SettingsSection.notifications)),
                     _row(AppIcons.backup, 'Backup & Sync',
                         () => openBackup(context),
-                        badge: 'Plus'),
+                        badge: store.isPlus ? null : 'Plus'),
                   ]),
                   const SizedBox(height: 16),
                   _Group(children: [

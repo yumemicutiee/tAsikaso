@@ -167,8 +167,9 @@ void main() {
     await tester.tap(plus);
     await tester.pumpAndSettle();
     expect(find.byType(PlansScreen), findsOneWidget);
-    // The trial button is below the plan comparison: scroll down to it.
-    final trial = find.text('Start 7-Day Free Trial');
+    // The start button is below the plan comparison: scroll down to it.
+    // (Test mode: plans start without payment.)
+    final trial = find.text('Start Yearly Plan');
     await tester.scrollUntilVisible(
       trial,
       300,
@@ -297,11 +298,17 @@ void main() {
     expect(AppColors.palette, Palette.navy);
 
     // With Plus it applies straight away.
-    store.updatePrefs(store.prefs.copyWith(plus: true));
+    store.startPlan(PlusPlan.yearly);
     await tester.pumpAndSettle();
     expect(store.palette, Palette.plum);
     expect(AppColors.palette, Palette.plum);
     expect(AppColors.primary, Color(Palette.plum.fill));
+
+    // Back on Free the chosen theme is kept but not shown.
+    store.endPlan();
+    await tester.pumpAndSettle();
+    expect(store.prefs.palette, 'plum');
+    expect(AppColors.palette, Palette.navy);
   });
 
   testWidgets('Pomodoro Analysis shows the week', (tester) async {
@@ -318,6 +325,16 @@ void main() {
     expect(find.text('25m'), findsWidgets);
     expect(find.text('Productive Hours'), findsOneWidget);
 
+    // Free plan: this week only.
+    await tester.tap(find.text('Month'));
+    await tester.pumpAndSettle();
+    expect(find.text('Full Pomodoro Analysis'), findsOneWidget);
+    expect(find.text('This Month'), findsNothing);
+    await tester.tap(find.text('Not Now'));
+    await tester.pumpAndSettle();
+
+    AppStore.instance.startPlan(PlusPlan.semester);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Month'));
     await tester.pumpAndSettle();
     expect(find.text('This Month'), findsOneWidget);
@@ -502,8 +519,8 @@ Meeting at 10:30 today
       expect(c, ThemeColors.fromHue(330));
       expect(c == ThemeColors.fromHue(200), isFalse);
       final store = AppStore.instance;
-      store.updatePrefs(
-          store.prefs.copyWith(palette: 'custom', customHue: 330, plus: true));
+      store.updatePrefs(store.prefs.copyWith(palette: 'custom', customHue: 330));
+      store.startPlan(PlusPlan.yearly);
       expect(store.palette, Palette.custom);
       expect(store.themeColors, c);
     });
@@ -816,8 +833,9 @@ Meeting at 10:30 today
       expect(store.prefs.hidePlusBanner, isTrue);
 
       // Members never see it, hidden or not.
-      store.updatePrefs(store.prefs.copyWith(hidePlusBanner: false, plus: true));
+      store.startPlan(PlusPlan.monthly);
       await tester.pump();
+      expect(store.prefs.hidePlusBanner, isFalse);
       expect(find.text('Try tAsikaso+ free'), findsNothing);
     });
 
@@ -1262,6 +1280,7 @@ Meeting at 10:30 today
         (tester) async {
       usePhoneSize(tester);
       final store = AppStore.instance;
+      store.startPlan(PlusPlan.yearly); // smart review is tAsikaso+
       final folder = store.folders.first;
       final tomorrow = DateTime.now().add(const Duration(days: 1));
       final deck = await store.addSet(
@@ -1378,8 +1397,11 @@ Meeting at 10:30 today
       });
 
       store.addFolder('Chemistry', 0xFFA9CFF5);
+      store.startPlan(PlusPlan.yearly); // backup files are tAsikaso+
       await tester.pumpWidget(const StudyApp());
       await tester.tap(find.byIcon(AppTab.profile.icon));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Backup & Sync'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Backup & Sync'));
       await tester.pumpAndSettle();

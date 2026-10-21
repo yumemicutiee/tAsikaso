@@ -670,7 +670,9 @@ class _DeckRow extends StatelessWidget {
     final studied = deck.lastStudiedAt;
     final seen = deck.lastSeen;
     final scored = studied != null && seen > 0;
-    final due = AppStore.instance.dueCards(deck).length;
+    final store = AppStore.instance;
+    // Due counts are smart review (tAsikaso+).
+    final due = store.isPlus ? store.dueCards(deck).length : 0;
     final score = scored ? deck.lastKnown / seen : 0.0;
     final deep = Color.lerp(color, AppColors.ink, 0.35)!;
 

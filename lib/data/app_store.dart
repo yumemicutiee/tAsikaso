@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
+import 'plans.dart';
 import '../theme/app_colors.dart';
 import '../theme/brand.dart';
 import '../utils/format.dart';
@@ -77,6 +79,7 @@ class AppStore extends ChangeNotifier {
   String? _currentTaskId;
   final Map<String, int> _focusLog = {}; // day key -> minutes
   final Map<String, int> _reviewLog = {}; // day key -> cards reviewed
+  final Map<String, int> _suggestedLog = {}; // month key -> suggested cards
   final Map<String, Uint8List> _thumbs = {}; // note id -> small JPEG
   Uint8List? _profilePhoto;
   final List<FocusSession> _sessions = []; // oldest first
@@ -115,6 +118,7 @@ class AppStore extends ChangeNotifier {
     _currentTaskId = null;
     _focusLog.clear();
     _reviewLog.clear();
+    _suggestedLog.clear();
     _thumbs.clear();
     _profilePhoto = null;
     _sessions.clear();
@@ -202,6 +206,7 @@ class AppStore extends ChangeNotifier {
     }
     await _loadThumbnails(storage);
     await _loadProfilePhoto(storage);
+    checkPlanEnded();
     notifyListeners();
   }
 
@@ -319,15 +324,18 @@ class AppStore extends ChangeNotifier {
       _paused = null;
       _saveFailed = false;
     }
-    // Keep the look and tAsikaso+ as they were.
+    // Keep the look, the tAsikaso+ plan and this month's suggested-card
+    // count (a plan and its limits aren't study data).
     final keep = _prefs;
+    final suggested = Map.of(_suggestedLog);
     _clear();
     _prefs = _prefs.copyWith(
       appearance: keep.appearance,
       palette: keep.palette,
       customHue: keep.customHue,
-      plus: keep.plus,
+      subscription: keep.subscription,
     );
+    _suggestedLog.addAll(suggested);
     _persist();
     notifyListeners();
     onEraseEverything?.call();
@@ -424,6 +432,7 @@ class AppStore extends ChangeNotifier {
     final current = j['currentTask'];
     final focusLog = _intMap(j['focusLog']);
     final reviewLog = _intMap(j['reviewLog']);
+    final suggestedLog = _intMap(j['suggestedLog']);
     final sessions = all(j['sessions'], FocusSession.fromJson);
     final breaks = all(j['breaks'], BreakSession.fromJson);
     final prefs = one(j['prefs'], AppPrefs.fromJson) ?? const AppPrefs();
@@ -449,6 +458,9 @@ class AppStore extends ChangeNotifier {
     _reviewLog
       ..clear()
       ..addAll(reviewLog);
+    _suggestedLog
+      ..clear()
+      ..addAll(suggestedLog);
     _sessions
       ..clear()
       ..addAll(sessions);
@@ -477,6 +489,7 @@ class AppStore extends ChangeNotifier {
         'currentTask': _currentTaskId,
         'focusLog': _focusLog,
         'reviewLog': _reviewLog,
+        if (_suggestedLog.isNotEmpty) 'suggestedLog': _suggestedLog,
         'sessions': [for (final s in _sessions) s.toJson()],
         'breaks': [for (final b in _breaks) b.toJson()],
         'prefs': _prefs.toJson(),
@@ -1053,6 +1066,12 @@ class AppStore extends ChangeNotifier {
           'Update the app to restore it.');
     }
 
+    // The plan and this month's suggested-card count belong to this device
+    // and account, not to the data being restored: an old backup mustn't
+    // end (or start) a plan, or hand back used-up suggestions.
+    final keepPlan = _prefs.subscription;
+    final keepSuggested = Map.of(_suggestedLog);
+
     // A restore is a clean slate, so it also ends a paused state (the
     // unreadable file is replaced).
     final device = _paused ?? _storage;
@@ -1071,6 +1090,14 @@ class AppStore extends ChangeNotifier {
     await device.writeJson(json);
     _paused = null;
     await init(device);
+
+    _prefs = _prefs.copyWith(
+        subscription: keepPlan, clearSubscription: keepPlan == null);
+    for (final e in keepSuggested.entries) {
+      final restored = _suggestedLog[e.key] ?? 0;
+      if (e.value > restored) _suggestedLog[e.key] = e.value;
+    }
+    _changed();
   }
 
   /// Remembers that a backup file was just made.
@@ -1081,8 +1108,84 @@ class AppStore extends ChangeNotifier {
 
   AppPrefs get prefs => _prefs;
 
-  /// tAsikaso+ is active.
-  bool get isPlus => _prefs.plus;
+  // ---- tAsikaso+ ---------------------------------------------------------------
+
+  /// The plan on record, even if it has ended (see [isPlus]).
+  Subscription? get subscription => _prefs.subscription;
+
+  /// tAsikaso+ is active right now.
+  bool get isPlus => _prefs.subscription?.activeAt(clock.now()) ?? false;
+
+  /// The active plan, or null on the free plan.
+  PlusPlan? get plan => isPlus ? _prefs.subscription!.plan : null;
+
+  /// Starts [plan] now, for one period. Switching from another plan starts
+  /// the new one from today. [test] marks a plan switched on without
+  /// payment (see [kTestPurchases]).
+  void startPlan(PlusPlan plan, {bool test = kTestPurchases}) {
+    final now = clock.now();
+    _prefs = _prefs.copyWith(
+      subscription: Subscription(
+        plan: plan,
+        startedAt: now,
+        endsAt: plan.endFrom(now),
+        test: test,
+      ),
+      hidePlusBanner: false, // shows again if the plan ends
+    );
+    _changed();
+  }
+
+  /// Back to the free plan straight away. Nothing is deleted: colours fall
+  /// back to the default and Plus features lock until a plan starts again.
+  void endPlan() {
+    if (_prefs.subscription == null) return;
+    _prefs = _prefs.copyWith(clearSubscription: true);
+    _changed();
+  }
+
+  /// When a plan on record has run out: back to Free, and the user is told.
+  /// Called at start-up; returns true if a plan just ended.
+  bool checkPlanEnded() {
+    final s = _prefs.subscription;
+    if (s == null || s.activeAt(clock.now())) return false;
+    _prefs = _prefs.copyWith(clearSubscription: true);
+    _persist();
+    _report((
+      title: 'Your $kPlusName Plan Ended',
+      message: 'Your ${s.plan.title} plan ended on '
+          '${formatNoteDate(s.endsAt!)}, so you are on the free plan now. '
+          'Nothing was deleted: your colors, analysis history, smart review '
+          'and backups come back when you start a plan again.',
+    ));
+    return true;
+  }
+
+  // ---- Suggested cards (free: a few a month) ---------------------------------
+
+  int get suggestedCardsThisMonth =>
+      _suggestedLog[monthKey(clock.now())] ?? 0;
+
+  /// How many more suggested cards this month's plan allows; null = no
+  /// limit (tAsikaso+).
+  int? get suggestedCardsLeft => isPlus
+      ? null
+      : math.max(0, kFreeSuggestedCardsPerMonth - suggestedCardsThisMonth);
+
+  /// Keeps as many of [cards] (made by the app from notes) as the plan
+  /// allows this month, counts those, and says how many were left out.
+  ({List<Flashcard> kept, int dropped}) takeSuggestedCards(
+      List<Flashcard> cards) {
+    final left = suggestedCardsLeft;
+    final kept =
+        left == null || cards.length <= left ? cards : cards.sublist(0, left);
+    if (kept.isNotEmpty) {
+      final key = monthKey(clock.now());
+      _suggestedLog[key] = (_suggestedLog[key] ?? 0) + kept.length;
+      _changed();
+    }
+    return (kept: kept, dropped: cards.length - kept.length);
+  }
 
   /// The colour theme to show: the chosen one if it's free or tAsikaso+ is
   /// active, otherwise the default.

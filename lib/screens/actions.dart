@@ -1,10 +1,14 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
 import '../data/app_store.dart';
+import '../data/plans.dart';
 import '../data/pomodoro_controller.dart';
 import '../models/models.dart';
+import '../theme/brand.dart';
 import '../services/scan_service.dart';
 import '../services/study_ai.dart';
 import '../utils/card_suggestions.dart';
@@ -18,6 +22,7 @@ import 'flashcards/set_screen.dart';
 import 'flashcards/study_cards_screen.dart';
 import 'folder_screen.dart';
 import 'note_viewer_screen.dart';
+import 'plans_screen.dart';
 import 'settings_screen.dart';
 
 // Shared actions for notes, flashcard sets and folders, used by several
@@ -85,8 +90,9 @@ void openSet(BuildContext context, FlashcardSet deck) {
   );
 }
 
-/// Studies [deck]: just the cards due today when some (but not all) are
-/// due, otherwise every card. [dueOnly] overrides that.
+/// Studies [deck]: with smart review (tAsikaso+), just the cards due today
+/// when some (but not all) are due, otherwise every card. [dueOnly]
+/// overrides that; the free plan always studies every card.
 void studySet(BuildContext context, FlashcardSet deck, {bool? dueOnly}) {
   if (deck.cards.isEmpty) {
     _toast(context, 'Add some cards first.');
@@ -94,7 +100,8 @@ void studySet(BuildContext context, FlashcardSet deck, {bool? dueOnly}) {
     return;
   }
   final due = _store.dueCards(deck).length;
-  final reviewDue = dueOnly ?? (due > 0 && due < deck.cards.length);
+  final reviewDue = _store.isPlus &&
+      (dueOnly ?? (due > 0 && due < deck.cards.length));
   Navigator.of(context).push(
     MaterialPageRoute(
         builder: (_) => StudyCardsScreen(setId: deck.id, dueOnly: reviewDue)),
@@ -165,10 +172,34 @@ Future<List<QuizQuestion>?> makeQuiz(
   return questions;
 }
 
+/// Cards to ask the study server for: 30, or what's left of the free
+/// plan's suggested cards this month.
+int cardsToAskFor(int? left) => left == null ? 30 : math.min(30, left);
+
+/// Said when the free plan's suggested cards for this month are used up.
+String get suggestionLimitNote =>
+    "Free plan: this month's $kFreeSuggestedCardsPerMonth suggested cards "
+    'are used up. $kPlusName has no limit.';
+
+/// [questions] without those about cards that weren't kept.
+List<QuizQuestion> _quizFor(List<QuizQuestion> questions, List<Flashcard> kept) {
+  final ids = {for (final c in kept) c.id};
+  return [
+    for (final q in questions)
+      if (q.cardId == null || ids.contains(q.cardId)) q,
+  ];
+}
+
 /// Cards for an existing set from the text of its photos: the study server
 /// writes them (with key concepts and a quiz) when it's on; otherwise
-/// they're suggested from the text for the user to add or skip.
+/// they're suggested from the text for the user to add or skip. The free
+/// plan gets [kFreeSuggestedCardsPerMonth] a month.
 Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
+  final left = _store.suggestedCardsLeft;
+  if (left == 0) {
+    await showPlusPrompt(context, PlusFeature.unlimitedSuggestions);
+    return;
+  }
   final ai = StudyAi.isOn;
   String text = deck.sourceText;
   StudyKit? kit;
@@ -187,7 +218,8 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
           text = await ScanService.readText(photos);
         }
         if (ai && text.trim().isNotEmpty) {
-          kit = await StudyAi.makeStudyKit(text: text, title: deck.title);
+          kit = await StudyAi.makeStudyKit(
+              text: text, title: deck.title, maxCards: cardsToAskFor(left));
         }
       },
     );
@@ -210,41 +242,50 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
   };
 
   if (kit case final kit?) {
-    final fresh = [
+    final (:kept, :dropped) = _store.takeSuggestedCards([
       for (final c in kit.cards)
         if (fronts.add(c.front.trim().toLowerCase())) c,
-    ];
+    ]);
     _store.updateSet(current.copyWith(
-      cards: [...current.cards, ...fresh],
+      cards: [...current.cards, ...kept],
       sourceText: text,
       summary: kit.summary,
       concepts: kit.concepts,
-      quiz: kit.quiz,
+      quiz: _quizFor(kit.quiz, [...current.cards, ...kept]),
     ));
-    _toast(context,
-        fresh.isEmpty ? 'No new cards to add.' : '${plural(fresh.length, 'card')} added.');
+    final made = kept.isEmpty
+        ? 'No new cards to add.'
+        : '${plural(kept.length, 'card')} added.';
+    _toast(context, dropped > 0 ? '$made $suggestionLimitNote' : made);
     return;
   }
 
-  final fresh = [
+  final (:kept, :dropped) = _store.takeSuggestedCards([
     for (final c in suggestCards(text))
       if (fronts.add(c.front.trim().toLowerCase())) c,
-  ];
+  ]);
   _store.updateSet(current.copyWith(
-    suggestions: [...current.suggestions, ...fresh],
+    suggestions: [...current.suggestions, ...kept],
     sourceText: text,
   ));
-  final made = fresh.isEmpty
+  var made = kept.isEmpty
       ? 'No cards were found in the text.'
-      : '${plural(fresh.length, 'card')} suggested from the text.';
+      : '${plural(kept.length, 'card')} suggested from the text.';
+  if (dropped > 0) made = '$made $suggestionLimitNote';
   _toast(context, problem == null ? made : '$problem $made');
 }
 
-/// A new flashcard set from a note's text, in the note's folder.
+/// A new flashcard set from a note's text, in the note's folder. The free
+/// plan gets [kFreeSuggestedCardsPerMonth] suggested cards a month.
 Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
   final text = note.displayText;
   if (text.trim().isEmpty) {
     _toast(context, 'This note has no text to make cards from.');
+    return;
+  }
+  final left = _store.suggestedCardsLeft;
+  if (left == 0) {
+    await showPlusPrompt(context, PlusFeature.unlimitedSuggestions);
     return;
   }
   StudyKit? kit;
@@ -254,7 +295,8 @@ Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
       kit = await runWithProgress(
         context,
         'Making your flashcards…',
-        () => StudyAi.makeStudyKit(text: text, title: note.title),
+        () => StudyAi.makeStudyKit(
+            text: text, title: note.title, maxCards: cardsToAskFor(left)),
       );
     } on StudyAiException catch (e) {
       problem = e.message;
@@ -264,24 +306,31 @@ Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
     }
   }
   if (!context.mounted) return;
-  final suggestions = kit == null ? suggestCards(text) : const <Flashcard>[];
+  final (kept: cards, dropped: droppedCards) =
+      _store.takeSuggestedCards(kit?.cards ?? const []);
+  final (kept: suggestions, dropped: droppedSuggestions) = kit == null
+      ? _store.takeSuggestedCards(suggestCards(text))
+      : (kept: const <Flashcard>[], dropped: 0);
   final deck = await _store.addSet(
     title: note.title,
     folderId: note.folderId,
-    cards: kit?.cards ?? const [],
+    cards: cards,
     suggestions: suggestions,
     sourceText: note.text.isNotEmpty ? note.text : text,
     summary: kit?.summary ?? note.summary,
     concepts: kit?.concepts ?? note.concepts,
-    quiz: kit?.quiz ?? const [],
+    quiz: kit == null ? const [] : _quizFor(kit.quiz, cards),
   );
   if (!context.mounted) return;
   openSet(context, deck);
-  final made = kit != null
-      ? '${plural(kit.cards.length, 'card')} made from "${note.title}".'
+  var made = kit != null
+      ? '${plural(cards.length, 'card')} made from "${note.title}".'
       : suggestions.isEmpty
           ? 'No cards were found in the text; write your own.'
           : '${plural(suggestions.length, 'card')} suggested from the text.';
+  if (droppedCards + droppedSuggestions > 0) {
+    made = '$made $suggestionLimitNote';
+  }
   _toast(context, problem == null ? made : '$problem $made');
 }
 

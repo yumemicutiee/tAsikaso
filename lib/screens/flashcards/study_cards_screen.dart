@@ -49,7 +49,8 @@ class _StudyCardsScreenState extends State<StudyCardsScreen> {
   void _load({required bool shuffle}) {
     final deck = _store.setById(widget.setId);
     var cards = List.of(deck?.cards ?? const <Flashcard>[]);
-    if (widget.dueOnly && deck != null) {
+    // Due-only rounds are smart review (tAsikaso+).
+    if (widget.dueOnly && deck != null && _store.isPlus) {
       final due = _store.dueCards(deck);
       if (due.isNotEmpty) cards = due;
     }

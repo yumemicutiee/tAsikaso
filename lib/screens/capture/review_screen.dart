@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/app_store.dart';
+import '../../data/plans.dart';
 import '../../models/models.dart';
 import '../../services/scan_service.dart';
 import '../../services/study_ai.dart';
@@ -15,6 +16,7 @@ import '../../utils/card_suggestions.dart';
 import '../../utils/format.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
+import '../actions.dart' show cardsToAskFor, suggestionLimitNote;
 import '../flashcards/set_screen.dart';
 import '../note_viewer_screen.dart';
 import 'captured_page.dart';
@@ -161,17 +163,21 @@ class _ReviewScreenState extends State<ReviewScreen> {
       final text = RecognizedPage.join(pages);
 
       // The study server (Claude) types the notes up and picks out key
-      // concepts; for flashcards it writes the cards and a quiz too.
+      // concepts; for flashcards it writes the cards and a quiz too. The
+      // free plan's suggested cards for the month cap how many it writes;
+      // once they're used up, it isn't asked for cards at all.
+      final left = store.suggestedCardsLeft;
+      final cardsUsedUp = asCards && left == 0;
       StudyKit? kit;
       String? aiProblem;
-      if (StudyAi.isOn && text.trim().length >= 20) {
+      if (StudyAi.isOn && text.trim().length >= 20 && !cardsUsedUp) {
         progress.value =
             asCards ? 'Making your flashcards…' : 'Typing up your notes…';
         try {
           kit = await StudyAi.makeStudyKit(
             text: text,
             title: request.title,
-            maxCards: asCards ? 30 : 0,
+            maxCards: asCards ? cardsToAskFor(left) : 0,
             quizCount: asCards ? 12 : 0,
           );
         } on StudyAiException catch (e) {
@@ -188,8 +194,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
           (created = store.addFolder('My Notes', AppColors.folderPalette.first));
 
       if (asCards) {
-        final cards = kit?.cards ?? const <Flashcard>[];
-        final suggestions = kit == null ? suggestCards(text) : const <Flashcard>[];
+        final (kept: cards, dropped: droppedCards) =
+            store.takeSuggestedCards(kit?.cards ?? const <Flashcard>[]);
+        final (kept: suggestions, dropped: droppedSuggestions) =
+            kit == null && !cardsUsedUp
+                ? store.takeSuggestedCards(suggestCards(text))
+                : (kept: const <Flashcard>[], dropped: 0);
+        final ids = {for (final c in cards) c.id};
         final deck = await store.addSet(
           title: request.title,
           folderId: folder.id,
@@ -199,21 +210,30 @@ class _ReviewScreenState extends State<ReviewScreen> {
           sourceText: text,
           summary: kit?.summary ?? '',
           concepts: kit?.concepts ?? const [],
-          quiz: kit?.quiz ?? const [],
+          quiz: [
+            for (final q in kit?.quiz ?? const <QuizQuestion>[])
+              if (q.cardId == null || ids.contains(q.cardId)) q,
+          ],
         );
         // Close the progress dialog, review and camera, then open the set so
         // cards can be written while looking at the photos.
         navigator.popUntil((route) => route.isFirst);
         navigator.push(MaterialPageRoute(builder: (_) => SetScreen(setId: deck.id)));
-        toast(kit != null
-            ? 'Photos saved with ${plural(cards.length, 'flashcard')} made '
-                'for you.'
-            : aiProblem != null
-                ? '$aiProblem Cards were suggested from the text instead.'
-                : suggestions.isEmpty
-                    ? 'Photos saved. Now add cards for them.'
-                    : 'Photos saved. We found ${plural(suggestions.length, 'card')} '
-                        'to suggest.');
+        var message = cardsUsedUp
+            ? 'Photos saved. Write cards for them yourself.'
+            : kit != null
+                ? 'Photos saved with ${plural(cards.length, 'flashcard')} made '
+                    'for you.'
+                : aiProblem != null
+                    ? '$aiProblem Cards were suggested from the text instead.'
+                    : suggestions.isEmpty
+                        ? 'Photos saved. Now add cards for them.'
+                        : 'Photos saved. We found '
+                            '${plural(suggestions.length, 'card')} to suggest.';
+        if (cardsUsedUp || droppedCards + droppedSuggestions > 0) {
+          message = '$message $suggestionLimitNote';
+        }
+        toast(message);
         return;
       }
 
@@ -744,9 +764,15 @@ class _SaveSheetState extends State<_SaveSheet> {
             _FormatOption(
               icon: AppIcons.flashcards,
               title: 'Flashcards',
-              subtitle: ai && canReadText
-                  ? 'Cards and a quiz made from your notes'
-                  : 'Write cards while looking at your photos',
+              subtitle: (ai && canReadText
+                      ? 'Cards and a quiz made from your notes'
+                      : 'Write cards while looking at your photos') +
+                  switch (AppStore.instance.suggestedCardsLeft) {
+                    null => '',
+                    0 => " · this month's suggested cards are used up",
+                    final left =>
+                      ' · $left of $kFreeSuggestedCardsPerMonth suggested cards left this month',
+                  },
               selected: !pdf,
               onTap: () => setState(() => _format = _SaveFormat.flashcards),
             ),

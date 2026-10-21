@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
+import '../../data/plans.dart';
 import '../../models/models.dart';
 import '../../services/scan_service.dart';
 import '../../services/study_ai.dart';
@@ -13,6 +14,7 @@ import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/list_items.dart';
 import '../actions.dart';
+import '../plans_screen.dart';
 
 /// A flashcard set: its reference photos, its cards, and a Study button.
 class SetScreen extends StatelessWidget {
@@ -35,7 +37,10 @@ class SetScreen extends StatelessWidget {
           );
         }
         final folder = store.folder(deck.folderId);
-        final due = store.dueCards(deck);
+        // Smart review (what's due today) is tAsikaso+; answers are still
+        // recorded on the free plan, so a plan starts with real history.
+        final smart = store.isPlus;
+        final due = smart ? store.dueCards(deck) : deck.cards;
         // Cards can be made from the photos' text: already read, or
         // readable on this device.
         final canMakeCards = deck.sourceText.trim().isNotEmpty ||
@@ -94,7 +99,21 @@ class SetScreen extends StatelessWidget {
                         : 'Study ${plural(deck.cards.length, 'Card')}',
                 onPressed: deck.cards.isEmpty ? null : () => studySet(context, deck),
               ),
-              if (deck.cards.isNotEmpty)
+              if (deck.cards.isNotEmpty && !smart)
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () =>
+                        showPlusPrompt(context, PlusFeature.smartReview),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      textStyle: const TextStyle(
+                          fontSize: 11.5, fontWeight: FontWeight.w600),
+                    ),
+                    icon: const Icon(AppIcons.locked, size: 13),
+                    label: const Text('Smart review: just the cards due today'),
+                  ),
+                )
+              else if (deck.cards.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Center(

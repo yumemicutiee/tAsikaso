@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../data/app_store.dart';
 import '../data/backup.dart';
+import '../data/plans.dart';
 import '../data/pomodoro_controller.dart';
 import '../services/drive_sync.dart';
 import '../theme/app_colors.dart';
@@ -16,6 +17,7 @@ import '../utils/format.dart';
 import '../widgets/app_header.dart';
 import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
+import 'plans_screen.dart';
 
 Future<void> openBackup(BuildContext context) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
@@ -84,16 +86,20 @@ class _BackupScreenState extends State<BackupScreen> {
       return;
     }
     if (!_sync.isSignedIn) return;
+    final plus = AppStore.instance.isPlus;
     if (_sync.remote != null && _sync.lastSyncAt == null) {
       // This device hasn't synced before and Drive already holds data
-      // (from another phone, or from before a reinstall).
-      await _offerRestore();
-    } else {
+      // (from another phone, or from before a reinstall). Getting it back
+      // is free; uploading is tAsikaso+.
+      await _offerRestore(canUpload: plus);
+    } else if (plus) {
       await _syncNow();
+    } else {
+      _toast('Signed in as ${_sync.email}. ${DriveSync.needsPlusMessage}');
     }
   }
 
-  Future<void> _offerRestore() async {
+  Future<void> _offerRestore({required bool canUpload}) async {
     final saved = _sync.remote?.modifiedTime;
     final restore = await showDialog<bool>(
       context: context,
@@ -102,14 +108,14 @@ class _BackupScreenState extends State<BackupScreen> {
         content: Text(
           'Google Drive has your folders, notes, flashcards and tasks'
           '${saved == null ? '' : ', saved ${formatAgo(saved, clock.now())}'}. '
-          'Restore them to this device (replacing what is here now), or '
-          "keep this device's data and upload it to Drive instead?",
+          'Restore them to this device (replacing what is here now)'
+          '${canUpload ? ", or keep this device's data and upload it to Drive instead?" : '?'}',
           style: const TextStyle(height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep Mine'),
+            child: Text(canUpload ? 'Keep Mine' : 'Not Now'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -125,7 +131,7 @@ class _BackupScreenState extends State<BackupScreen> {
     if (!mounted || restore == null) return;
     if (restore) {
       await _restoreFromDrive(confirm: false);
-    } else {
+    } else if (canUpload) {
       await _syncNow();
     }
   }
@@ -169,6 +175,10 @@ class _BackupScreenState extends State<BackupScreen> {
 
   Future<void> _backUp() async {
     final store = AppStore.instance;
+    if (!store.isPlus) {
+      await showPlusPrompt(context, PlusFeature.backup);
+      return;
+    }
     setState(() => _busy = true);
     try {
       final bytes = await store.createBackup();
@@ -230,6 +240,7 @@ class _BackupScreenState extends State<BackupScreen> {
         listenable: Listenable.merge([store, _sync]),
         builder: (context, _) {
           final last = store.prefs.lastBackupAt;
+          final plus = store.isPlus;
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
@@ -240,13 +251,21 @@ class _BackupScreenState extends State<BackupScreen> {
                 'file yourself.',
                 style: AppText.itemMeta.copyWith(height: 1.4),
               ),
+              if (!plus) ...[
+                const SizedBox(height: 14),
+                _PlusNote(
+                  onTap: () => showPlusPrompt(context, PlusFeature.backup),
+                ),
+              ],
               const SizedBox(height: 20),
               _DriveCard(
                 sync: _sync,
+                plus: plus,
                 onSignIn: _signIn,
                 onSignOut: _signOut,
                 onSyncNow: _syncNow,
                 onRestore: () => _restoreFromDrive(),
+                onPlans: () => openPlans(context),
               ),
               const SizedBox(height: 28),
               Text('Backup file', style: AppText.sectionTitle),
@@ -286,7 +305,7 @@ class _BackupScreenState extends State<BackupScreen> {
               ),
               const SizedBox(height: 12),
               AccentButton(
-                label: 'Back Up Now',
+                label: plus ? 'Back Up Now' : 'Back Up Now  ·  $kPlusName',
                 onPressed: _busy ? null : _backUp,
               ),
               const SizedBox(height: 4),
@@ -326,21 +345,64 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 }
 
+/// What's free and what's tAsikaso+ on this screen, for free accounts.
+class _PlusNote extends StatelessWidget {
+  const _PlusNote({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primarySoft,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Row(
+            children: [
+              Icon(AppIcons.locked, size: 18, color: AppColors.primaryDeep),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Syncing to Google Drive and making backup files are part '
+                  'of $kPlusName. Signing in and restoring what you already '
+                  'saved are free.',
+                  style: AppText.statLabel
+                      .copyWith(height: 1.4, color: AppColors.textPrimary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Google Drive sync: sign in, status, Sync Now, Restore, auto-sync.
+/// Without tAsikaso+ ([plus] false) syncing is replaced by a way to the
+/// plans; signing in and restoring still work.
 class _DriveCard extends StatelessWidget {
   const _DriveCard({
     required this.sync,
+    required this.plus,
     required this.onSignIn,
     required this.onSignOut,
     required this.onSyncNow,
     required this.onRestore,
+    required this.onPlans,
   });
 
   final DriveSync sync;
+  final bool plus;
   final VoidCallback onSignIn;
   final VoidCallback onSignOut;
   final VoidCallback onSyncNow;
   final VoidCallback onRestore;
+  final VoidCallback onPlans;
 
   @override
   Widget build(BuildContext context) {
@@ -391,10 +453,12 @@ class _DriveCard extends StatelessWidget {
             Text('Signed in as ${sync.email}', style: AppText.itemTitle),
             const SizedBox(height: 4),
             Text(
-              sync.lastSyncAt == null
-                  ? 'Not synced yet'
-                  : 'Last synced ${formatAgo(sync.lastSyncAt!, now)}'
-                      '${sync.hasUnsyncedChanges ? ' · changes waiting' : ''}',
+              !plus
+                  ? 'Sync is paused: it comes with $kPlusName'
+                  : sync.lastSyncAt == null
+                      ? 'Not synced yet'
+                      : 'Last synced ${formatAgo(sync.lastSyncAt!, now)}'
+                          '${sync.hasUnsyncedChanges ? ' · changes waiting' : ''}',
               style: AppText.statLabel,
             ),
             if (sync.error case final error?) ...[
@@ -436,23 +500,27 @@ class _DriveCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 14),
-            AccentButton(label: 'Sync Now', onPressed: busy ? null : onSyncNow),
-            // The card already paints a background, so the tile mustn't.
-            Material(
-              type: MaterialType.transparency,
-              child: SwitchListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-                title: Text('Sync automatically', style: AppText.itemTitle),
-                subtitle: Text(
-                    'A little after each change, and when you leave the app.',
-                    style: AppText.itemMeta),
-                value: sync.autoSync,
-                activeThumbColor: AppColors.primaryDeep,
-                onChanged: sync.setAutoSync,
+            if (plus) ...[
+              AccentButton(
+                  label: 'Sync Now', onPressed: busy ? null : onSyncNow),
+              // The card already paints a background, so the tile mustn't.
+              Material(
+                type: MaterialType.transparency,
+                child: SwitchListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  title: Text('Sync automatically', style: AppText.itemTitle),
+                  subtitle: Text(
+                      'A little after each change, and when you leave the app.',
+                      style: AppText.itemMeta),
+                  value: sync.autoSync,
+                  activeThumbColor: AppColors.primaryDeep,
+                  onChanged: sync.setAutoSync,
+                ),
               ),
-            ),
+            ] else
+              AccentButton(label: 'See Plans to Sync', onPressed: onPlans),
             if (sync.remote != null && !sync.remoteNewer)
               Center(
                 child: TextButton(

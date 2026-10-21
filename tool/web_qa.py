@@ -33,6 +33,8 @@ FIND_JS = """([text, exact]) => {
     const r = e.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) continue;
     if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
+    // Page-sized containers hold every label on screen: never a target.
+    if (r.width * r.height > innerWidth * innerHeight * 0.5) continue;
     const area = r.width * r.height;
     if (!best || area < best.area) best = {x: r.left + r.width / 2, y: r.top + r.height / 2, area};
   }

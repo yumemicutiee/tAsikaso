@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_icons.dart';
 
 /// Grey pill with a white "thumb" on the selected option, e.g.
 /// Overview | Timeline or Week | Month | Year.
@@ -11,6 +12,7 @@ class SegmentedTabs extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.dense = false,
+    this.locked = const {},
   });
 
   final List<String> labels;
@@ -19,6 +21,10 @@ class SegmentedTabs extends StatelessWidget {
 
   /// Smaller text and padding, for use inside a card.
   final bool dense;
+
+  /// Options that show a small lock (tAsikaso+). Tapping one still calls
+  /// [onChanged], which decides what happens.
+  final Set<int> locked;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +41,7 @@ class SegmentedTabs extends StatelessWidget {
               child: Semantics(
                 button: true,
                 selected: i == selected,
+                hint: locked.contains(i) ? 'tAsikaso+' : null,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => onChanged(i),
@@ -55,19 +62,33 @@ class SegmentedTabs extends StatelessWidget {
                             ]
                           : null,
                     ),
-                    child: Text(
-                      labels[i],
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: dense ? 11.5 : 12.5,
-                        fontWeight:
-                            i == selected ? FontWeight.w700 : FontWeight.w600,
-                        color: i == selected
-                            ? AppColors.ink
-                            : AppColors.textSecondary,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (locked.contains(i)) ...[
+                          Icon(AppIcons.locked,
+                              size: dense ? 11 : 12,
+                              color: AppColors.textMuted),
+                          const SizedBox(width: 3),
+                        ],
+                        Flexible(
+                          child: Text(
+                            labels[i],
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: dense ? 11.5 : 12.5,
+                              fontWeight: i == selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: i == selected
+                                  ? AppColors.ink
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

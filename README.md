@@ -116,24 +116,43 @@ lecture-note capture → PDF or flashcards.
   Forest, Wine, Cocoa, Graphite, or **Custom** (slide to any hue; matching
   light and dark shades are made from it). Buttons, rings, charts, the tAsikaso+
   cards and Focus Mode follow it, in light and dark. Locked colours open the
-  plans page. Payments aren't connected yet, so debug builds show "Turn On
-  Plus for Testing" on the plans page.
+  plans page.
 - **Start Focus** on the Dashboard (and the play button on Continue) starts a
   Pomodoro and opens Focus Mode straight away.
 - **Stats:** Today's Progress shows real focus minutes and cards reviewed;
   the streak counts days in a row with a finished Pomodoro or reviewed cards.
 
-**tAsikaso+ prices (Philippine pesos, for students):** ₱49 / month,
-₱199 / semester (6 months) or ₱349 / year, with a 7-day free trial. Free keeps
-everything needed to study (timer, tasks, scanning to PDF, your own cards,
-search and copy, this week's analysis); Plus adds month/year analysis, app
-colours, unlimited suggested cards, and soon smart review and backup.
+**tAsikaso+ plans (Philippine pesos, for students):** ₱49 / month,
+₱199 / semester (6 months) or ₱349 / year. Free keeps everything needed to
+study (timer, tasks, scanning to PDF, your own cards, quizzes, search and
+copy, this week's analysis, restoring a backup you have). Plus adds, and the
+app enforces (`lib/data/plans.dart` lists them as `PlusFeature`):
 
-**Not yet:** payments for tAsikaso+ (Google Play Billing). The plan limits
-shown on the plans page aren't enforced yet.
-Smart Study needs your own study server and Anthropic API key; it isn't
-part of the Plus plan yet, and nothing stops a user from switching it on
-once a server address is in the app.
+| Perk | Free | tAsikaso+ |
+|---|---|---|
+| Pomodoro Analysis | this week only | every week, month and year, the heatmap, the full timeline |
+| Suggested cards from notes (AI or from the text) | 20 a month (the study server isn't called once they're used up) | unlimited |
+| Smart review | every card each round (answers are still recorded) | due-only reviews, due counts |
+| App colours | Navy | all colours and Custom |
+| Google Drive sync & backup files | sign in (name, photo) and restore only | sync and backup files |
+
+Plans have a start and end date (Monthly 1, Semester 6, Yearly 12 months)
+and end on their own, with a notice; nothing is deleted when a plan ends.
+Delete All Data and restoring a backup keep the plan and this month's
+suggested-card count.
+
+**Test purchases (now):** payments aren't connected, so Profile → See Plans
+starts any plan free ("Test mode, no payment is taken"), switches between
+Monthly, Semester and Yearly, and **Go Back to Free Plan** ends it. This is
+the build flag `TEST_PURCHASES` (`lib/data/plans.dart`), on by default; when
+Google Play Billing is added, build with `--dart-define=TEST_PURCHASES=false`
+and the plans page stops handing out plans.
+
+**Not yet:** payments for tAsikaso+ (Google Play Billing), and plans tied to
+a user account on a server: today the plan is kept on the device, so anyone
+can start a test plan. Smart Study needs your own study server and Anthropic
+API key; on the free plan it is capped by the 20 suggested cards a month,
+but typing up notes (Text PDF) isn't limited.
 
 A first launch starts with five sample folders and five sample tasks so the
 app isn't empty. They can be edited or deleted.

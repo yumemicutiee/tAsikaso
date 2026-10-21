@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/plans.dart';
+
+export '../data/plans.dart' show PlusPlan;
+
 // All models are immutable and serialise to JSON for on-device storage.
 // Big binary data (PDFs, photos, thumbnails) is stored as separate files,
 // keyed by the model's id, and never lives inside the JSON.
@@ -830,6 +834,55 @@ enum Appearance {
   final String label;
 }
 
+/// A tAsikaso+ plan the user has: which one, since when, and until when.
+@immutable
+class Subscription {
+  const Subscription({
+    required this.plan,
+    required this.startedAt,
+    this.endsAt,
+    this.test = false,
+  });
+
+  final PlusPlan plan;
+  final DateTime startedAt;
+
+  /// When this period ends (null: no end, from older test builds).
+  final DateTime? endsAt;
+
+  /// Switched on without payment (see `kTestPurchases`).
+  final bool test;
+
+  /// Still running at [now].
+  bool activeAt(DateTime now) {
+    final end = endsAt;
+    return end == null || now.isBefore(end);
+  }
+
+  Json toJson() => {
+        'name': plan.name,
+        'since': startedAt.toUtc().toIso8601String(),
+        if (endsAt case final e?) 'until': e.toUtc().toIso8601String(),
+        if (test) 'test': true,
+      };
+
+  /// Null when [j] isn't a plan this version knows.
+  static Subscription? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final plan = PlusPlan.fromName(j['name']);
+    final since = j['since'] is String ? DateTime.tryParse(j['since'] as String) : null;
+    if (plan == null || since == null) return null;
+    return Subscription(
+      plan: plan,
+      startedAt: since.toLocal(),
+      endsAt: j['until'] is String
+          ? DateTime.tryParse(j['until'] as String)?.toLocal()
+          : null,
+      test: j['test'] == true,
+    );
+  }
+}
+
 /// Personal preferences and app behaviour (Settings).
 @immutable
 class AppPrefs {
@@ -847,7 +900,7 @@ class AppPrefs {
     this.appearance = Appearance.system,
     this.palette = 'navy',
     this.customHue = 200,
-    this.plus = false,
+    this.subscription,
     this.lastBackupAt,
     this.useAi = true,
     this.aiServerUrl = '',
@@ -894,9 +947,9 @@ class AppPrefs {
   /// The hue (0–360) of the user's own colour ("Custom").
   final double customHue;
 
-  /// tAsikaso+ is active. (Payments aren't connected yet; debug builds can
-  /// switch it on from the plans page for testing.)
-  final bool plus;
+  /// The tAsikaso+ plan, or null for the free plan. It may have ended;
+  /// `AppStore.isPlus` says whether it is active now.
+  final Subscription? subscription;
 
   /// When a backup file was last made (null = never).
   final DateTime? lastBackupAt;
@@ -929,7 +982,8 @@ class AppPrefs {
     Appearance? appearance,
     String? palette,
     double? customHue,
-    bool? plus,
+    Subscription? subscription,
+    bool clearSubscription = false,
     DateTime? lastBackupAt,
     bool? useAi,
     String? aiServerUrl,
@@ -950,7 +1004,8 @@ class AppPrefs {
         appearance: appearance ?? this.appearance,
         palette: palette ?? this.palette,
         customHue: customHue ?? this.customHue,
-        plus: plus ?? this.plus,
+        subscription:
+            clearSubscription ? null : (subscription ?? this.subscription),
         lastBackupAt: lastBackupAt ?? this.lastBackupAt,
         useAi: useAi ?? this.useAi,
         aiServerUrl: aiServerUrl ?? this.aiServerUrl,
@@ -972,7 +1027,7 @@ class AppPrefs {
         'theme': appearance.name,
         'palette': palette,
         'hue': customHue,
-        'plus': plus,
+        if (subscription case final s?) 'plan': s.toJson(),
         if (lastBackupAt case final t?) 'backupAt': t.toIso8601String(),
         'ai': useAi,
         if (aiServerUrl.isNotEmpty) 'aiUrl': aiServerUrl,
@@ -997,7 +1052,12 @@ class AppPrefs {
         ),
         palette: j['palette'] as String? ?? 'navy',
         customHue: (j['hue'] is num ? (j['hue'] as num).toDouble() : 200.0) % 360,
-        plus: _bool(j['plus']),
+        subscription: Subscription.fromJson(j['plan']) ??
+            // Older test builds had an on/off switch with no plan or end.
+            (_bool(j['plus'])
+                ? Subscription(
+                    plan: PlusPlan.yearly, startedAt: DateTime(2026), test: true)
+                : null),
         lastBackupAt: j['backupAt'] is String
             ? DateTime.tryParse(j['backupAt'] as String)
             : null,

@@ -58,6 +58,16 @@ class HelpScreen extends StatelessWidget {
           'many cards are due today, and you can always study all of them.',
     ),
     (
+      'What does tAsikaso+ add, and can I try it?',
+      'tAsikaso+ adds every week, month and year in Pomodoro Analysis with '
+          'the heatmap and full timeline, smart review, app colors, Google '
+          'Drive sync and backup files, and unlimited suggested cards (the '
+          'free plan gets 20 a month). While payments are being set up, '
+          'every plan is free to try: open Profile → See Plans, pick Monthly, '
+          'Semester or Yearly, switch whenever you like, or tap Go Back to '
+          'Free Plan. Nothing is deleted when a plan ends.',
+    ),
+    (
       'Where is my data saved?',
       'Everything is saved on this phone; deleting the app deletes it. To '
           'keep a copy, open Profile → Backup & Sync and tap Back Up Now, '
