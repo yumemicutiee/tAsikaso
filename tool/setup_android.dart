@@ -119,6 +119,9 @@ void _patchManifest(File file) {
   var changed = false;
 
   const permissions = [
+    // Smart Study talks to the study server; Flutter's template grants
+    // INTERNET in debug and profile builds only.
+    'android.permission.INTERNET',
     'android.permission.POST_NOTIFICATIONS',
     'android.permission.RECEIVE_BOOT_COMPLETED',
     'android.permission.SCHEDULE_EXACT_ALARM',

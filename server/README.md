@@ -22,7 +22,9 @@ like. `npm run try -- notes.txt` does the same with your own text.
 
 To use the local server from the app: on a phone on the same Wi-Fi, set the
 server address in the app to `http://<your PC's IP>:8787` (Settings → Smart
-Study); on the web build use `http://localhost:8787`.
+Study); on the web build use `http://localhost:8787`. Plain `http://` only
+works in **debug** builds of the Android app (Android blocks it otherwise);
+a release build needs an `https://` address, which any host gives you.
 
 ## Put it on your website
 
