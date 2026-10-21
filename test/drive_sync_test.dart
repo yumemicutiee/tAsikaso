@@ -3,12 +3,15 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 import 'package:study_app/data/app_store.dart';
 import 'package:study_app/screens/backup_screen.dart';
+import 'package:study_app/screens/profile_screen.dart';
 import 'package:study_app/services/drive_store.dart';
 import 'package:study_app/services/drive_sync.dart';
 import 'package:study_app/theme/app_colors.dart';
+import 'package:study_app/utils/profile_photo.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +32,106 @@ void main() {
   tearDown(() async {
     await sync.resetForTesting();
     DriveSync.debugStore = null;
+    DriveSync.debugFetchPhoto = null;
+  });
+
+  group('Profile from the Google account', () {
+    final jpeg = Uint8List.fromList(img.encodeJpg(img.Image(width: 8, height: 8)));
+
+    test('fills in an empty name and the photo, never the user\'s own', () async {
+      drive.name = 'Eugene Custodio';
+      drive.photoUrl = 'https://lh3.googleusercontent.com/a/abc=s96-c';
+      final fetched = <String>[];
+      DriveSync.debugFetchPhoto = (url) async {
+        fetched.add(url);
+        return jpeg;
+      };
+
+      await sync.debugSignIn();
+      expect(store.prefs.userName, 'Eugene Custodio');
+      expect(store.profilePhoto, jpeg);
+      expect(store.prefs.profilePhotoUrl, drive.photoUrl);
+      expect(sync.googlePhotoUrl, drive.photoUrl);
+      expect(fetched, [drive.photoUrl]);
+
+      // The same photo again: no new download.
+      await sync.debugSignIn();
+      expect(fetched.length, 1);
+
+      // The user's own name and photo are left alone, even if Google's change.
+      store.updatePrefs(store.prefs.copyWith(userName: 'Gene'));
+      final own = Uint8List.fromList([1, 2, 3]);
+      await store.setProfilePhoto(own);
+      expect(store.prefs.profilePhotoUrl, '');
+      drive.photoUrl = 'https://lh3.googleusercontent.com/a/new=s96-c';
+      await sync.debugSignIn();
+      expect(store.prefs.userName, 'Gene');
+      expect(store.profilePhoto, own);
+      expect(fetched.length, 1);
+
+      // "Use my Google photo" brings it back on purpose.
+      expect(await sync.useGooglePhoto(), isTrue);
+      expect(store.profilePhoto, jpeg);
+      expect(fetched.length, 2);
+
+      // With no photo, a (new) Google photo is taken again.
+      await store.setProfilePhoto(null);
+      await sync.debugSignIn();
+      expect(store.profilePhoto, jpeg);
+      expect(fetched.length, 3);
+    });
+
+    test('a Google photo link is asked for at the profile size', () {
+      expect(googlePhotoAtSize('https://x/a/abc=s96-c', 256), 'https://x/a/abc=s256-c');
+      expect(googlePhotoAtSize('https://x/a/abc=s96', 256), 'https://x/a/abc=s256');
+      expect(googlePhotoAtSize('https://x/-/s64-c/photo.jpg', 256), 'https://x/-/s256-c/photo.jpg');
+      expect(googlePhotoAtSize('https://x/photo.png', 256), 'https://x/photo.png');
+    });
+
+    test('squarePhoto makes a square JPEG and refuses junk', () {
+      final wide = img.encodePng(img.Image(width: 40, height: 20));
+      final out = squarePhoto(Uint8List.fromList(wide))!;
+      final decoded = img.decodeImage(out)!;
+      expect((decoded.width, decoded.height), (profilePhotoSize, profilePhotoSize));
+      expect(squarePhoto(Uint8List.fromList([1, 2, 3])), isNull);
+    });
+
+    test('the photo travels in backups and in Drive sync', () async {
+      await store.setProfilePhoto(jpeg);
+      final zip = await store.createBackup();
+      store.resetForTesting();
+      expect(store.profilePhoto, isNull);
+      await store.restoreBackup(zip);
+      expect(store.profilePhoto, jpeg);
+
+      await sync.debugSignIn();
+      await sync.syncNow();
+      expect(drive.byName.keys, contains('profile__photo.jpg'));
+
+      await store.setProfilePhoto(null);
+      await sync.syncNow();
+      expect(drive.byName.keys, isNot(contains('profile__photo.jpg')));
+    });
+
+    testWidgets('Profile shows the photo and can remove it', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await store.setProfilePhoto(jpeg);
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ProfileScreen())));
+      await tester.pump();
+      final avatar = tester.widget<CircleAvatar>(find.byType(CircleAvatar).first);
+      expect(avatar.backgroundImage, isNotNull);
+
+      await tester.tap(find.bySemanticsLabel('Change photo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choose from Gallery'), findsOneWidget);
+      expect(find.text('Use My Google Photo'), findsNothing); // not signed in
+      await tester.tap(find.text('Remove Photo'));
+      await tester.pumpAndSettle();
+      expect(store.profilePhoto, isNull);
+      expect(store.prefs.profilePhotoUrl, '');
+    });
   });
 
   test('file names on Drive carry the key without slashes', () {

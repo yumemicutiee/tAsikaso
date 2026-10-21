@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../data/app_store.dart';
+import '../services/drive_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../theme/brand.dart';
+import '../utils/profile_photo.dart';
 import '../widgets/app_header.dart';
 import '../widgets/dialogs.dart';
 import 'actions.dart';
@@ -14,9 +18,20 @@ import 'backup_screen.dart';
 import 'help_screen.dart';
 import 'plans_screen.dart';
 
-/// Profile: study stats and app settings.
+/// Profile: photo and name (filled in from the Google account on sign-in,
+/// changeable here), study stats and app settings.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  /// Picks a photo from the gallery or the camera; null if the user backed
+  /// out. Tests replace this.
+  @visibleForTesting
+  static Future<XFile?> Function(ImageSource source) pickPhoto =
+      (source) => ImagePicker().pickImage(
+            source: source,
+            maxWidth: 1024,
+            maxHeight: 1024,
+          );
 
   @override
   Widget build(BuildContext context) {
@@ -30,25 +45,58 @@ class ProfileScreen extends StatelessWidget {
             listenable: store,
             builder: (context, _) {
               final name = store.prefs.userName.trim();
+              final photo = store.profilePhoto;
               return ListView(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                 children: [
                   Center(
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundColor: AppColors.primarySoft,
-                      child: name.isEmpty
-                          ? Icon(AppIcons.avatar,
-                              size: 40, color: AppColors.primaryDeep)
-                          : Text(
-                              name.characters.first.toUpperCase(),
-                              style: TextStyle(
-                                fontFamily: kHeadingFont,
-                                fontSize: 32,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primaryDeep,
+                    child: Semantics(
+                      button: true,
+                      label: 'Change photo',
+                      child: GestureDetector(
+                        onTap: () => _editPhoto(context),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor: AppColors.primarySoft,
+                              backgroundImage:
+                                  photo == null ? null : MemoryImage(photo),
+                              child: photo != null
+                                  ? null
+                                  : name.isEmpty
+                                      ? Icon(AppIcons.avatar,
+                                          size: 40, color: AppColors.primaryDeep)
+                                      : Text(
+                                          name.characters.first.toUpperCase(),
+                                          style: TextStyle(
+                                            fontFamily: kHeadingFont,
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.primaryDeep,
+                                          ),
+                                        ),
+                            ),
+                            Positioned(
+                              right: -2,
+                              bottom: -2,
+                              child: Container(
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: AppColors.background, width: 2),
+                                ),
+                                child: const Icon(AppIcons.capture,
+                                    size: 14, color: AppColors.onFill),
                               ),
                             ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -159,6 +207,85 @@ class ProfileScreen extends StatelessWidget {
     store.updatePrefs(store.prefs.copyWith(userName: name.trim()));
   }
 
+  /// Change or remove the profile photo.
+  static Future<void> _editPhoto(BuildContext context) async {
+    final store = AppStore.instance;
+    final sync = DriveSync.instance;
+    final choice = await showModalBottomSheet<_PhotoChoice>(
+      context: context,
+      builder: (context) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(AppIcons.gallery),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.of(context).pop(_PhotoChoice.gallery),
+            ),
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(AppIcons.capture),
+                title: const Text('Take a Photo'),
+                onTap: () => Navigator.of(context).pop(_PhotoChoice.camera),
+              ),
+            if (sync.googlePhotoUrl != null)
+              ListTile(
+                leading: const Icon(AppIcons.backup),
+                title: const Text('Use My Google Photo'),
+                onTap: () => Navigator.of(context).pop(_PhotoChoice.google),
+              ),
+            if (store.profilePhoto != null)
+              ListTile(
+                leading: const Icon(AppIcons.delete, color: AppColors.streakRed),
+                title: const Text('Remove Photo',
+                    style: TextStyle(color: AppColors.streakRed)),
+                onTap: () => Navigator.of(context).pop(_PhotoChoice.remove),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    void toast(String text) => messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+
+    switch (choice) {
+      case _PhotoChoice.remove:
+        await store.setProfilePhoto(null);
+      case _PhotoChoice.google:
+        if (!await sync.useGooglePhoto()) {
+          toast("Couldn't get your Google photo. Check your connection and "
+              'try again.');
+        }
+      case _PhotoChoice.gallery:
+      case _PhotoChoice.camera:
+        final source = choice == _PhotoChoice.gallery
+            ? ImageSource.gallery
+            : ImageSource.camera;
+        final XFile? file;
+        try {
+          file = await pickPhoto(source);
+        } catch (e) {
+          debugPrint('Could not pick a photo: $e');
+          toast(choice == _PhotoChoice.gallery
+              ? "Couldn't open your gallery."
+              : "Couldn't open the camera.");
+          return;
+        }
+        if (file == null) return;
+        final square = await compute(squarePhoto, await file.readAsBytes());
+        if (square == null) {
+          toast("That photo couldn't be read. Try another one.");
+          return;
+        }
+        await store.setProfilePhoto(square);
+    }
+  }
+
   static Widget _row(IconData icon, String label, VoidCallback onTap,
           {String? badge}) =>
       ListTile(
@@ -195,6 +322,8 @@ class ProfileScreen extends StatelessWidget {
         onTap: onTap,
       );
 }
+
+enum _PhotoChoice { gallery, camera, google, remove }
 
 class _StatBox extends StatelessWidget {
   const _StatBox({required this.value, required this.label, required this.color});

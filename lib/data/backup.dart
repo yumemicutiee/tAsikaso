@@ -19,7 +19,9 @@ String backupFileName(DateTime at) {
 /// Only these are backed up and restored; anything else in the ZIP is
 /// ignored, so a tampered file can't write outside the app's data.
 bool _isDataKey(String name) =>
-    name.startsWith('notes/') || name.startsWith('sets/');
+    name.startsWith('notes/') ||
+    name.startsWith('sets/') ||
+    name.startsWith('profile/');
 
 Uint8List packBackup({
   required String json,

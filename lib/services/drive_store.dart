@@ -20,6 +20,18 @@ class RemoteFile {
   final int size;
 }
 
+/// Who is signed in, as Drive reports it.
+@immutable
+class AccountInfo {
+  const AccountInfo({required this.email, this.name, this.photoUrl});
+
+  final String email;
+  final String? name;
+
+  /// Link to the account's photo, if it has one.
+  final String? photoUrl;
+}
+
 /// The app's private folder on Google Drive (`appDataFolder`: the user
 /// never sees it in Drive, and other apps can't read it), or a stand-in
 /// for tests.
@@ -33,8 +45,8 @@ abstract class DriveStore {
 
   Future<void> delete(String id);
 
-  /// The signed-in account's email, if Drive will say.
-  Future<String?> accountEmail();
+  /// The signed-in account, if Drive will say.
+  Future<AccountInfo?> accountInfo();
 
   void close() {}
 }
@@ -109,9 +121,15 @@ class GoogleDriveStore implements DriveStore {
   Future<void> delete(String id) => _api.files.delete(id);
 
   @override
-  Future<String?> accountEmail() async {
+  Future<AccountInfo?> accountInfo() async {
     final about = await _api.about.get($fields: 'user');
-    return about.user?.emailAddress;
+    final user = about.user;
+    if (user == null) return null;
+    return AccountInfo(
+      email: user.emailAddress ?? '',
+      name: user.displayName,
+      photoUrl: user.photoLink,
+    );
   }
 
   @override
@@ -137,6 +155,8 @@ class MemoryDriveStore implements DriveStore {
   int uploads = 0;
   int deletes = 0;
   String? email = 'student@example.com';
+  String? name;
+  String? photoUrl;
 
   /// The current time, so tests can control `modifiedTime`.
   DateTime Function() now = DateTime.now;
@@ -179,7 +199,11 @@ class MemoryDriveStore implements DriveStore {
   }
 
   @override
-  Future<String?> accountEmail() async => email;
+  Future<AccountInfo?> accountInfo() async {
+    final e = email;
+    if (e == null) return null;
+    return AccountInfo(email: e, name: name, photoUrl: photoUrl);
+  }
 
   @override
   void close() {}

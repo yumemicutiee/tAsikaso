@@ -7,6 +7,12 @@ lecture-note capture → PDF or flashcards.
 - **Saved on the phone:** folders, notes (PDFs), flashcards, tasks, settings
   and stats are stored in the app's documents folder and survive restarts.
   On the web they are saved in the browser (IndexedDB).
+- **Profile photo and name from Google:** signing in fills in the name (if
+  none is set) and takes the account photo (kept at 256 px, following a
+  changed Google photo until the user picks their own). Tap the photo on
+  Profile to choose one from the gallery or camera, go back to the Google
+  photo, or remove it; tap the name to change it. The photo is backed up
+  and synced with everything else.
 - **Google Drive sync:** Profile → Backup & Sync → **Sign in with Google**.
   Everything (folders, notes, flashcards, tasks, statistics, settings) is
   kept in a private folder of the user's own Google Drive that only this

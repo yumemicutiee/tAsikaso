@@ -1,4 +1,5 @@
 import 'package:clock/clock.dart';
+import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
@@ -84,6 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _Greeting(
               name: store.prefs.userName,
+              photo: store.profilePhoto,
               streak: store.streakDays,
               searching: _searching,
               onSearch: _toggleSearch,
@@ -845,9 +847,13 @@ class _Greeting extends StatelessWidget {
     required this.onSearch,
     required this.onAvatar,
     required this.onAddName,
+    this.photo,
   });
 
   final String name;
+
+  /// The profile photo, shown instead of the initial when there is one.
+  final Uint8List? photo;
   final int streak;
   final bool searching;
   final VoidCallback onSearch;
@@ -873,18 +879,21 @@ class _Greeting extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 21,
                   backgroundColor: AppColors.primarySoft,
-                  child: initial == null
-                      ? Icon(AppIcons.avatar,
-                          size: 20, color: AppColors.primaryDeep)
-                      : Text(
-                          initial,
-                          style: TextStyle(
-                            fontFamily: kHeadingFont,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primaryDeep,
-                          ),
-                        ),
+                  backgroundImage: photo == null ? null : MemoryImage(photo!),
+                  child: photo != null
+                      ? null
+                      : initial == null
+                          ? Icon(AppIcons.avatar,
+                              size: 20, color: AppColors.primaryDeep)
+                          : Text(
+                              initial,
+                              style: TextStyle(
+                                fontFamily: kHeadingFont,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primaryDeep,
+                              ),
+                            ),
                 ),
               ),
             ),

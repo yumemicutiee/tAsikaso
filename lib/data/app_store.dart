@@ -78,6 +78,7 @@ class AppStore extends ChangeNotifier {
   final Map<String, int> _focusLog = {}; // day key -> minutes
   final Map<String, int> _reviewLog = {}; // day key -> cards reviewed
   final Map<String, Uint8List> _thumbs = {}; // note id -> small JPEG
+  Uint8List? _profilePhoto;
   final List<FocusSession> _sessions = []; // oldest first
   final List<BreakSession> _breaks = []; // oldest first
   AppPrefs _prefs = const AppPrefs();
@@ -115,6 +116,7 @@ class AppStore extends ChangeNotifier {
     _focusLog.clear();
     _reviewLog.clear();
     _thumbs.clear();
+    _profilePhoto = null;
     _sessions.clear();
     _breaks.clear();
     _prefs = const AppPrefs();
@@ -199,6 +201,7 @@ class AppStore extends ChangeNotifier {
           : _unreadable(kept: kept));
     }
     await _loadThumbnails(storage);
+    await _loadProfilePhoto(storage);
     notifyListeners();
   }
 
@@ -260,6 +263,34 @@ class AppStore extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadProfilePhoto(LocalStorage storage) async {
+    try {
+      _profilePhoto = await storage.readBytes(profilePhotoKey);
+    } catch (_) {
+      _profilePhoto = null; // the avatar shows the initial instead
+    }
+  }
+
+  // ---- Profile photo -----------------------------------------------------------
+
+  static const profilePhotoKey = 'profile/photo.jpg';
+
+  /// The user's photo (a square JPEG), or null for the initial / icon.
+  Uint8List? get profilePhoto => _profilePhoto;
+
+  /// Sets (or with null, removes) the profile photo. [fromUrl] is the
+  /// Google photo link it was taken from, or empty for the user's own.
+  Future<void> setProfilePhoto(Uint8List? bytes, {String fromUrl = ''}) async {
+    if (bytes == null) {
+      await _tryDelete(profilePhotoKey);
+    } else {
+      await _storage.writeBytes(profilePhotoKey, bytes);
+    }
+    _profilePhoto = bytes;
+    _prefs = _prefs.copyWith(profilePhotoUrl: bytes == null ? '' : fromUrl);
+    _changed();
+  }
+
   /// Deletes every folder, note, flashcard set, task, statistic and setting,
   /// including saved PDFs, photos and backup copies. Nothing is re-added.
   ///
@@ -269,7 +300,14 @@ class AppStore extends ChangeNotifier {
   Future<bool> eraseEverything() async {
     final device = _paused ?? _storage;
     var clean = true;
-    for (final prefix in ['notes/', 'sets/', 'backup/', 'drive/', _recoveryPrefix]) {
+    for (final prefix in [
+      'notes/',
+      'sets/',
+      'profile/',
+      'backup/',
+      'drive/',
+      _recoveryPrefix,
+    ]) {
       if (!await _tryDeletePrefix(prefix, from: device)) clean = false;
     }
     // The save file itself, and copies kept by older versions.
@@ -951,7 +989,7 @@ class AppStore extends ChangeNotifier {
   Future<Uint8List> createBackup() async {
     await pendingSaves; // include the latest change
     final files = <String, Uint8List>{};
-    for (final prefix in ['notes/', 'sets/']) {
+    for (final prefix in ['notes/', 'sets/', 'profile/']) {
       for (final key in await _files.list(prefix)) {
         final bytes = await _files.readBytes(key);
         if (bytes != null) files[key] = bytes;
@@ -976,9 +1014,13 @@ class AppStore extends ChangeNotifier {
   /// Everything small, as the JSON that is saved, backed up and synced.
   String exportJson() => jsonEncode(_toJson());
 
-  /// Keys of every PDF, photo and thumbnail on this device.
-  Future<List<String>> dataFileKeys() async =>
-      [...await _files.list('notes/'), ...await _files.list('sets/')];
+  /// Keys of every PDF, photo and thumbnail on this device, and the
+  /// profile photo.
+  Future<List<String>> dataFileKeys() async => [
+        ...await _files.list('notes/'),
+        ...await _files.list('sets/'),
+        ...await _files.list('profile/'),
+      ];
 
   Future<Uint8List?> readFile(String key) => _files.readBytes(key);
 
@@ -1015,12 +1057,15 @@ class AppStore extends ChangeNotifier {
     // unreadable file is replaced).
     final device = _paused ?? _storage;
     await pendingSaves; // no older save may land on top of the restore
-    for (final prefix in ['notes/', 'sets/']) {
+    for (final prefix in ['notes/', 'sets/', 'profile/']) {
       await _tryDeletePrefix(prefix, from: device);
     }
     for (final entry in files.entries) {
-      if (entry.key.startsWith('notes/') || entry.key.startsWith('sets/')) {
-        await device.writeBytes(entry.key, entry.value);
+      final key = entry.key;
+      if (key.startsWith('notes/') ||
+          key.startsWith('sets/') ||
+          key.startsWith('profile/')) {
+        await device.writeBytes(key, entry.value);
       }
     }
     await device.writeJson(json);

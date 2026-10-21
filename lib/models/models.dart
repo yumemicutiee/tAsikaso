@@ -852,6 +852,7 @@ class AppPrefs {
     this.useAi = true,
     this.aiServerUrl = '',
     this.aiToken = '',
+    this.profilePhotoUrl = '',
   });
 
   /// Shown in greetings ("Hello, Budi!").
@@ -909,6 +910,11 @@ class AppPrefs {
   final String aiServerUrl;
   final String aiToken;
 
+  /// Where the profile photo came from: the Google account photo's link
+  /// when it was taken from there (so a new Google photo replaces it),
+  /// empty for a photo the user chose themselves, or no photo.
+  final String profilePhotoUrl;
+
   AppPrefs copyWith({
     String? userName,
     bool? smartScanner,
@@ -928,6 +934,7 @@ class AppPrefs {
     bool? useAi,
     String? aiServerUrl,
     String? aiToken,
+    String? profilePhotoUrl,
   }) =>
       AppPrefs(
         userName: userName ?? this.userName,
@@ -948,6 +955,7 @@ class AppPrefs {
         useAi: useAi ?? this.useAi,
         aiServerUrl: aiServerUrl ?? this.aiServerUrl,
         aiToken: aiToken ?? this.aiToken,
+        profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       );
 
   Json toJson() => {
@@ -969,6 +977,7 @@ class AppPrefs {
         'ai': useAi,
         if (aiServerUrl.isNotEmpty) 'aiUrl': aiServerUrl,
         if (aiToken.isNotEmpty) 'aiToken': aiToken,
+        if (profilePhotoUrl.isNotEmpty) 'photoUrl': profilePhotoUrl,
       };
 
   factory AppPrefs.fromJson(Json j) => AppPrefs(
@@ -995,5 +1004,6 @@ class AppPrefs {
         useAi: j['ai'] != false,
         aiServerUrl: j['aiUrl'] as String? ?? '',
         aiToken: j['aiToken'] as String? ?? '',
+        profilePhotoUrl: j['photoUrl'] as String? ?? '',
       );
 }

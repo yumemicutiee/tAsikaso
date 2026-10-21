@@ -7,8 +7,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:http/http.dart' as http;
 
 import '../data/app_store.dart';
+import '../utils/profile_photo.dart';
 import 'drive_store.dart';
 
 /// Keeps the user's data in their own Google Drive and brings it back on
@@ -58,9 +60,15 @@ class DriveSync extends ChangeNotifier {
   @visibleForTesting
   static DriveStore? debugStore;
 
+  /// Set in tests to stand in for downloading the account photo.
+  @visibleForTesting
+  static Future<Uint8List?> Function(String url)? debugFetchPhoto;
+
   bool _initialized = false;
   GoogleSignInAccount? _account;
   String? _email;
+  String? _googleName;
+  String? _googlePhotoUrl;
   bool _busy = false;
   String? _error;
   RemoteFile? _remoteData;
@@ -82,6 +90,10 @@ class DriveSync extends ChangeNotifier {
 
   bool get isSignedIn => _email != null;
   String? get email => _email;
+
+  /// The Google account's photo link, once signed in (for "Use my Google
+  /// photo" after the user picked their own).
+  String? get googlePhotoUrl => _googlePhotoUrl;
   bool get busy => _busy;
 
   /// What went wrong last time, in words, or null.
@@ -156,7 +168,9 @@ class DriveSync extends ChangeNotifier {
     _setBusy(true);
     try {
       if (debugStore != null) {
-        await _signedIn(await debugStore!.accountEmail() ?? 'test', null);
+        final info = await debugStore!.accountInfo();
+        await _signedIn(info?.email ?? 'test', null,
+            name: info?.name, photoUrl: info?.photoUrl);
         return null;
       }
       if (GoogleSignIn.instance.supportsAuthenticate()) {
@@ -173,13 +187,14 @@ class DriveSync extends ChangeNotifier {
         final authz = await GoogleSignIn.instance.authorizationClient
             .authorizeScopes(scopes);
         final store = GoogleDriveStore(authz.authClient(scopes: scopes));
-        String? email;
+        AccountInfo? info;
         try {
-          email = await store.accountEmail();
+          info = await store.accountInfo();
         } finally {
           store.close();
         }
-        await _signedIn(email ?? 'Google account', null);
+        await _signedIn(info?.email ?? 'Google account', null,
+            name: info?.name, photoUrl: info?.photoUrl);
       }
       return null;
     } on GoogleSignInException catch (e) {
@@ -193,11 +208,14 @@ class DriveSync extends ChangeNotifier {
     }
   }
 
-  /// Signs out. The data on Drive stays; this device keeps its own copy.
+  /// Signs out. The data on Drive stays; this device keeps its own copy
+  /// (the name and photo taken from the account stay too).
   Future<void> signOut() async {
     _timer?.cancel();
     _email = null;
     _account = null;
+    _googleName = null;
+    _googlePhotoUrl = null;
     _remoteData = null;
     _lastSyncAt = null;
     _uploadedJson = null;
@@ -225,16 +243,34 @@ class DriveSync extends ChangeNotifier {
     if (on && _dirty) _schedule();
   }
 
-  /// Signs in for tests, with [debugStore] standing in for Drive.
+  /// Signs in for tests, with [debugStore] standing in for Drive (its
+  /// account's name and photo link are used unless given here).
   @visibleForTesting
-  Future<void> debugSignIn({String email = 'student@example.com'}) async {
+  Future<void> debugSignIn({
+    String email = 'student@example.com',
+    String? name,
+    String? photoUrl,
+  }) async {
     if (!_initialized) {
       _initialized = true;
       await _loadState();
       AppStore.instance.addListener(_onStoreChanged);
       AppStore.onEraseEverything = forget;
     }
-    await _signedIn(email, null);
+    final info = await debugStore?.accountInfo();
+    await _signedIn(info?.email ?? email, null,
+        name: name ?? info?.name, photoUrl: photoUrl ?? info?.photoUrl);
+  }
+
+  /// Takes the signed-in account's photo as the profile photo (again).
+  /// False if there is none or it couldn't be fetched.
+  Future<bool> useGooglePhoto() async {
+    final url = _googlePhotoUrl;
+    if (url == null) return false;
+    final bytes = await (debugFetchPhoto ?? _fetchPhoto)(url);
+    if (bytes == null) return false;
+    await AppStore.instance.setProfilePhoto(bytes, fromUrl: url);
+    return true;
   }
 
   /// Back to nothing, for tests.
@@ -250,6 +286,8 @@ class DriveSync extends ChangeNotifier {
     _initialized = false;
     _account = null;
     _email = null;
+    _googleName = null;
+    _googlePhotoUrl = null;
     _busy = false;
     _error = null;
     _remoteData = null;
@@ -260,8 +298,15 @@ class DriveSync extends ChangeNotifier {
     _running = null;
   }
 
-  Future<void> _signedIn(String email, GoogleSignInAccount? account) async {
+  Future<void> _signedIn(
+    String email,
+    GoogleSignInAccount? account, {
+    String? name,
+    String? photoUrl,
+  }) async {
     _account = account;
+    _googleName = name ?? account?.displayName;
+    _googlePhotoUrl = photoUrl ?? account?.photoUrl;
     final changed = email != _email;
     _email = email;
     _error = null;
@@ -273,7 +318,48 @@ class DriveSync extends ChangeNotifier {
     }
     await _saveState();
     notifyListeners();
+    await _adoptGoogleProfile(_googleName, _googlePhotoUrl);
     await checkRemote();
+  }
+
+  /// Fills in the profile from the Google account: the name when none is
+  /// set, and the account photo when there is no photo yet or the current
+  /// one came from Google (so a new Google photo follows). A name or photo
+  /// the user chose themselves is never touched.
+  Future<void> _adoptGoogleProfile(String? name, String? photoUrl) async {
+    final store = AppStore.instance;
+    try {
+      final trimmed = name?.trim() ?? '';
+      if (trimmed.isNotEmpty && store.prefs.userName.trim().isEmpty) {
+        store.updatePrefs(store.prefs.copyWith(userName: trimmed));
+      }
+      if (photoUrl == null || photoUrl.isEmpty) return;
+      final current = store.prefs.profilePhotoUrl;
+      if (store.profilePhoto != null && (current.isEmpty || current == photoUrl)) {
+        return; // the user's own photo, or this Google photo already
+      }
+      final bytes = await (debugFetchPhoto ?? _fetchPhoto)(photoUrl);
+      if (bytes != null) await store.setProfilePhoto(bytes, fromUrl: photoUrl);
+    } catch (e) {
+      debugPrint('Profile from Google: $e');
+    }
+  }
+
+  /// Downloads the account photo at a useful size and squares it.
+  static Future<Uint8List?> _fetchPhoto(String url) async {
+    final client = http.Client();
+    try {
+      final res = await client
+          .get(Uri.parse(googlePhotoAtSize(url, profilePhotoSize)))
+          .timeout(const Duration(seconds: 20));
+      if (res.statusCode != 200 || res.bodyBytes.isEmpty) return null;
+      return await compute(squarePhoto, res.bodyBytes);
+    } catch (e) {
+      debugPrint('Google photo could not be fetched: $e');
+      return null;
+    } finally {
+      client.close();
+    }
   }
 
   /// Looks at what is on Drive (so [remote] and [remoteNewer] are right).
@@ -459,7 +545,11 @@ class DriveSync extends ChangeNotifier {
   static String? localKey(String name) {
     if (name == dataName) return null;
     final key = name.replaceAll('__', '/');
-    if (key.startsWith('notes/') || key.startsWith('sets/')) return key;
+    if (key.startsWith('notes/') ||
+        key.startsWith('sets/') ||
+        key.startsWith('profile/')) {
+      return key;
+    }
     return null;
   }
 
