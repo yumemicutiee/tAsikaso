@@ -20,14 +20,30 @@ lecture-note capture → PDF or flashcards.
   straightens each page, offers filters, scans many pages, and can import from
   the gallery. You can still check each page before saving. If it's turned off in Settings, or the phone
   can't run it, or you're on the web, the app's own camera opens instead
-  (Single / Multiple, flash, gallery, rotate, four-corner crop).
+  (Single / Multiple, flash, gallery, rotate, four-corner crop). The app's
+  camera and gallery import **find the page edges too** (`lib/utils/page_detector.dart`,
+  pure Dart): the crop corners start on the page, and you drag them if they're off.
 - **Text recognition (OCR):** when you save, the text on the pages is read
-  on the phone (no internet). For PDFs it makes notes searchable and adds a
-  **View Text** screen with Copy. For Flashcards it suggests cards from
-  lines like `Term – definition`, `Term: definition`, `Q: … / A: …`, or a
-  question followed by its answer. You pick **Add**, **Skip** or **Add All**.
-- **Save Notes As:** choose PDF or Flashcards, a title and a folder, or tap
-  **New** to create a folder right there.
+  on the phone (no internet). It goes into the Scan PDF as a hidden text
+  layer, so the text can be selected, searched and copied in any PDF viewer;
+  it makes notes searchable in the app and adds a **View Text** screen with
+  Copy and **Make Flashcards**. Without the study server, flashcards are
+  suggested from lines like `Term – definition`, `Term: definition`,
+  `Q: … / A: …`, or a question followed by its answer, and you pick **Add**,
+  **Skip** or **Add All**.
+- **Smart Study (Claude):** with the study server set up (see
+  `server/README.md`; Settings → Smart Study holds its address and token),
+  saving a scan sends the recognised text there and Claude Opus 5.5 sends
+  back the notes **typed up cleanly**, a summary, the **key concepts**, a set
+  of **flashcards** and a **quiz**. Key concepts show on the note's text
+  screen and on the set; "Make Cards with AI" and "New Quiz" work on
+  existing sets, and any note's text can become a set. Needs internet; when
+  the server can't be reached the app falls back to the offline behaviour
+  and says so. The photos themselves never leave the phone.
+- **Save Notes As:** choose **Scan PDF** (the pages as photos, text
+  selectable), **Text PDF** (the notes typed up, with the key concepts at
+  the end; needs text recognition) or **Flashcards**, a title and a folder,
+  or tap **New** to create a folder right there.
 - **Library & folders:** create folders with a colour, open a folder to see
   its notes and sets, edit or delete folders (long-press a folder too).
   Notes can be opened, shared, renamed, moved or deleted.
@@ -36,6 +52,14 @@ lecture-note capture → PDF or flashcards.
 - **Flashcards:** create sets (from the + button or from scanned photos),
   write cards while looking at your photos, then study: tap to flip, "Again"
   brings a card back later, "Got It" moves on; a summary at the end.
+- **Quizzes:** any set with two or more cards has **Take a Quiz**: multiple
+  choice, true or false, fill in the blank and typed answers, one at a
+  time, with the right answer and an explanation after each and the score
+  at the end. Questions come from the study server when it's on, otherwise
+  they're made from the cards themselves. Typed answers are judged on the
+  phone (spelling slips and word order forgiven) or, with the server, by
+  meaning. Right answers count like "Got It" and wrong ones like "Again"
+  for smart review.
 - **Pomodoro:** START opens **Focus Mode**: a circle grows out of the
   button into a full-screen view with the task, "Focus on the process, *name*!",
   a big timer and a tick-mark dial. The controls are pause, reset and skip.
@@ -72,7 +96,8 @@ lecture-note capture → PDF or flashcards.
   notifications (timer alerts that sound even when the app is closed, a daily
   study reminder at a time you pick, and on Android 14+ an **Allow Exact
   Timing** row while the phone would deliver alerts late); Smart Scanner;
-  Delete All Data; Help & FAQ.
+  Smart Study (the AI switch, the study server's address — checked when you
+  save it — and the app token); Delete All Data; Help & FAQ.
 - **Dark mode:** Settings → Appearance: System (follows the phone), Light or
   Dark. It switches instantly, on every screen.
 - **App colours (tAsikaso+):** Settings → App Color: Navy (free), Teal, Plum,
@@ -94,6 +119,9 @@ colours, unlimited suggested cards, and soon smart review and backup.
 
 **Not yet:** payments for tAsikaso+ (Google Play Billing) and automatic sync
 between devices. The plan limits shown on the plans page aren't enforced yet.
+Smart Study needs your own study server and Anthropic API key; it isn't
+part of the Plus plan yet, and nothing stops a user from switching it on
+once a server address is in the app.
 
 A first launch starts with five sample folders and five sample tasks so the
 app isn't empty. They can be edited or deleted.
@@ -152,6 +180,15 @@ flutter run -d chrome                      # web
 flutter test                               # widget smoke tests
 ```
 
+**Smart Study.** The AI features talk to the small Node.js server in
+`server/`, which holds your Anthropic API key (never put the key in the
+app). `server/README.md` has the setup and deployment steps. Point the app
+at it in Settings → Smart Study, or bake the address and token in:
+
+```bash
+flutter build apk --dart-define=STUDY_AI_URL=https://your-site.com --dart-define=STUDY_AI_TOKEN=the-APP_TOKEN
+```
+
 **Android setup for notifications.** Timer alerts and the daily reminder use
 `flutter_local_notifications`, which needs two things in the generated
 `android/` folder: Java "desugaring" in `android/app/build.gradle.kts`, and
@@ -187,12 +224,13 @@ the microphone permission it also asks for, since nothing is recorded).
 | Profile | `lib/screens/profile_screen.dart` | Name (tap to edit), stats, Plus card, Analysis and Settings |
 | Scan flow | `lib/screens/capture/scan_flow.dart` | Smart Scanner first, the app's camera as fallback |
 | Capture | `lib/screens/capture/capture_screen.dart` | App camera: Single / Multiple, flash, gallery import |
-| Review & crop | `lib/screens/capture/review_screen.dart` | Rotate, drag the 4 corners to crop, then save as **PDF** into a folder |
-| Note viewer | `lib/screens/note_viewer_screen.dart` | View, share or print a saved PDF; rename, move, delete |
+| Review & crop | `lib/screens/capture/review_screen.dart` | Rotate, drag the 4 corners (pre-set on the page edges when found), then save as **Scan PDF**, **Text PDF** or **Flashcards** |
+| Note viewer | `lib/screens/note_viewer_screen.dart` | View, share or print a saved PDF; rename, move, delete; View Text (typed-up notes, summary, key concepts, Make Flashcards) |
 | Folder | `lib/screens/folder_screen.dart` | A folder's notes and flashcard sets |
-| Flashcard set | `lib/screens/flashcards/set_screen.dart` | Photos, cards, add/edit cards, Study button |
+| Flashcard set | `lib/screens/flashcards/set_screen.dart` | Photos, key concepts, cards, add/edit cards, Study and Take a Quiz buttons |
 | Study cards | `lib/screens/flashcards/study_cards_screen.dart` | Flip, Again / Got It, summary |
-| Settings | `lib/screens/settings_screen.dart` | Name, goal, typed Pomodoro lengths, Focus Mode, notifications, scanning, data |
+| Quiz | `lib/screens/flashcards/quiz_screen.dart` | One question at a time, four types, result after each, score and review at the end |
+| Settings | `lib/screens/settings_screen.dart` | Name, goal, typed Pomodoro lengths, Focus Mode, notifications, scanning, Smart Study, data |
 
 ## Where things live
 
@@ -203,19 +241,29 @@ lib/
   models/                      folders, notes, tasks, flashcards, settings (JSON)
   data/app_store.dart          all app data + saving; screens listen to it
   data/pomodoro_controller.dart  the one timer, shared by Study and Focus Mode
-  services/scan_service*.dart  ML Kit scanner + OCR (phones), stub on web
-  utils/card_suggestions.dart  finds flashcards in recognised text
+  services/scan_service*.dart  ML Kit scanner + OCR with line positions (phones), stub on web
+  services/study_ai.dart       talks to the study server (server/) for Smart Study
+  utils/card_suggestions.dart  finds flashcards in recognised text (offline)
+  utils/page_detector.dart     finds the page edges in a photo (the app's own auto-crop)
+  utils/quiz_builder.dart      makes quiz questions from a set's cards (offline)
+  utils/answer_match.dart      judges a typed answer on the phone
   data/storage/                files on the phone, memory on web/tests
   widgets/                     header, bottom bar, folder card, list rows, dialogs
   screens/                     Dashboard, Library, Folder, Study, Profile,
                                Settings, capture/, flashcards/, actions.dart
+  screens/capture/notes_pdf.dart  Scan PDF (hidden text layer) and Text PDF builders
 assets/fonts/                  Plus Jakarta Sans (headings, numbers), Inter (text), Phosphor icons
+server/                        the study server: Node.js + Claude (its own README)
 ```
 
 ## Next (functionality)
 
 - Google Play Billing for Plus (e.g. `in_app_purchase`), then enforce limits
+  and decide how Smart Study fits the plans
 - Automatic sync (Google Drive app folder) on top of the backup file
+- Run the phone checklist in `docs/phone-test-checklist.md` with the study
+  server on: Smart Study and the auto-crop have only been checked in tests
+  and on the web build so far
 
 Fonts: Plus Jakarta Sans (Tokotype) and Inter (Rasmus Andersson), SIL Open Font License 1.1.
 Icons: Phosphor Icons, MIT License (assets/fonts/PHOSPHOR_LICENSE.txt).

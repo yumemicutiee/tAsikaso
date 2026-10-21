@@ -22,8 +22,9 @@ AnswerVerdict judgeAnswer(
     if (t == n) return AnswerVerdict.correct;
     // A short right answer inside a longer typed one ("it's the mitochondria").
     if (n.length >= 4 && t.contains(n)) return AnswerVerdict.correct;
-    // A typo or two: about one per eight characters.
-    final allowed = n.length < 5 ? 0 : math.min(3, n.length ~/ 8);
+    // A typo or two: one for a short word, about one per six characters
+    // after that (a swapped pair of letters counts as two), at most three.
+    final allowed = n.length < 5 ? 0 : math.max(1, math.min(3, n.length ~/ 6));
     if (allowed > 0 && _editDistance(t, n, allowed) <= allowed) {
       return AnswerVerdict.correct;
     }

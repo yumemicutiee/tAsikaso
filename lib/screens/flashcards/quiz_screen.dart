@@ -198,10 +198,19 @@ class _QuizScreenState extends State<QuizScreen> {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
           child: Row(
             children: [
-              Text('Question ${_index + 1} of ${_questions.length}',
-                  style: AppText.statLabel),
-              const Spacer(),
-              Text(q.type.label, style: AppText.statLabel),
+              Expanded(
+                child: Text('Question ${_index + 1} of ${_questions.length}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.statLabel),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(q.type.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.statLabel),
+              ),
             ],
           ),
         ),

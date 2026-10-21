@@ -36,14 +36,23 @@ List<Offset>? detectPageCorners(img.Image image) {
   final threshold = _otsu(lum);
   final mask = Uint8List(w * h);
   var bright = 0;
+  var brightSum = 0;
+  var darkSum = 0;
   for (var i = 0; i < mask.length; i++) {
     if (lum[i] >= threshold) {
       mask[i] = 1;
       bright++;
+      brightSum += lum[i];
+    } else {
+      darkSum += lum[i];
     }
   }
   final share = bright / mask.length;
   if (share < 0.1 || share > 0.97) return null;
+  // Two shades of nearly the same brightness (paper on a white desk) are
+  // not a page and its surroundings, whatever the threshold says.
+  final contrast = brightSum / bright - darkSum / (mask.length - bright);
+  if (contrast < 40) return null;
 
   // Close small holes (the writing) so the page is one solid shape.
   final closed = _erode(_dilate(mask, w, h, 2), w, h, 2);

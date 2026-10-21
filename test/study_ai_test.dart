@@ -1,0 +1,203 @@
+import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+
+import 'package:study_app/data/app_store.dart';
+import 'package:study_app/models/models.dart';
+import 'package:study_app/services/study_ai.dart';
+
+/// What the study server sends back for a study kit.
+const kitJson = {
+  'kit': {
+    'title': 'Cell Biology',
+    'summary': 'The parts of a cell.',
+    'notes': '# Cell Biology\n- Mitochondria make ATP',
+    'concepts': [
+      {'term': 'ATP', 'explanation': 'The cell\'s energy currency.'},
+    ],
+    'cards': [
+      {'front': 'What makes ATP?', 'back': 'The mitochondria'},
+      {'front': 'Ribosome', 'back': 'Makes proteins'},
+      {'front': '', 'back': 'no front'},
+    ],
+    'quiz': [
+      {
+        'type': 'multiple_choice',
+        'prompt': 'What makes ATP?',
+        'options': ['Ribosome', 'Mitochondria', 'Nucleus', 'Golgi'],
+        'answerIndex': 1,
+        'answer': 'Mitochondria',
+        'acceptable': <String>[],
+        'explanation': 'Respiration happens there.',
+        'cardIndex': 0,
+      },
+      {
+        'type': 'typed',
+        'prompt': 'What does a ribosome do?',
+        'options': <String>[],
+        'answerIndex': -1,
+        'answer': 'Makes proteins',
+        'acceptable': ['protein synthesis'],
+        'explanation': '',
+        'cardIndex': 9,
+      },
+    ],
+  },
+  'model': 'claude-opus-5-5',
+  'usage': {'input': 100, 'output': 200},
+};
+
+void main() {
+  final store = AppStore.instance;
+  final requests = <http.Request>[];
+
+  setUp(() {
+    store.resetForTesting();
+    store.updatePrefs(store.prefs
+        .copyWith(aiServerUrl: 'https://study.test/api/', aiToken: 'secret'));
+    requests.clear();
+  });
+
+  tearDown(() => StudyAi.debugClient = null);
+
+  void answerWith(int status, Object body) {
+    StudyAi.debugClient = () => MockClient((req) async {
+          requests.add(req);
+          return http.Response(jsonEncode(body), status,
+              headers: {'content-type': 'application/json'});
+        });
+  }
+
+  test('is on when a server is set and the switch is on', () {
+    expect(StudyAi.isOn, isTrue);
+    store.updatePrefs(store.prefs.copyWith(useAi: false));
+    expect(StudyAi.isOn, isFalse);
+    store.updatePrefs(store.prefs.copyWith(useAi: true, aiServerUrl: ''));
+    expect(StudyAi.hasServer, isFalse);
+    expect(StudyAi.isOn, isFalse);
+  });
+
+  test('only http(s) addresses with a host are accepted', () {
+    expect(StudyAi.isValidUrl('https://study.test'), isTrue);
+    expect(StudyAi.isValidUrl('http://192.168.1.5:8787'), isTrue);
+    expect(StudyAi.isValidUrl('study.test'), isFalse);
+    expect(StudyAi.isValidUrl('ftp://study.test'), isFalse);
+    expect(StudyAi.isValidUrl(''), isFalse);
+  });
+
+  test('a study kit comes back with cards that have ids and a quiz that '
+      'points at them', () async {
+    answerWith(200, kitJson);
+    final kit = await StudyAi.makeStudyKit(text: 'x' * 40, title: 'Bio');
+
+    final req = requests.single;
+    expect(req.url.toString(), 'https://study.test/api/v1/study-kit');
+    expect(req.headers['authorization'], 'Bearer secret');
+    final sent = jsonDecode(req.body) as Map<String, Object?>;
+    expect(sent['title'], 'Bio');
+    expect(sent['maxCards'], 30);
+
+    expect(kit.title, 'Cell Biology');
+    expect(kit.notes, startsWith('# Cell Biology'));
+    expect(kit.concepts.single.term, 'ATP');
+    expect(kit.cards.length, 2); // the one without a front is left out
+    expect(kit.cards.map((c) => c.id).toSet().length, 2);
+    expect(kit.quiz.length, 2);
+    expect(kit.quiz.first.cardId, kit.cards.first.id);
+    expect(kit.quiz.last.cardId, isNull); // index 9 is no card
+    expect(kit.quiz.last.acceptable, ['protein synthesis']);
+  });
+
+  test('a quiz for existing cards maps the indexes back to card ids',
+      () async {
+    answerWith(200, {
+      'quiz': {
+        'questions': [
+          {
+            'type': 'true_false',
+            'prompt': 'Ribosomes make ATP.',
+            'options': ['True', 'False'],
+            'answerIndex': 1,
+            'answer': 'False',
+            'acceptable': <String>[],
+            'explanation': 'Mitochondria do.',
+            'cardIndex': 1,
+          },
+        ],
+      },
+    });
+    const cards = [
+      Flashcard(id: 'a', front: 'A', back: 'a'),
+      Flashcard(id: 'b', front: 'B', back: 'b'),
+    ];
+    final quiz = await StudyAi.makeQuiz(title: 'Set', cards: cards);
+    expect(quiz.single.cardId, 'b');
+    expect(quiz.single.type, QuestionType.trueFalse);
+    final sent = jsonDecode(requests.single.body) as Map<String, Object?>;
+    expect((sent['cards'] as List).length, 2);
+  });
+
+  test('an answer check returns the verdict and feedback', () async {
+    answerWith(200, {
+      'check': {'verdict': 'partly', 'feedback': 'Nearly: it also needs water.'},
+    });
+    final check = await StudyAi.checkAnswer(
+        question: 'Q', answer: 'A', userAnswer: 'a-ish');
+    expect(check.partly, isTrue);
+    expect(check.correct, isFalse);
+    expect(check.feedback, contains('water'));
+  });
+
+  test("the server's own error code and message come through", () async {
+    answerWith(401, {
+      'error': {'code': 'unauthorized', 'message': "This app isn't allowed."},
+    });
+    await expectLater(
+      StudyAi.makeStudyKit(text: 'x' * 40),
+      throwsA(isA<StudyAiException>()
+          .having((e) => e.code, 'code', 'unauthorized')
+          .having((e) => e.message, 'message', "This app isn't allowed.")),
+    );
+  });
+
+  test('no connection is reported as offline, in plain words', () async {
+    StudyAi.debugClient =
+        () => MockClient((_) async => throw http.ClientException('refused'));
+    await expectLater(
+      StudyAi.makeStudyKit(text: 'x' * 40),
+      throwsA(isA<StudyAiException>()
+          .having((e) => e.code, 'code', 'offline')
+          .having((e) => e.message, 'message', contains('Settings'))),
+    );
+  });
+
+  test('a reply that is not JSON is a bad reply', () async {
+    StudyAi.debugClient =
+        () => MockClient((_) async => http.Response('<html>', 200));
+    await expectLater(
+      StudyAi.makeStudyKit(text: 'x' * 40),
+      throwsA(isA<StudyAiException>().having((e) => e.code, 'code', 'bad_reply')),
+    );
+  });
+
+  test('no server set is reported before any request is made', () async {
+    store.updatePrefs(store.prefs.copyWith(aiServerUrl: ''));
+    answerWith(200, kitJson);
+    await expectLater(
+      StudyAi.makeStudyKit(text: 'x' * 40),
+      throwsA(isA<StudyAiException>().having((e) => e.code, 'code', 'not_set')),
+    );
+    expect(requests, isEmpty);
+  });
+
+  test('ping says whether a study server answers', () async {
+    answerWith(200, {'ok': true, 'model': 'claude-opus-5-5'});
+    expect(await StudyAi.ping('https://study.test'), isTrue);
+    expect(requests.single.url.path, '/health');
+    answerWith(200, {'hello': 'world'});
+    expect(await StudyAi.ping('https://study.test'), isFalse);
+    expect(await StudyAi.ping('not a url'), isFalse);
+  });
+}

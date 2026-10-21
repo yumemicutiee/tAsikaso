@@ -262,7 +262,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
       navigator.pop(); // progress dialog
       toast("No text could be read from these pages, so a Text PDF can't "
           'be made. Save them as a Scan PDF instead.');
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Saving the notes failed: $e\n$st');
       // Don't leave an empty folder behind for a save that didn't happen.
       if (created != null &&
           store.noteCountIn(created.id) == 0 &&

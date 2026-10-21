@@ -20,23 +20,24 @@ class PdfFonts {
   final pw.Font bold;
   final pw.Font heading;
 
-  static Future<PdfFonts>? _loading;
+  // The loaded fonts are kept, not the future that loads them: a future
+  // made in one zone (a test's fake time, say) never completes in another.
+  static PdfFonts? _loaded;
 
-  static Future<PdfFonts> load() => _loading ??= _load();
-
-  static Future<PdfFonts> _load() async {
+  static Future<PdfFonts> load() async {
+    if (_loaded case final fonts?) return fonts;
     try {
       Future<pw.Font> ttf(String asset) async =>
           pw.Font.ttf(await rootBundle.load(asset));
-      return PdfFonts._(
+      return _loaded = PdfFonts._(
         await ttf('assets/fonts/Inter-Regular.ttf'),
         await ttf('assets/fonts/Inter-SemiBold.ttf'),
         await ttf('assets/fonts/PlusJakartaSans-Bold.ttf'),
       );
     } catch (e) {
-      // The built-in fonts still make a PDF; only unusual characters suffer.
+      // The built-in fonts still make a PDF; only unusual characters
+      // suffer. Not kept, so the next PDF tries the real fonts again.
       debugPrint('PDF fonts could not be loaded: $e');
-      _loading = null; // try again next time
       return PdfFonts._(
         pw.Font.helvetica(),
         pw.Font.helveticaBold(),
