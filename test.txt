@@ -1,0 +1,238 @@
+
+::group::✅ Passing tests
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: Profile from the Google account fills in an empty name and the photo, never the user's own
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: Profile from the Google account a Google photo link is asked for at the profile size
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: Profile from the Google account squarePhoto makes a square JPEG and refuses junk
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: Profile from the Google account the photo travels in backups and in Drive sync
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Plans test purchases are on while payments are not connected
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Plans each plan runs for its own length, and switching starts afresh
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: Profile from the Google account Profile shows the photo and can remove it
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Plans a plan ends by itself, and the user is told once
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Plans the plan is saved, and older "plus" switches still load
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: file names on Drive carry the key without slashes
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: syncing uploads everything once, then only what changed
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: a new device sees the data on Drive and can restore it
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: signing out and Delete All Data keep the copy on Drive
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: without Drive, a sync says to sign in
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Plans Delete All Data and restoring a backup keep the plan
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Suggested cards: 20 a month on the free plan cards past the allowance are left out; next month starts over
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Suggested cards: 20 a month on the free plan tAsikaso+ has no limit
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Suggested cards: 20 a month on the free plan the count survives Delete All Data and old backups
+✅ /home/runner/work/tAsikaso/tAsikaso/test/drive_sync_test.dart: Backup & Sync: sign in, first sync, status
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Suggested cards: 20 a month on the free plan used up: the study server is not asked for cards at all
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Suggested cards: 20 a month on the free plan some left: only that many are asked for and kept
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Free plan vs tAsikaso+ on screen a tester starts, switches and ends a plan
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Free plan vs tAsikaso+ on screen Analysis: heatmap and earlier weeks lock on the free plan
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Free plan vs tAsikaso+ on screen Timeline: free shows this week, Plus shows everything
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Free plan vs tAsikaso+ on screen Smart review: free studies all cards, Plus sees what is due
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Free plan vs tAsikaso+ on screen Backup: making a file is Plus, restoring stays free
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Google Drive sync and the plan free accounts can sign in and restore, but not upload
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Google Drive sync and the plan signed in on the free plan: sync is paused, plans offered
+✅ /home/runner/work/tAsikaso/tAsikaso/test/plans_test.dart: Google Drive sync and the plan the photo-less upload list carries the profile photo too
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Bottom navigation switches screens
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: is on when a server is set and the switch is on
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: only http(s) addresses with a host are accepted
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: a study kit comes back with cards that have ids and a quiz that points at them
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: a quiz for existing cards maps the indexes back to card ids
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: a quiz can ask for some question types only
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: Cancel ends a request at once and closes the connection
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: an answer check returns the verdict and feedback
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: the server's own error code and message come through
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: the server's request id is added to its message as a short Ref
+::endgroup::
+::group::✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: no connection is reported as offline, in plain words
+Study server unreachable: ClientException: refused
+::endgroup::
+::group::✅ Passing tests
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: a reply that is not JSON is a bad reply
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: no server set is reported before any request is made
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_ai_test.dart: ping says whether a study server answers
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Capture button opens the capture screen
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Pomodoro counts down, pauses and resets
+✅ /home/runner/work/tAsikaso/tAsikaso/test/notes_pdf_test.dart: a scan PDF carries the recognised text invisibly, one page per photo
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Adding a task from the Study tab
+✅ /home/runner/work/tAsikaso/tAsikaso/test/notes_pdf_test.dart: a text PDF lays out headings, bullets and paragraphs over pages
+✅ /home/runner/work/tAsikaso/tAsikaso/test/notes_pdf_test.dart: plain text read from the pages still makes a document
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Dashboard greets by name and opens the Plus plans
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Dashboard search opens from the search button
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Start Focus on the Dashboard starts a Pomodoro
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Settings opens from Profile and changes apply
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Save Notes As offers Scan PDF, Text PDF and Flashcards
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Save Notes As a scan PDF keeps the text that was read, and no server is needed
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Dark mode follows the Appearance setting
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Save Notes As a text PDF is typed up by the study server, with concepts
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Color themes need tAsikaso+
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Save Notes As flashcards come from the study server when it is on
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Pomodoro Analysis shows the week
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Suggested cards finds definitions, questions and Q/A pairs
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Suggested cards ignores empty text
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore a finished Pomodoro counts for today and the current task
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore data survives saving and loading again
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore finished Pomodoros are kept for the analysis
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore recently studied sets come first
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore Delete All Data leaves nothing behind
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore choosing a task moves it to the top
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore the current task is listed first even after loading
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore deleting a task can be undone
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore Pomodoro presets, custom lengths and reset
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore a custom color is built from one hue
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore breaks are recorded for the focus / break split
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: AppStore deleting a folder removes its notes and sets
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Saved data is never lost unreadable records are left out, not everything
+::endgroup::
+::group::✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Saved data is never lost a file that can't be read is kept, not replaced by samples
+Could not load saved data: FormatException: Unexpected end of input (at character 14)
+{"folders": [
+             ^
+
+#0      _ChunkedJsonParser.fail (dart:convert-patch/convert_patch.dart:1466:5)
+#1      _ChunkedJsonParser.close (dart:convert-patch/convert_patch.dart:496:7)
+#2      _parseJson (dart:convert-patch/convert_patch.dart:36:10)
+#3      JsonDecoder.convert (dart:convert/json.dart:640:36)
+#4      JsonCodec.decode (dart:convert/json.dart:219:41)
+#5      jsonDecode (dart:convert/json.dart:160:12)
+#6      AppStore._load (package:study_app/data/app_store.dart:387:29)
+#7      AppStore.init (package:study_app/data/app_store.dart:161:23)
+<asynchronous suspension>
+#8      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart:579:7)
+<asynchronous suspension>
+#9      Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)
+<asynchronous suspension>
+#10     Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#11     Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+
+::endgroup::
+::group::✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Saved data is never lost the last copy that worked is brought back
+Could not load saved data: FormatException: Unexpected character (at character 1)
+garbage
+^
+
+#0      _ChunkedJsonParser.fail (dart:convert-patch/convert_patch.dart:1466:5)
+#1      _ChunkedJsonParser.parseNumber (dart:convert-patch/convert_patch.dart:1332:9)
+#2      _ChunkedJsonParser.parse (dart:convert-patch/convert_patch.dart:934:22)
+#3      _parseJson (dart:convert-patch/convert_patch.dart:35:10)
+#4      JsonDecoder.convert (dart:convert/json.dart:640:36)
+#5      JsonCodec.decode (dart:convert/json.dart:219:41)
+#6      jsonDecode (dart:convert/json.dart:160:12)
+#7      AppStore._load (package:study_app/data/app_store.dart:387:29)
+#8      AppStore.init (package:study_app/data/app_store.dart:161:23)
+<asynchronous suspension>
+#9      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart:599:7)
+<asynchronous suspension>
+#10     Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)
+<asynchronous suspension>
+#11     Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#12     Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+
+::endgroup::
+::group::✅ Passing tests
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Saved data is never lost data from a newer app version is left alone
+::endgroup::
+::group::✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Saved data is never lost a failed save is reported, once until saving works again
+Save failed: Exception: No space left on device
+Save failed: Exception: No space left on device
+Save failed: Exception: No space left on device
+::endgroup::
+::group::✅ Passing tests
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Pomodoro timer a running Pomodoro carries on after the app is closed
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Save Notes As when the study server fails, cards are suggested from the text instead
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Pomodoro timer a Pomodoro that ended while closed counts on the day it ended
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Quiz answers a multiple choice and a typed question, then shows the score
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Pomodoro timer a Pomodoro counts for the task it was started on
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Quiz the set screen makes a quiz from the cards when there is no study server
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Quiz a typed answer is judged by the study server when it is on
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Pomodoro timer switching mode or skipping asks before losing a Pomodoro
+✅ /home/runner/work/tAsikaso/tAsikaso/test/smart_study_widget_test.dart: Settings has a Smart Study section with the server address
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes typing a length keeps the saved Custom rhythm
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes the Plus strip can be hidden and is not shown to members
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes Start Focus during a paused break starts a Pomodoro
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes Delete All Data also clears a save file that could not be read
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes saved PDFs still open while saving is paused
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Quiz from the cards themselves mixes the types, one question per card, each pointing at its card
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Quiz from the cards themselves stops at the asked-for count
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Quiz from the cards themselves one card can still make a question, just not a multiple choice
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Quiz from the cards themselves cards with an empty side are skipped
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Quiz from the cards themselves only the question types asked for are made
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Quiz from the cards themselves the quiz sizes offered fit the set
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Judging a typed answer on the phone the same words, give or take case, punctuation and an article
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Judging a typed answer on the phone a typo or two is fine, a different word is not
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Judging a typed answer on the phone the right answer inside a longer sentence counts
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Judging a typed answer on the phone most of the key words is partly right
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Judging a typed answer on the phone the other accepted answers count too, and nothing is never right
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Saving and loading a quiz question survives a round trip; broken ones are left out
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes editing a task keeps a Pomodoro finished meanwhile
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Saving and loading a set keeps its source text, summary, concepts and quiz
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Saving and loading a note keeps its typed-up text, summary and concepts
+✅ /home/runner/work/tAsikaso/tAsikaso/test/quiz_test.dart: Saving and loading preferences keep the study server settings
+::endgroup::
+::group::✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes when the scanner cannot open, the camera opens instead
+Document scanner unavailable: Exception: No Play services
+::endgroup::
+::group::✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes a scanned page that cannot be read is left out, not the whole scan
+A scanned page could not be read: FormatException: This photo format is not supported.
+A scanned page could not be read: FormatException: This photo format is not supported.
+::endgroup::
+::group::✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes a photo that cannot be opened does not stop the import
+Could not open a photo: FormatException: This photo format is not supported.
+::endgroup::
+::group::✅ Passing tests
+✅ /home/runner/work/tAsikaso/tAsikaso/test/page_detector_test.dart: finds the corners of a page on a darker desk
+✅ /home/runner/work/tAsikaso/tAsikaso/test/page_detector_test.dart: a page seen at a steeper angle is still found
+✅ /home/runner/work/tAsikaso/tAsikaso/test/page_detector_test.dart: a page that fills the frame is left as it is
+✅ /home/runner/work/tAsikaso/tAsikaso/test/page_detector_test.dart: a page on a background as pale as itself is left as it is
+✅ /home/runner/work/tAsikaso/tAsikaso/test/page_detector_test.dart: a round bright thing is not taken for a page
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes Notifications & Reminders opens Settings at that section
+✅ /home/runner/work/tAsikaso/tAsikaso/test/page_detector_test.dart: fromPhoto pre-sets the crop corners when asked to find the edges
+✅ /home/runner/work/tAsikaso/tAsikaso/test/page_detector_test.dart: fromPhoto can turn a sideways frame upright first
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes a name can be cleared again
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 1 fixes the estimate never reads as less than what was done
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 2 fixes the long-break rhythm starts over after a long pause
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 2 fixes a break cut short by Reset still counts for the time taken
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 2 fixes the timer remembers when its last phase ended
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 2 fixes crop corners cannot cross each other
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 2 fixes Focus by Task keeps a renamed task as one row
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 2 fixes a folder can be deleted from its edit sheet
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 2 fixes the flashcard score is for a whole round, counted once
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: saving on web IndexedDB storage keeps files and the JSON document
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: smart review a known card comes back later and later, a missed one tomorrow
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: smart review cards are due on their day, and new cards are always due
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: smart review answering schedules the card and the set counts what is due
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: smart review a set offers to review just the cards that are due
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: backup & restore a backup file holds the data and every file, and reads back
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: backup & restore something that is not a backup is refused
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: backup & restore everything comes back after a restore, even on a fresh device
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: backup & restore a backup from a newer version is refused and nothing changes
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 3: backup & restore Back Up Now hands over a file; Restore brings it back
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 4 polish a wide photo gets a landscape PDF page, a tall one portrait
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 4 polish the note text screen follows a rename
+✅ /home/runner/work/tAsikaso/tAsikaso/test/widget_test.dart: Phase 4 polish deleting a card asks first
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Cards for a set and for a note Make Cards with AI adds the study server's cards, concepts and quiz to a set
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Cards for a set and for a note without the study server, cards are suggested from the set's text to add or skip
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Cards for a set and for a note Make Flashcards on a note's text makes a set and opens it
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Cards for a set and for a note Make Flashcards offline suggests cards from the note's text
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Note text switches between the typed-up notes and the text as read
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Note text Type Up with AI types up a note saved offline, without using suggested cards
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Note text Type Up with AI shows the server's message when it fails
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Cancel Cancel drops the request and saves nothing
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Cancel Cancel while a quiz is written opens no quiz and keeps none
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Saving a scan a Text PDF is refused when no text was read, and the pages stay
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Saving a scan Cancel during the AI step still saves the photos, with cards suggested from the text
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Quizzes Try Again starts the same quiz over
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Quizzes New Quiz asks how many questions and which types
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Quizzes New Quiz sends the count and types to the study server, and keeps only those types
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Quizzes when the server fails, the quiz says so at the top instead of a toast over the Check button
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Quizzes a partly right answer counts as half, and as not known for smart review
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Quizzes the score: a right answer is a point, a partly right one half
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Set screen the saved quiz can be looked through, and a bad question deleted
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Set screen a set with few cards and no study server suggests adding more for a better quiz
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Search finds notes by their typed-up text, summary and key concepts
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: Search finds sets by their summary and key concepts
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: The study server's app token stays out of backup files, and a restore keeps this device's server
+✅ /home/runner/work/tAsikaso/tAsikaso/test/study_tools_test.dart: The study server's app token stays out of the copy on Google Drive, and a restore from Drive keeps it
+::endgroup::
+
+🎉 165 tests passed.
