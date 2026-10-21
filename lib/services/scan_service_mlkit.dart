@@ -5,6 +5,8 @@ import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'recognized_text.dart';
+
 // Phones (and the test VM, where both report unavailable).
 
 /// ML Kit's document scanner exists on Android only.
@@ -45,11 +47,11 @@ Future<List<Uint8List>?> scanDocuments(int pageLimit) async {
   }
 }
 
-Future<String> readText(List<Uint8List> jpegs) async {
+Future<List<RecognizedPage>> readPages(List<Uint8List> jpegs) async {
   final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
   final dir = await getTemporaryDirectory();
   final stamp = DateTime.now().microsecondsSinceEpoch;
-  final out = StringBuffer();
+  final pages = <RecognizedPage>[];
   try {
     for (var i = 0; i < jpegs.length; i++) {
       // ML Kit reads JPEGs from a file (raw bytes must be camera frames).
@@ -58,11 +60,18 @@ Future<String> readText(List<Uint8List> jpegs) async {
       try {
         final result =
             await recognizer.processImage(InputImage.fromFilePath(file.path));
-        final text = result.text.trim();
-        if (text.isNotEmpty) {
-          if (out.isNotEmpty) out.write('\n\n');
-          out.write(text);
-        }
+        pages.add(RecognizedPage(lines: [
+          for (final block in result.blocks)
+            for (final line in block.lines)
+              if (line.text.trim().isNotEmpty)
+                RecognizedLine(
+                  text: line.text.trim(),
+                  left: line.boundingBox.left,
+                  top: line.boundingBox.top,
+                  right: line.boundingBox.right,
+                  bottom: line.boundingBox.bottom,
+                ),
+        ]));
       } finally {
         try {
           await file.delete();
@@ -74,5 +83,5 @@ Future<String> readText(List<Uint8List> jpegs) async {
   } finally {
     await recognizer.close();
   }
-  return out.toString();
+  return pages;
 }

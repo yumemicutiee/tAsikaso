@@ -189,7 +189,9 @@ class _CaptureScreenState extends State<CaptureScreen>
       final file = await c.takePicture();
       // Let the spinner paint before decoding (runs on the UI thread on web).
       await WidgetsBinding.instance.endOfFrame;
-      final page = await CapturedPage.fromPhoto(_nextId++, await file.readAsBytes());
+      final page = await CapturedPage.fromPhoto(
+          _nextId++, await file.readAsBytes(),
+          findEdges: true);
       if (!mounted) return;
       if (_mode == CaptureMode.single) {
         setState(() => _busy = false);
@@ -224,7 +226,9 @@ class _CaptureScreenState extends State<CaptureScreen>
       // One photo that can't be read (an unusual format, say) must not
       // stop the photos after it.
       try {
-        imported.add(await CapturedPage.fromPhoto(_nextId++, await f.readAsBytes()));
+        imported.add(await CapturedPage.fromPhoto(
+            _nextId++, await f.readAsBytes(),
+            findEdges: true));
       } catch (e) {
         failed++;
         debugPrint('Could not open a photo: $e');

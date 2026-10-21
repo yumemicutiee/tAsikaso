@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+import 'recognized_text.dart';
 import 'scan_service_stub.dart'
     if (dart.library.io) 'scan_service_mlkit.dart' as impl;
+
+export 'recognized_text.dart';
 
 /// The phone's own document scanner and text recognition (Google ML Kit).
 ///
@@ -23,10 +26,14 @@ class ScanService {
   @visibleForTesting
   static Future<List<Uint8List>?> Function()? debugScan;
 
+  /// Set in tests to stand in for text recognition.
+  @visibleForTesting
+  static Future<List<RecognizedPage>> Function(List<Uint8List>)? debugRead;
+
   static bool get canScanDocuments =>
       debugScannerAvailable ?? impl.canScanDocuments;
 
-  static bool get canReadText => impl.canReadText;
+  static bool get canReadText => debugRead != null || impl.canReadText;
 
   /// Opens the scanner. Returns the cropped pages as JPEGs, or null if the
   /// user backed out. Throws if the scanner couldn't start (e.g. Google Play
@@ -37,16 +44,24 @@ class ScanService {
     return impl.scanDocuments(pageLimit);
   }
 
-  /// All text found on [jpegs], pages separated by a blank line. Returns an
-  /// empty string if nothing was found, it's unavailable, or it failed —
-  /// reading text is a bonus and must never block saving.
-  static Future<String> readText(List<Uint8List> jpegs) async {
-    if (!canReadText || jpegs.isEmpty) return '';
+  /// The text on each of [jpegs], line by line with positions. One result
+  /// per page, empty where nothing was found, text recognition isn't
+  /// available, or it failed: reading text is a bonus and must never block
+  /// saving.
+  static Future<List<RecognizedPage>> readPages(List<Uint8List> jpegs) async {
+    final none = [for (final _ in jpegs) const RecognizedPage()];
+    if (!canReadText || jpegs.isEmpty) return none;
     try {
-      return await impl.readText(jpegs);
+      final pages = await (debugRead ?? impl.readPages)(jpegs);
+      return pages.length == jpegs.length ? pages : none;
     } catch (e) {
       debugPrint('Text recognition failed: $e');
-      return '';
+      return none;
     }
   }
+
+  /// All text found on [jpegs], pages separated by a blank line. Empty if
+  /// nothing was found or reading text isn't available.
+  static Future<String> readText(List<Uint8List> jpegs) async =>
+      RecognizedPage.join(await readPages(jpegs));
 }

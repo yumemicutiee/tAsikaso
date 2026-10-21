@@ -578,6 +578,9 @@ class AppStore extends ChangeNotifier {
     required Uint8List thumbnail,
     required int pageCount,
     String text = '',
+    String cleanText = '',
+    String summary = '',
+    List<Concept> concepts = const [],
   }) async {
     final note = Note(
       id: newId(),
@@ -586,6 +589,9 @@ class AppStore extends ChangeNotifier {
       createdAt: clock.now(),
       pageCount: pageCount,
       text: text,
+      cleanText: cleanText,
+      summary: summary,
+      concepts: concepts,
     );
     await _storage.writeBytes(note.pdfKey, pdf);
     await _storage.writeBytes(note.thumbKey, thumbnail);
@@ -632,6 +638,10 @@ class AppStore extends ChangeNotifier {
     List<Uint8List> photos = const [],
     List<Flashcard> cards = const [],
     List<Flashcard> suggestions = const [],
+    String sourceText = '',
+    String summary = '',
+    List<Concept> concepts = const [],
+    List<QuizQuestion> quiz = const [],
   }) async {
     final deck = FlashcardSet(
       id: newId(),
@@ -641,6 +651,10 @@ class AppStore extends ChangeNotifier {
       cards: cards,
       suggestions: suggestions,
       photoCount: photos.length,
+      sourceText: sourceText,
+      summary: summary,
+      concepts: concepts,
+      quiz: quiz,
     );
     for (var i = 0; i < photos.length; i++) {
       await _storage.writeBytes(deck.photoKey(i), photos[i]);

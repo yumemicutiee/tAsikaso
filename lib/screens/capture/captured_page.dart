@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:image/image.dart' as img;
 
+import '../../utils/page_detector.dart';
+
 /// A photographed or imported page, plus how the user wants it cropped and
 /// rotated. The original photo is never changed; crop and rotation are
 /// applied when the notes are saved (see [render]).
@@ -41,11 +43,18 @@ class CapturedPage {
   /// Crop corners in the rotated view.
   List<Offset> corners = List.of(fullFrame);
 
+  /// The corners were found by the app (see [fromPhoto]); the user can
+  /// still drag them.
+  bool autoDetected = false;
+
   /// Width / height as shown on screen (after rotation).
   double get displayAspectRatio =>
       quarterTurns.isOdd ? height / width : width / height;
 
-  void resetCrop() => corners = List.of(fullFrame);
+  void resetCrop() {
+    corners = List.of(fullFrame);
+    autoDetected = false;
+  }
 
   /// Corners can't come closer than this (as a fraction of the page).
   static const double minCropGap = 0.05;
@@ -86,9 +95,24 @@ class CapturedPage {
 
   /// Decodes a camera/gallery photo, straightens it using its EXIF
   /// orientation and scales it down. Runs off the UI thread on phones.
-  static Future<CapturedPage> fromPhoto(int id, Uint8List original) async {
-    final (bytes, width, height) = await compute(_normalizePhoto, original);
-    return CapturedPage(id: id, bytes: bytes, width: width, height: height);
+  ///
+  /// With [findEdges], the page is looked for in the photo (like a document
+  /// scanner does) and the crop corners start on its edges when it's found.
+  static Future<CapturedPage> fromPhoto(
+    int id,
+    Uint8List original, {
+    bool findEdges = false,
+  }) async {
+    final (bytes, width, height, corners) =
+        await compute(_normalizePhoto, (original, findEdges));
+    final page = CapturedPage(id: id, bytes: bytes, width: width, height: height);
+    if (corners != null) {
+      page.corners = [
+        for (var i = 0; i < 4; i++) Offset(corners[i * 2], corners[i * 2 + 1]),
+      ];
+      page.autoDetected = true;
+    }
+    return page;
   }
 
   /// Applies rotation and the four-corner crop. Returns a JPEG.
@@ -106,7 +130,11 @@ class CapturedPage {
 // ---------------------------------------------------------------------------
 // Image work. Top-level functions so `compute` can run them in an isolate.
 
-(Uint8List, int, int) _normalizePhoto(Uint8List data) {
+/// Returns the upright, scaled JPEG, its size, and the page corners found
+/// in it (as x, y fractions, 8 numbers) or null.
+(Uint8List, int, int, List<double>?) _normalizePhoto(
+    (Uint8List, bool) job) {
+  final (data, findEdges) = job;
   final decoded = img.decodeImage(data);
   if (decoded == null) {
     throw const FormatException('This photo format is not supported.');
@@ -120,7 +148,17 @@ class CapturedPage {
         : img.copyResize(image,
             height: maxSide, interpolation: img.Interpolation.average);
   }
-  return (img.encodeJpg(image, quality: 88), image.width, image.height);
+  List<double>? corners;
+  if (findEdges) {
+    try {
+      final found = detectPageCorners(image);
+      if (found != null) corners = [for (final c in found) ...[c.dx, c.dy]];
+    } catch (e) {
+      // Finding the edges is a convenience; the full frame still works.
+      debugPrint('Page detection failed: $e');
+    }
+  }
+  return (img.encodeJpg(image, quality: 88), image.width, image.height, corners);
 }
 
 Uint8List _renderPage((Uint8List, int, List<double>) job) {

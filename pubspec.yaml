@@ -30,6 +30,7 @@ dependencies:
   archive: ^4.5.2
   share_plus: ^13.3.1
   file_picker: ^13.1.0
+  http: ^1.6.0                 # talks to the study server (server/)
 
 dev_dependencies:
   flutter_test:

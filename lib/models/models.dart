@@ -45,6 +45,27 @@ class StudyFolder {
       );
 }
 
+/// A key idea from the notes, picked out by the study server.
+@immutable
+class Concept {
+  const Concept({required this.term, required this.explanation});
+
+  final String term;
+  final String explanation;
+
+  Json toJson() => {'term': term, 'explanation': explanation};
+
+  factory Concept.fromJson(Json j) => Concept(
+        term: j['term'] as String? ?? '',
+        explanation: j['explanation'] as String? ?? '',
+      );
+
+  static List<Concept> listFromJson(Object? list) => [
+        for (final c in (list as List<Object?>? ?? const []))
+          if (c is Map<String, Object?>) Concept.fromJson(c),
+      ];
+}
+
 /// Captured lecture notes saved as a PDF.
 @immutable
 class Note {
@@ -55,6 +76,9 @@ class Note {
     required this.createdAt,
     this.pageCount = 0,
     this.text = '',
+    this.cleanText = '',
+    this.summary = '',
+    this.concepts = const [],
   });
 
   final String id;
@@ -67,16 +91,40 @@ class Note {
   /// available on this device. Used for search and "View Text".
   final String text;
 
+  /// The notes typed up cleanly by the study server (OCR mistakes fixed,
+  /// headings and bullets marked), or empty. See `notes_pdf.dart` for the
+  /// line format.
+  final String cleanText;
+
+  /// A few sentences on what the notes cover, from the study server.
+  final String summary;
+
+  /// Key concepts from the study server, or none.
+  final List<Concept> concepts;
+
   String get pdfKey => 'notes/$id.pdf';
   String get thumbKey => 'notes/$id.jpg';
 
-  Note copyWith({String? title, String? folderId}) => Note(
+  /// The best text to show: typed up when available, else as read.
+  String get displayText => cleanText.isNotEmpty ? cleanText : text;
+
+  Note copyWith({
+    String? title,
+    String? folderId,
+    String? cleanText,
+    String? summary,
+    List<Concept>? concepts,
+  }) =>
+      Note(
         id: id,
         title: title ?? this.title,
         folderId: folderId ?? this.folderId,
         createdAt: createdAt,
         pageCount: pageCount,
         text: text,
+        cleanText: cleanText ?? this.cleanText,
+        summary: summary ?? this.summary,
+        concepts: concepts ?? this.concepts,
       );
 
   Json toJson() => {
@@ -86,6 +134,10 @@ class Note {
         'createdAt': createdAt.toIso8601String(),
         'pages': pageCount,
         'text': text,
+        if (cleanText.isNotEmpty) 'clean': cleanText,
+        if (summary.isNotEmpty) 'summary': summary,
+        if (concepts.isNotEmpty)
+          'concepts': [for (final c in concepts) c.toJson()],
       };
 
   factory Note.fromJson(Json j) => Note(
@@ -95,6 +147,9 @@ class Note {
         createdAt: _date(j['createdAt']),
         pageCount: _int(j['pages']),
         text: j['text'] as String? ?? '',
+        cleanText: j['clean'] as String? ?? '',
+        summary: j['summary'] as String? ?? '',
+        concepts: Concept.listFromJson(j['concepts']),
       );
 }
 
@@ -235,6 +290,117 @@ class Flashcard {
       );
 }
 
+/// The kinds of quiz question.
+enum QuestionType {
+  multipleChoice('multiple_choice', 'Multiple Choice'),
+  trueFalse('true_false', 'True or False'),
+  fillBlank('fill_blank', 'Fill in the Blank'),
+  typed('typed', 'Type the Answer');
+
+  const QuestionType(this.key, this.label);
+
+  /// The name the study server uses.
+  final String key;
+  final String label;
+
+  static QuestionType? fromKey(Object? key) {
+    for (final t in values) {
+      if (t.key == key) return t;
+    }
+    return null;
+  }
+}
+
+/// One quiz question, from the study server or made from the set's cards.
+@immutable
+class QuizQuestion {
+  const QuizQuestion({
+    required this.type,
+    required this.prompt,
+    required this.answer,
+    this.options = const [],
+    this.answerIndex = -1,
+    this.acceptable = const [],
+    this.explanation = '',
+    this.cardId,
+  });
+
+  final QuestionType type;
+
+  /// The question; for [QuestionType.fillBlank] it holds one `____`.
+  final String prompt;
+
+  /// Choices for multiple choice (four) and true / false (two); else empty.
+  final List<String> options;
+
+  /// Index of the right choice in [options], or -1.
+  final int answerIndex;
+
+  /// The right answer as text, for every type.
+  final String answer;
+
+  /// Other right answers (typed and fill-in-the-blank).
+  final List<String> acceptable;
+  final String explanation;
+
+  /// The card this question tests, so smart review can learn from it.
+  final String? cardId;
+
+  bool get isChoice =>
+      type == QuestionType.multipleChoice || type == QuestionType.trueFalse;
+
+  Json toJson() => {
+        'type': type.key,
+        'prompt': prompt,
+        'answer': answer,
+        if (options.isNotEmpty) 'options': options,
+        if (answerIndex >= 0) 'answerIndex': answerIndex,
+        if (acceptable.isNotEmpty) 'acceptable': acceptable,
+        if (explanation.isNotEmpty) 'explanation': explanation,
+        'card': ?cardId,
+      };
+
+  /// Throws if [j] isn't a usable question, so a list parser can skip it.
+  factory QuizQuestion.fromJson(Json j) {
+    final type = QuestionType.fromKey(j['type']);
+    final prompt = j['prompt'] as String? ?? '';
+    final answer = j['answer'] as String? ?? '';
+    if (type == null || prompt.isEmpty || answer.isEmpty) {
+      throw const FormatException('Not a quiz question.');
+    }
+    final options = _strings(j['options']);
+    final index = _int(j['answerIndex'], -1);
+    return QuizQuestion(
+      type: type,
+      prompt: prompt,
+      answer: answer,
+      options: options,
+      answerIndex: index >= 0 && index < options.length ? index : -1,
+      acceptable: _strings(j['acceptable']),
+      explanation: j['explanation'] as String? ?? '',
+      cardId: j['card'] is String ? j['card'] as String : null,
+    );
+  }
+
+  static List<QuizQuestion> listFromJson(Object? list) => [
+        for (final q in (list as List<Object?>? ?? const []))
+          if (q is Map<String, Object?>) ?_tryQuestion(q),
+      ];
+
+  static QuizQuestion? _tryQuestion(Json j) {
+    try {
+      return QuizQuestion.fromJson(j);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static List<String> _strings(Object? list) => [
+        for (final s in (list as List<Object?>? ?? const []))
+          if (s is String && s.isNotEmpty) s,
+      ];
+}
+
 /// A deck of flashcards, optionally with the page photos it was made from.
 @immutable
 class FlashcardSet {
@@ -249,6 +415,10 @@ class FlashcardSet {
     this.lastStudiedAt,
     this.lastKnown = 0,
     this.lastSeen = 0,
+    this.sourceText = '',
+    this.summary = '',
+    this.concepts = const [],
+    this.quiz = const [],
   });
 
   final String id;
@@ -269,6 +439,17 @@ class FlashcardSet {
   final int lastKnown;
   final int lastSeen;
 
+  /// The text the set was made from (OCR), kept so cards and quizzes can be
+  /// made again later. Empty for sets written by hand.
+  final String sourceText;
+
+  /// What the notes cover and their key concepts, from the study server.
+  final String summary;
+  final List<Concept> concepts;
+
+  /// The last quiz made for this set, so it opens without waiting.
+  final List<QuizQuestion> quiz;
+
   String photoKey(int index) => 'sets/$id/$index.jpg';
 
   /// Cards due for review on [day] (midnight); see [Flashcard.isDue].
@@ -283,6 +464,10 @@ class FlashcardSet {
     DateTime? lastStudiedAt,
     int? lastKnown,
     int? lastSeen,
+    String? sourceText,
+    String? summary,
+    List<Concept>? concepts,
+    List<QuizQuestion>? quiz,
   }) =>
       FlashcardSet(
         id: id,
@@ -295,6 +480,10 @@ class FlashcardSet {
         lastStudiedAt: lastStudiedAt ?? this.lastStudiedAt,
         lastKnown: lastKnown ?? this.lastKnown,
         lastSeen: lastSeen ?? this.lastSeen,
+        sourceText: sourceText ?? this.sourceText,
+        summary: summary ?? this.summary,
+        concepts: concepts ?? this.concepts,
+        quiz: quiz ?? this.quiz,
       );
 
   Json toJson() => {
@@ -308,6 +497,11 @@ class FlashcardSet {
         'studied': lastStudiedAt?.toIso8601String(),
         'known': lastKnown,
         'seen': lastSeen,
+        if (sourceText.isNotEmpty) 'source': sourceText,
+        if (summary.isNotEmpty) 'summary': summary,
+        if (concepts.isNotEmpty)
+          'concepts': [for (final c in concepts) c.toJson()],
+        if (quiz.isNotEmpty) 'quiz': [for (final q in quiz) q.toJson()],
       };
 
   factory FlashcardSet.fromJson(Json j) => FlashcardSet(
@@ -323,6 +517,10 @@ class FlashcardSet {
             : null,
         lastKnown: _int(j['known']),
         lastSeen: _int(j['seen']),
+        sourceText: j['source'] as String? ?? '',
+        summary: j['summary'] as String? ?? '',
+        concepts: Concept.listFromJson(j['concepts']),
+        quiz: QuizQuestion.listFromJson(j['quiz']),
       );
 
   static List<Flashcard> _cards(Object? list) => [
@@ -651,6 +849,9 @@ class AppPrefs {
     this.customHue = 200,
     this.plus = false,
     this.lastBackupAt,
+    this.useAi = true,
+    this.aiServerUrl = '',
+    this.aiToken = '',
   });
 
   /// Shown in greetings ("Hello, Budi!").
@@ -699,6 +900,15 @@ class AppPrefs {
   /// When a backup file was last made (null = never).
   final DateTime? lastBackupAt;
 
+  /// Ask the study server (Claude) for clean notes, key concepts, flashcards
+  /// and quizzes when notes are saved.
+  final bool useAi;
+
+  /// The study server's address and app token typed in Settings. Empty
+  /// means the ones built into the app (`--dart-define`), if any.
+  final String aiServerUrl;
+  final String aiToken;
+
   AppPrefs copyWith({
     String? userName,
     bool? smartScanner,
@@ -715,6 +925,9 @@ class AppPrefs {
     double? customHue,
     bool? plus,
     DateTime? lastBackupAt,
+    bool? useAi,
+    String? aiServerUrl,
+    String? aiToken,
   }) =>
       AppPrefs(
         userName: userName ?? this.userName,
@@ -732,6 +945,9 @@ class AppPrefs {
         customHue: customHue ?? this.customHue,
         plus: plus ?? this.plus,
         lastBackupAt: lastBackupAt ?? this.lastBackupAt,
+        useAi: useAi ?? this.useAi,
+        aiServerUrl: aiServerUrl ?? this.aiServerUrl,
+        aiToken: aiToken ?? this.aiToken,
       );
 
   Json toJson() => {
@@ -750,6 +966,9 @@ class AppPrefs {
         'hue': customHue,
         'plus': plus,
         if (lastBackupAt case final t?) 'backupAt': t.toIso8601String(),
+        'ai': useAi,
+        if (aiServerUrl.isNotEmpty) 'aiUrl': aiServerUrl,
+        if (aiToken.isNotEmpty) 'aiToken': aiToken,
       };
 
   factory AppPrefs.fromJson(Json j) => AppPrefs(
@@ -773,5 +992,8 @@ class AppPrefs {
         lastBackupAt: j['backupAt'] is String
             ? DateTime.tryParse(j['backupAt'] as String)
             : null,
+        useAi: j['ai'] != false,
+        aiServerUrl: j['aiUrl'] as String? ?? '',
+        aiToken: j['aiToken'] as String? ?? '',
       );
 }

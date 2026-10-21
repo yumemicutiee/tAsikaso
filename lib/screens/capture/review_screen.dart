@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/app_store.dart';
 import '../../models/models.dart';
 import '../../services/scan_service.dart';
+import '../../services/study_ai.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_icons.dart';
 import '../../theme/app_theme.dart';
@@ -17,6 +19,11 @@ import '../flashcards/set_screen.dart';
 import '../note_viewer_screen.dart';
 import 'captured_page.dart';
 import 'notes_pdf.dart';
+
+/// A Text PDF needs text, and none could be read from the pages.
+class _NoTextException implements Exception {
+  const _NoTextException();
+}
 
 /// Review captured pages: rotate and crop each one by dragging its four
 /// corners, then save them as a PDF in a folder.
@@ -116,15 +123,25 @@ class _ReviewScreenState extends State<ReviewScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final store = AppStore.instance;
-    final asCards = request.format == _SaveFormat.flashcards;
+    final format = request.format;
+    final asCards = format == _SaveFormat.flashcards;
+    final progress = ValueNotifier<String>(
+        asCards ? 'Preparing your photos…' : 'Creating your PDF…');
 
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _ProgressDialog(
-        text: asCards ? 'Preparing your photos…' : 'Creating your PDF…',
-      ),
+      builder: (_) => _ProgressDialog(text: progress),
     );
+
+    void toast(String text, {SnackBarAction? action}) => messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(text),
+        showCloseIcon: true,
+        action: action,
+        duration: Duration(seconds: text.length > 60 ? 8 : 4),
+      ));
 
     StudyFolder? created; // "My Notes", made for this save alone
     try {
@@ -138,62 +155,113 @@ class _ReviewScreenState extends State<ReviewScreen> {
       }
 
       // Read the text on the pages (on the phone, no internet). Used for
-      // search, "View Text" and suggested flashcards.
-      final text = await ScanService.readText(jpegs);
+      // search, "View Text", the PDF's hidden text layer, and flashcards.
+      if (ScanService.canReadText) progress.value = 'Reading the text…';
+      final pages = await ScanService.readPages(jpegs);
+      final text = RecognizedPage.join(pages);
+
+      // The study server (Claude) types the notes up and picks out key
+      // concepts; for flashcards it writes the cards and a quiz too.
+      StudyKit? kit;
+      String? aiProblem;
+      if (StudyAi.isOn && text.trim().length >= 20) {
+        progress.value =
+            asCards ? 'Making your flashcards…' : 'Typing up your notes…';
+        try {
+          kit = await StudyAi.makeStudyKit(
+            text: text,
+            title: request.title,
+            maxCards: asCards ? 30 : 0,
+            quizCount: asCards ? 12 : 0,
+          );
+        } on StudyAiException catch (e) {
+          aiProblem = e.message;
+        }
+      }
+      if (format == _SaveFormat.textPdf &&
+          text.trim().isEmpty &&
+          (kit == null || kit.notes.trim().isEmpty)) {
+        throw const _NoTextException();
+      }
 
       final folder = request.folder ??
           (created = store.addFolder('My Notes', AppColors.folderPalette.first));
 
       if (asCards) {
-        final suggestions = suggestCards(text);
+        final cards = kit?.cards ?? const <Flashcard>[];
+        final suggestions = kit == null ? suggestCards(text) : const <Flashcard>[];
         final deck = await store.addSet(
           title: request.title,
           folderId: folder.id,
           photos: jpegs,
+          cards: cards,
           suggestions: suggestions,
+          sourceText: text,
+          summary: kit?.summary ?? '',
+          concepts: kit?.concepts ?? const [],
+          quiz: kit?.quiz ?? const [],
         );
         // Close the progress dialog, review and camera, then open the set so
         // cards can be written while looking at the photos.
         navigator.popUntil((route) => route.isFirst);
         navigator.push(MaterialPageRoute(builder: (_) => SetScreen(setId: deck.id)));
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
-            content: Text(suggestions.isEmpty
-                ? 'Photos saved. Now add cards for them.'
-                : 'Photos saved. We found ${plural(suggestions.length, 'card')} '
-                    'to suggest.'),
-            showCloseIcon: true,
-          ));
+        toast(kit != null
+            ? 'Photos saved with ${plural(cards.length, 'flashcard')} made '
+                'for you.'
+            : aiProblem != null
+                ? '$aiProblem Cards were suggested from the text instead.'
+                : suggestions.isEmpty
+                    ? 'Photos saved. Now add cards for them.'
+                    : 'Photos saved. We found ${plural(suggestions.length, 'card')} '
+                        'to suggest.');
         return;
       }
 
-      final pdf = await buildNotesPdf(jpegs, title: request.title);
+      progress.value = 'Creating your PDF…';
+      final Uint8List pdf;
+      final int pageCount;
+      if (format == _SaveFormat.textPdf) {
+        final body = (kit?.notes.trim().isNotEmpty ?? false) ? kit!.notes : text;
+        pdf = await buildTextPdf(
+          title: request.title,
+          text: body,
+          summary: kit?.summary ?? '',
+          concepts: kit?.concepts ?? const [],
+        );
+        pageCount = pdfPageCount(pdf);
+      } else {
+        pdf = await buildNotesPdf(jpegs, title: request.title, text: pages);
+        pageCount = jpegs.length;
+      }
       final thumb = await CapturedPage.thumbnail(jpegs.first);
       final note = await store.addNote(
         title: request.title,
         folderId: folder.id,
         pdf: pdf,
         thumbnail: thumb,
-        pageCount: jpegs.length,
+        pageCount: pageCount,
         text: text,
+        cleanText: kit?.notes ?? '',
+        summary: kit?.summary ?? '',
+        concepts: kit?.concepts ?? const [],
       );
 
       navigator.popUntil((route) => route.isFirst);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Saved to ${folder.name}'),
-            showCloseIcon: true,
-            action: SnackBarAction(
-              label: 'Open',
-              onPressed: () => navigator.push(
-                MaterialPageRoute(builder: (_) => NoteViewerScreen(noteId: note.id)),
-              ),
-            ),
+      toast(
+        aiProblem == null
+            ? 'Saved to ${folder.name}'
+            : 'Saved to ${folder.name}. $aiProblem',
+        action: SnackBarAction(
+          label: 'Open',
+          onPressed: () => navigator.push(
+            MaterialPageRoute(builder: (_) => NoteViewerScreen(noteId: note.id)),
           ),
-        );
+        ),
+      );
+    } on _NoTextException {
+      navigator.pop(); // progress dialog
+      toast("No text could be read from these pages, so a Text PDF can't "
+          'be made. Save them as a Scan PDF instead.');
     } catch (_) {
       // Don't leave an empty folder behind for a save that didn't happen.
       if (created != null &&
@@ -202,13 +270,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
         store.deleteFolder(created.id).ignore();
       }
       navigator.pop(); // progress dialog
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(asCards
-              ? "Couldn't save the photos. Please try again."
-              : "Couldn't create the PDF. Please try again."),
-        ),
-      );
+      toast(asCards
+          ? "Couldn't save the photos. Please try again."
+          : "Couldn't create the PDF. Please try again.");
     }
   }
 
@@ -275,6 +339,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     ),
                   ),
                 ),
+                if (_page.autoDetected && !widget.autoCropped)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      "Page edges found. Drag the corners if they're off.",
+                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
+                  ),
 
                 // Page strip
                 if (multi)
@@ -527,7 +599,8 @@ class _ToolButton extends StatelessWidget {
 class _ProgressDialog extends StatelessWidget {
   const _ProgressDialog({required this.text});
 
-  final String text;
+  /// What's happening now; it changes as the save goes on.
+  final ValueListenable<String> text;
 
   @override
   Widget build(BuildContext context) {
@@ -546,7 +619,13 @@ class _ProgressDialog extends StatelessWidget {
                     strokeWidth: 2.5, color: AppColors.primaryDeep),
               ),
               const SizedBox(width: 16),
-              Flexible(child: Text(text, style: AppText.itemTitle)),
+              Flexible(
+                child: ValueListenableBuilder<String>(
+                  valueListenable: text,
+                  builder: (context, value, _) =>
+                      Text(value, style: AppText.itemTitle),
+                ),
+              ),
             ],
           ),
         ),
@@ -555,7 +634,9 @@ class _ProgressDialog extends StatelessWidget {
   }
 }
 
-enum _SaveFormat { pdf, flashcards }
+/// Scan PDF: the pages as photos with a hidden text layer. Text PDF: the
+/// notes typed up. Flashcards: a set with the photos to write cards from.
+enum _SaveFormat { scanPdf, textPdf, flashcards }
 
 class _SaveRequest {
   const _SaveRequest({
@@ -595,7 +676,7 @@ class _SaveSheetState extends State<_SaveSheet> {
       _folder = folder;
     });
   }
-  _SaveFormat _format = _SaveFormat.pdf;
+  _SaveFormat _format = _SaveFormat.scanPdf;
   final _title = TextEditingController();
 
   @override
@@ -606,7 +687,7 @@ class _SaveSheetState extends State<_SaveSheet> {
 
   String _defaultTitle() {
     final name = _folder?.name ?? 'My';
-    final kind = _format == _SaveFormat.pdf ? 'Notes' : 'Cards';
+    final kind = _format == _SaveFormat.flashcards ? 'Cards' : 'Notes';
     return '$name $kind ${formatNoteDate(DateTime.now())}';
   }
 
@@ -622,7 +703,9 @@ class _SaveSheetState extends State<_SaveSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final pdf = _format == _SaveFormat.pdf;
+    final pdf = _format != _SaveFormat.flashcards;
+    final canReadText = ScanService.canReadText;
+    final ai = StudyAi.isOn;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomInset),
@@ -633,29 +716,38 @@ class _SaveSheetState extends State<_SaveSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SheetTitle('Save Notes As', subtitle: plural(widget.pageCount, 'page')),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _FormatOption(
-                    icon: AppIcons.pdf,
-                    title: 'PDF',
-                    subtitle: 'All pages in one file',
-                    selected: pdf,
-                    onTap: () => setState(() => _format = _SaveFormat.pdf),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _FormatOption(
-                    icon: AppIcons.flashcards,
-                    title: 'Flashcards',
-                    subtitle: 'Write cards from photos',
-                    selected: !pdf,
-                    onTap: () => setState(() => _format = _SaveFormat.flashcards),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 14),
+            _FormatOption(
+              icon: AppIcons.scan,
+              title: 'Scan PDF',
+              subtitle: canReadText
+                  ? 'Your pages as photos; the text can be selected and searched'
+                  : 'Your pages as photos, all in one file',
+              selected: _format == _SaveFormat.scanPdf,
+              onTap: () => setState(() => _format = _SaveFormat.scanPdf),
+            ),
+            const SizedBox(height: 8),
+            _FormatOption(
+              icon: AppIcons.text,
+              title: 'Text PDF',
+              subtitle: !canReadText
+                  ? 'Needs text recognition (Android or iOS)'
+                  : ai
+                      ? 'Your notes typed up cleanly, with key concepts'
+                      : 'The text read from your pages, as a document',
+              selected: _format == _SaveFormat.textPdf,
+              enabled: canReadText,
+              onTap: () => setState(() => _format = _SaveFormat.textPdf),
+            ),
+            const SizedBox(height: 8),
+            _FormatOption(
+              icon: AppIcons.flashcards,
+              title: 'Flashcards',
+              subtitle: ai && canReadText
+                  ? 'Cards and a quiz made from your notes'
+                  : 'Write cards while looking at your photos',
+              selected: !pdf,
+              onTap: () => setState(() => _format = _SaveFormat.flashcards),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -760,24 +852,29 @@ class _FormatOption extends StatelessWidget {
     required this.subtitle,
     required this.selected,
     required this.onTap,
+    this.enabled = true,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final bool selected;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final ink = enabled ? AppColors.ink : AppColors.textMuted;
     return Semantics(
       button: true,
       selected: selected,
+      enabled: enabled,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: EdgeInsets.all(selected ? 13 : 14),
+          padding: EdgeInsets.symmetric(
+              horizontal: selected ? 13 : 14, vertical: selected ? 11 : 12),
           decoration: BoxDecoration(
             color: selected ? AppColors.primarySoft : AppColors.surface,
             borderRadius: BorderRadius.circular(10),
@@ -786,16 +883,26 @@ class _FormatOption extends StatelessWidget {
               width: selected ? 2 : 1,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Icon(icon,
-                  color: selected ? AppColors.primaryDeep : AppColors.ink, size: 26),
-              const SizedBox(height: 10),
-              Text(title,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 2),
-              Text(subtitle, style: AppText.itemMeta),
+              Icon(icon, color: selected ? AppColors.primaryDeep : ink, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700, color: ink)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: AppText.itemMeta),
+                  ],
+                ),
+              ),
+              if (selected) ...[
+                const SizedBox(width: 8),
+                Icon(AppIcons.check, size: 18, color: AppColors.primaryDeep),
+              ],
             ],
           ),
         ),

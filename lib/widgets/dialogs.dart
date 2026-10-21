@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
@@ -9,6 +11,8 @@ import 'common.dart';
 
 /// Asks for a single line of text. Returns null if cancelled, and also if
 /// the text is empty unless [allowEmpty] (then '' means "cleared").
+/// [plainText] is for addresses and codes: no capitalisation or
+/// autocorrect.
 Future<String?> showTextInputDialog(
   BuildContext context, {
   required String title,
@@ -16,6 +20,7 @@ Future<String?> showTextInputDialog(
   String hint = '',
   String confirmLabel = 'Save',
   bool allowEmpty = false,
+  bool plainText = false,
 }) {
   return showDialog<String>(
     context: context,
@@ -25,6 +30,7 @@ Future<String?> showTextInputDialog(
       hint: hint,
       confirmLabel: confirmLabel,
       allowEmpty: allowEmpty,
+      plainText: plainText,
     ),
   );
 }
@@ -36,6 +42,7 @@ class _TextInputDialog extends StatefulWidget {
     required this.hint,
     required this.confirmLabel,
     required this.allowEmpty,
+    required this.plainText,
   });
 
   final String title;
@@ -43,6 +50,7 @@ class _TextInputDialog extends StatefulWidget {
   final String hint;
   final String confirmLabel;
   final bool allowEmpty;
+  final bool plainText;
 
   @override
   State<_TextInputDialog> createState() => _TextInputDialogState();
@@ -72,7 +80,12 @@ class _TextInputDialogState extends State<_TextInputDialog> {
         child: TextField(
           controller: _controller,
           autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
+          textCapitalization: widget.plainText
+              ? TextCapitalization.none
+              : TextCapitalization.sentences,
+          autocorrect: !widget.plainText,
+          enableSuggestions: !widget.plainText,
+          keyboardType: widget.plainText ? TextInputType.url : null,
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _submit(),
           decoration: InputDecoration(
@@ -154,6 +167,47 @@ Future<void> showInfoDialog(
       ],
     ),
   );
+}
+
+/// Shows [text] with a spinner while [work] runs, then closes it. Returns
+/// what [work] returns; an error closes the dialog and is thrown on.
+Future<T> runWithProgress<T>(
+  BuildContext context,
+  String text,
+  Future<T> Function() work,
+) async {
+  final navigator = Navigator.of(context);
+  var open = true;
+  unawaited(showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => PopScope(
+      canPop: false,
+      child: Dialog(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: AppColors.primaryDeep),
+              ),
+              const SizedBox(width: 16),
+              Flexible(child: Text(text, style: AppText.itemTitle)),
+            ],
+          ),
+        ),
+      ),
+    ),
+  ).whenComplete(() => open = false));
+  try {
+    return await work();
+  } finally {
+    if (open && navigator.mounted) navigator.pop();
+  }
 }
 
 /// Result of the folder editor.

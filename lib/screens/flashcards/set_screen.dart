@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
 import '../../models/models.dart';
+import '../../services/scan_service.dart';
+import '../../services/study_ai.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_icons.dart';
 import '../../theme/app_theme.dart';
@@ -34,10 +36,22 @@ class SetScreen extends StatelessWidget {
         }
         final folder = store.folder(deck.folderId);
         final due = store.dueCards(deck);
-        final menu = setActions(context, deck, onDeleted: () {
-          if (context.mounted) Navigator.of(context).pop();
-        })
-          ..remove('Study');
+        // Cards can be made from the photos' text: already read, or
+        // readable on this device.
+        final canMakeCards = deck.sourceText.trim().isNotEmpty ||
+            (deck.photoCount > 0 && ScanService.canReadText);
+        final menu = {
+          if (deck.cards.length >= 2)
+            'New Quiz': () => quizSet(context, deck, fresh: true),
+          if (canMakeCards)
+            (StudyAi.isOn ? 'Make Cards with AI' : 'Suggest Cards from Photos'):
+                () => makeCardsForSet(context, deck),
+          ...setActions(context, deck, onDeleted: () {
+            if (context.mounted) Navigator.of(context).pop();
+          })
+            ..remove('Study')
+            ..remove('Quiz'),
+        };
 
         return Scaffold(
           appBar: AppBar(
@@ -98,6 +112,41 @@ class SetScreen extends StatelessWidget {
                                 style: AppText.itemMeta),
                   ),
                 ),
+              if (deck.cards.length >= 2) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    onPressed: () => quizSet(context, deck),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.ink,
+                      side: BorderSide(color: AppColors.border, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(AppIcons.target, size: 18),
+                    label: Text(
+                      deck.quiz.isEmpty
+                          ? 'Take a Quiz'
+                          : 'Take a Quiz (${plural(deck.quiz.length, 'question')})',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+              if (deck.summary.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(deck.summary, style: AppText.statLabel.copyWith(height: 1.45)),
+              ],
+              if (deck.concepts.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Text('Key Concepts', style: AppText.sectionTitle),
+                const SizedBox(height: 10),
+                for (final c in deck.concepts)
+                  ConceptTile(term: c.term, explanation: c.explanation),
+              ],
               if (deck.photoCount > 0) ...[
                 const SizedBox(height: 24),
                 Text('Your Photos', style: AppText.sectionTitle),

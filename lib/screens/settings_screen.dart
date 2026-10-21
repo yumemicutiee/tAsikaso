@@ -7,6 +7,7 @@ import '../data/pomodoro_controller.dart';
 import '../models/models.dart';
 import '../services/notification_service.dart';
 import '../services/scan_service.dart';
+import '../services/study_ai.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -247,8 +248,41 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ]),
               _Note(ScanService.canScanDocuments
-                  ? 'Finds the page edges and crops automatically.'
-                  : 'Needs an Android phone. The camera is used instead.'),
+                  ? "Google's scanner finds the page edges and crops "
+                      'automatically. The app\'s own camera looks for the '
+                      'edges too.'
+                  : 'Needs an Android phone. The camera is used instead, '
+                      'and looks for the page edges itself.'),
+
+              const _Heading('Smart Study'),
+              _Group(children: [
+                _Switch(
+                  label: 'Flashcards & Quizzes with AI',
+                  value: p.useAi,
+                  onChanged: (v) => prefs(p.copyWith(useAi: v)),
+                ),
+                _TapRow(
+                  label: 'Study Server',
+                  value: StudyAi.serverUrl.isEmpty
+                      ? 'Not set'
+                      : _shortUrl(StudyAi.serverUrl),
+                  onTap: () => _editServer(context),
+                ),
+                _TapRow(
+                  label: 'App Token',
+                  value: StudyAi.token.isEmpty ? 'None' : '••••••••',
+                  onTap: () => _editToken(context),
+                ),
+              ]),
+              _Note(StudyAi.hasServer
+                  ? 'When you save a scan, the text read from it goes to '
+                      'your study server, which asks Claude for clean notes, '
+                      'key concepts, flashcards and a quiz. Needs internet. '
+                      'The photos stay on this device.'
+                  : 'Run the study server from the app\'s server folder '
+                      '(see its README), then add its address here to get '
+                      'clean notes, key concepts, flashcards and quizzes '
+                      'made for you.'),
 
               const _Heading('Your Data'),
               _Note(store.isPersistent
@@ -339,6 +373,64 @@ class SettingsScreen extends StatelessWidget {
     if (hue == null) return;
     store.updatePrefs(
         store.prefs.copyWith(palette: Palette.custom.name, customHue: hue));
+  }
+
+  /// "https://notes.example.com/api/" → "notes.example.com/api"
+  static String _shortUrl(String url) {
+    var s = url.replaceFirst(RegExp(r'^https?://'), '').replaceFirst(RegExp(r'/+$'), '');
+    if (s.length > 30) s = '${s.substring(0, 29)}…';
+    return s;
+  }
+
+  static Future<void> _editServer(BuildContext context) async {
+    final store = AppStore.instance;
+    final url = await showTextInputDialog(
+      context,
+      title: 'Study Server',
+      initial: store.prefs.aiServerUrl,
+      hint: 'https://your-site.com',
+      allowEmpty: true,
+      plainText: true,
+    );
+    if (url == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (url.isNotEmpty && !StudyAi.isValidUrl(url)) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('Enter the full address, starting with http:// or https://.'),
+        ));
+      return;
+    }
+    store.updatePrefs(store.prefs.copyWith(aiServerUrl: url));
+    if (url.isEmpty) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Checking the server…')));
+    final ok = await StudyAi.ping(url);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(ok
+            ? 'Connected to the study server.'
+            : "Saved, but no study server answered there. Check the "
+                'address and that the server is running.'),
+        showCloseIcon: true,
+      ));
+  }
+
+  static Future<void> _editToken(BuildContext context) async {
+    final store = AppStore.instance;
+    final token = await showTextInputDialog(
+      context,
+      title: 'App Token',
+      initial: store.prefs.aiToken,
+      hint: "The APP_TOKEN from the server's .env",
+      allowEmpty: true,
+      plainText: true,
+    );
+    if (token == null) return;
+    store.updatePrefs(store.prefs.copyWith(aiToken: token));
   }
 
   static Future<void> _editName(BuildContext context) async {

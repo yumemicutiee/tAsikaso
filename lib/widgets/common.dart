@@ -292,6 +292,36 @@ class AccentButton extends StatelessWidget {
   }
 }
 
+/// A key concept: the term in bold with its explanation under it.
+class ConceptTile extends StatelessWidget {
+  const ConceptTile({super.key, required this.term, required this.explanation});
+
+  final String term;
+  final String explanation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 11),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(term, style: AppText.itemTitle.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 3),
+          Text(explanation, style: AppText.statLabel.copyWith(height: 1.4)),
+        ],
+      ),
+    );
+  }
+}
+
 /// Title used at the top of bottom sheets.
 class SheetTitle extends StatelessWidget {
   const SheetTitle(this.text, {super.key, this.subtitle});

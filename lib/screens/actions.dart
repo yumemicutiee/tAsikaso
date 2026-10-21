@@ -1,13 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
 import '../data/app_store.dart';
 import '../data/pomodoro_controller.dart';
 import '../models/models.dart';
+import '../services/scan_service.dart';
+import '../services/study_ai.dart';
+import '../utils/card_suggestions.dart';
 import '../utils/format.dart';
+import '../utils/quiz_builder.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/list_items.dart';
 import 'capture/notes_pdf.dart';
+import 'flashcards/quiz_screen.dart';
 import 'flashcards/set_screen.dart';
 import 'flashcards/study_cards_screen.dart';
 import 'folder_screen.dart';
@@ -95,9 +101,194 @@ void studySet(BuildContext context, FlashcardSet deck, {bool? dueOnly}) {
   );
 }
 
+/// Opens a quiz on [deck]: the one it already has, or a new one. With
+/// [fresh], a new one is written even if the set has a quiz.
+Future<void> quizSet(BuildContext context, FlashcardSet deck,
+    {bool fresh = false}) async {
+  if (deck.cards.length < 2) {
+    _toast(context, 'Add at least two cards first.');
+    return;
+  }
+  // Questions about cards that were deleted since are left out.
+  final ids = {for (final c in deck.cards) c.id};
+  var questions = fresh
+      ? const <QuizQuestion>[]
+      : [
+          for (final q in deck.quiz)
+            if (q.cardId == null || ids.contains(q.cardId)) q,
+        ];
+  if (questions.isEmpty) {
+    final made = await makeQuiz(context, deck);
+    if (made == null) return;
+    questions = made;
+  }
+  if (!context.mounted) return;
+  Navigator.of(context).push(
+    MaterialPageRoute(
+        builder: (_) => QuizScreen(setId: deck.id, questions: questions)),
+  );
+}
+
+/// Writes a new quiz for [deck] — by the study server when it's on, else
+/// from the cards themselves — keeps it on the set, and returns it. Null if
+/// none could be made.
+Future<List<QuizQuestion>?> makeQuiz(
+    BuildContext context, FlashcardSet deck) async {
+  var questions = const <QuizQuestion>[];
+  String? problem;
+  if (StudyAi.isOn) {
+    try {
+      questions = await runWithProgress(
+        context,
+        'Writing your quiz…',
+        () => StudyAi.makeQuiz(
+            title: deck.title, cards: deck.cards, concepts: deck.concepts),
+      );
+    } on StudyAiException catch (e) {
+      problem = e.message;
+    } catch (e) {
+      debugPrint('Quiz from the study server failed: $e');
+      problem = "The study server's answer couldn't be read.";
+    }
+  }
+  if (questions.isEmpty) questions = buildLocalQuiz(deck.cards);
+  if (!context.mounted) return null;
+  if (questions.isEmpty) {
+    _toast(context, "A quiz couldn't be made from these cards.");
+    return null;
+  }
+  final current = _store.setById(deck.id);
+  if (current != null) _store.updateSet(current.copyWith(quiz: questions));
+  if (problem != null) {
+    _toast(context, '$problem The quiz was made from your cards instead.');
+  }
+  return questions;
+}
+
+/// Cards for an existing set from the text of its photos: the study server
+/// writes them (with key concepts and a quiz) when it's on; otherwise
+/// they're suggested from the text for the user to add or skip.
+Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
+  final ai = StudyAi.isOn;
+  String text = deck.sourceText;
+  StudyKit? kit;
+  String? problem;
+  try {
+    await runWithProgress(
+      context,
+      ai ? 'Making your flashcards…' : 'Reading your photos…',
+      () async {
+        if (text.trim().isEmpty && deck.photoCount > 0) {
+          final photos = <Uint8List>[];
+          for (var i = 0; i < deck.photoCount; i++) {
+            final bytes = await _store.readSetPhoto(deck, i);
+            if (bytes != null) photos.add(bytes);
+          }
+          text = await ScanService.readText(photos);
+        }
+        if (ai && text.trim().isNotEmpty) {
+          kit = await StudyAi.makeStudyKit(text: text, title: deck.title);
+        }
+      },
+    );
+  } on StudyAiException catch (e) {
+    problem = e.message;
+  } catch (e) {
+    debugPrint('Making cards failed: $e');
+    problem = "Couldn't make cards. Please try again.";
+  }
+  if (!context.mounted) return;
+  if (text.trim().isEmpty) {
+    _toast(context, 'No text could be read from the photos.');
+    return;
+  }
+  final current = _store.setById(deck.id);
+  if (current == null) return;
+  final fronts = {
+    for (final c in current.cards) c.front.trim().toLowerCase(),
+    for (final c in current.suggestions) c.front.trim().toLowerCase(),
+  };
+
+  if (kit case final kit?) {
+    final fresh = [
+      for (final c in kit.cards)
+        if (fronts.add(c.front.trim().toLowerCase())) c,
+    ];
+    _store.updateSet(current.copyWith(
+      cards: [...current.cards, ...fresh],
+      sourceText: text,
+      summary: kit.summary,
+      concepts: kit.concepts,
+      quiz: kit.quiz,
+    ));
+    _toast(context,
+        fresh.isEmpty ? 'No new cards to add.' : '${plural(fresh.length, 'card')} added.');
+    return;
+  }
+
+  final fresh = [
+    for (final c in suggestCards(text))
+      if (fronts.add(c.front.trim().toLowerCase())) c,
+  ];
+  _store.updateSet(current.copyWith(
+    suggestions: [...current.suggestions, ...fresh],
+    sourceText: text,
+  ));
+  final made = fresh.isEmpty
+      ? 'No cards were found in the text.'
+      : '${plural(fresh.length, 'card')} suggested from the text.';
+  _toast(context, problem == null ? made : '$problem $made');
+}
+
+/// A new flashcard set from a note's text, in the note's folder.
+Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
+  final text = note.displayText;
+  if (text.trim().isEmpty) {
+    _toast(context, 'This note has no text to make cards from.');
+    return;
+  }
+  StudyKit? kit;
+  String? problem;
+  if (StudyAi.isOn) {
+    try {
+      kit = await runWithProgress(
+        context,
+        'Making your flashcards…',
+        () => StudyAi.makeStudyKit(text: text, title: note.title),
+      );
+    } on StudyAiException catch (e) {
+      problem = e.message;
+    } catch (e) {
+      debugPrint('Cards from the study server failed: $e');
+      problem = "The study server's answer couldn't be read.";
+    }
+  }
+  if (!context.mounted) return;
+  final suggestions = kit == null ? suggestCards(text) : const <Flashcard>[];
+  final deck = await _store.addSet(
+    title: note.title,
+    folderId: note.folderId,
+    cards: kit?.cards ?? const [],
+    suggestions: suggestions,
+    sourceText: note.text.isNotEmpty ? note.text : text,
+    summary: kit?.summary ?? note.summary,
+    concepts: kit?.concepts ?? note.concepts,
+    quiz: kit?.quiz ?? const [],
+  );
+  if (!context.mounted) return;
+  openSet(context, deck);
+  final made = kit != null
+      ? '${plural(kit.cards.length, 'card')} made from "${note.title}".'
+      : suggestions.isEmpty
+          ? 'No cards were found in the text; write your own.'
+          : '${plural(suggestions.length, 'card')} suggested from the text.';
+  _toast(context, problem == null ? made : '$problem $made');
+}
+
 /// [onDeleted] runs after the set is deleted (e.g. to close its screen).
 MenuActions setActions(BuildContext context, FlashcardSet deck, {VoidCallback? onDeleted}) => {
       'Study': () => studySet(context, deck),
+      'Quiz': () => quizSet(context, deck),
       'Rename': () async {
         final name = await showTextInputDialog(context,
             title: 'Rename Set', initial: deck.title);
