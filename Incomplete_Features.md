@@ -22,7 +22,7 @@ Status key: 🔴 blocks a feature · 🟠 feature works but is incomplete · �
 | 1.1 | **Payments (Google Play Billing) for tAsikaso+** | 🔴 | `plans_screen.dart` "Start Free Trial" only shows "coming soon"; debug builds have "Turn On Plus for Testing". No `in_app_purchase`, no receipt check, no restore. |
 | 1.2 | **Plus limits are not enforced** | 🟠 | Month/Year analysis, "unlimited suggested cards", backup are all free today. Only app colours check `isPlus`. Decide the rules, then gate in `AppStore`/screens. |
 | 1.3 | **Smart Study is not part of any plan** | 🟠 | Anyone with the server address + token gets Claude at the owner's cost. Needs a plan rule (Plus only / N scans a day) and, really, user accounts on the server (see 3.1). |
-| 1.4 | **Automatic sync between devices** | 🔴 | Only the manual backup ZIP via the share sheet. Google Drive app-folder sync (needs an OAuth client) is still the plan. |
+| 1.4 | **Automatic sync between devices (Google Drive)** | 🟠 built 21 Oct, not yet usable | `lib/services/drive_sync.dart`: sign in with Google, incremental upload to Drive's app folder, restore on a new phone, auto-sync after changes and on backgrounding. **Blocked on setup only:** the OAuth client in Google Cloud (Android: package + SHA‑1 of the upload key; Web: client id as the `GOOGLE_CLIENT_ID` repo variable) and the two signing secrets in GitHub. Until then "Sign in with Google" shows the "OAuth client is missing" message. Also untested on a device/with a real Google account; conflicts are last-upload-wins (no merge). |
 | 1.5 | **iOS build** | 🔴 | No `ios/` project generated or tested. Google's document scanner is Android-only (the app's own camera + auto-crop would be used); OCR exists on iOS but is untested; `AppDelegate.swift` needs the notification delegate (README). |
 | 1.6 | **Accounts / sign-in** | 🟡 | None. Everything is per device. Needed for billing, sync and server quotas. |
 | 1.7 | **Other languages for the UI** | 🟡 | UI strings are English only; notes themselves can be Filipino/Taglish (Claude keeps the language). |
@@ -116,6 +116,15 @@ Run `docs/phone-test-checklist.md` on an Android phone with the study server run
 - No test for the save flow's "no text → Text PDF refused" path.
 - Server: no test of `claude.ts` (see 3.3); `normalize.ts` and routes are covered.
 - The browser run-through is `tool/web_qa.py` (Python + Playwright, uses the installed Chrome): serve `build/web` on :8080, run the study server on :8787, then `python tool/web_qa.py`. It isn't wired into CI.
+
+## 9b. Google Drive sync — what's left (added 21 Oct, evening)
+
+- Create the Google Cloud OAuth clients (README → "Google Drive sync") and add the GitHub secrets/variables; then test sign-in on a phone and on the Pages site.
+- Sync is last-upload-wins per file: two phones editing at the same time overwrite each other's `data.json` (notes/photos are never lost, only the small data). A merge would need per-record timestamps.
+- Large libraries upload each file once, but a restore downloads everything in one go with no progress bar.
+- Web sessions: after the access token expires (~1 h) the next sync says "sign in again"; a silent refresh on the web isn't wired.
+- iOS needs the reversed client id in `Info.plist` once an iOS build exists.
+- `Delete All Data` forgets the Google account on purpose (so the Drive copy survives); the Settings dialog says so.
 
 ## 10. Suggested order of work
 

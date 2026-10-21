@@ -34,6 +34,10 @@ class AppStore extends ChangeNotifier {
 
   static final AppStore instance = AppStore._();
 
+  /// Called after [eraseEverything] (Google Drive sync forgets the
+  /// account, so the copy on Drive isn't wiped too).
+  static void Function()? onEraseEverything;
+
   /// Version of the save file this app writes. Files from a newer version are
   /// never overwritten.
   static const _dataVersion = 1;
@@ -265,7 +269,7 @@ class AppStore extends ChangeNotifier {
   Future<bool> eraseEverything() async {
     final device = _paused ?? _storage;
     var clean = true;
-    for (final prefix in ['notes/', 'sets/', 'backup/', _recoveryPrefix]) {
+    for (final prefix in ['notes/', 'sets/', 'backup/', 'drive/', _recoveryPrefix]) {
       if (!await _tryDeletePrefix(prefix, from: device)) clean = false;
     }
     // The save file itself, and copies kept by older versions.
@@ -288,6 +292,7 @@ class AppStore extends ChangeNotifier {
     );
     _persist();
     notifyListeners();
+    onEraseEverything?.call();
     return clean;
   }
 
@@ -965,9 +970,34 @@ class AppStore extends ChangeNotifier {
   /// is changed in that case.
   Future<void> restoreBackup(Uint8List zip) async {
     final contents = unpackBackup(zip);
+    await restoreFrom(json: contents.json, files: contents.files);
+  }
+
+  /// Everything small, as the JSON that is saved, backed up and synced.
+  String exportJson() => jsonEncode(_toJson());
+
+  /// Keys of every PDF, photo and thumbnail on this device.
+  Future<List<String>> dataFileKeys() async =>
+      [...await _files.list('notes/'), ...await _files.list('sets/')];
+
+  Future<Uint8List?> readFile(String key) => _files.readBytes(key);
+
+  /// Files the app keeps for itself (sync state), apart from the user's data.
+  Future<Uint8List?> readAppFile(String key) => _storage.readBytes(key);
+
+  Future<void> writeAppFile(String key, Uint8List bytes) =>
+      _storage.writeBytes(key, bytes);
+
+  /// Replaces everything on this device with [json] and [files] (from a
+  /// backup file or Google Drive). Throws a [FormatException] if the data
+  /// can't be used; nothing is changed in that case.
+  Future<void> restoreFrom({
+    required String json,
+    required Map<String, Uint8List> files,
+  }) async {
     final Object? decoded;
     try {
-      decoded = jsonDecode(contents.json);
+      decoded = jsonDecode(json);
     } catch (_) {
       throw const FormatException("This backup's data can't be read.");
     }
@@ -988,10 +1018,12 @@ class AppStore extends ChangeNotifier {
     for (final prefix in ['notes/', 'sets/']) {
       await _tryDeletePrefix(prefix, from: device);
     }
-    for (final entry in contents.files.entries) {
-      await device.writeBytes(entry.key, entry.value);
+    for (final entry in files.entries) {
+      if (entry.key.startsWith('notes/') || entry.key.startsWith('sets/')) {
+        await device.writeBytes(entry.key, entry.value);
+      }
     }
-    await device.writeJson(contents.json);
+    await device.writeJson(json);
     _paused = null;
     await init(device);
   }

@@ -5,6 +5,7 @@ import 'app.dart';
 import 'data/app_store.dart';
 import 'data/pomodoro_controller.dart';
 import 'data/storage/local_storage.dart';
+import 'services/drive_sync.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
@@ -17,6 +18,8 @@ Future<void> main() async {
   runApp(const StudyApp());
 
   // After the first frame so start-up isn't slowed down.
+  // Google Drive sync signs the user back in quietly and watches for changes.
+  DriveSync.instance.init();
   await NotificationService.init();
   final prefs = store.prefs;
   await NotificationService.setDailyReminder(

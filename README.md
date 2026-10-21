@@ -7,11 +7,17 @@ lecture-note capture → PDF or flashcards.
 - **Saved on the phone:** folders, notes (PDFs), flashcards, tasks, settings
   and stats are stored in the app's documents folder and survive restarts.
   On the web they are saved in the browser (IndexedDB).
-- **Backup & restore:** Profile → Backup & Sync (or Settings → Your Data)
-  makes one `.zip` with everything in it and opens the share sheet, so it can
-  go to Google Drive or anywhere else; on the web it downloads. Restore from
-  Backup picks the file and replaces everything on the device. Automatic
-  sync isn't built yet.
+- **Google Drive sync:** Profile → Backup & Sync → **Sign in with Google**.
+  Everything (folders, notes, flashcards, tasks, statistics, settings) is
+  kept in a private folder of the user's own Google Drive that only this
+  app can see, uploaded a little after each change and when the app goes to
+  the background; only new files are sent. On a new phone, signing in
+  offers to restore it all. Sign Out and Delete All Data leave the copy on
+  Drive alone. Needs the app's Google OAuth client (see "Google Drive sync"
+  under Run it).
+- **Backup file:** the same screen also makes one `.zip` with everything in
+  it and opens the share sheet (downloads on the web), and Restore from
+  Backup picks such a file and replaces everything on the device.
 - **Smart review (spaced repetition):** each card comes back after a growing
   gap when you know it (1, 3, 7, 14, 30… days) and tomorrow when you miss it.
   A set shows how many cards are due and offers to review just those, or all.
@@ -117,8 +123,8 @@ everything needed to study (timer, tasks, scanning to PDF, your own cards,
 search and copy, this week's analysis); Plus adds month/year analysis, app
 colours, unlimited suggested cards, and soon smart review and backup.
 
-**Not yet:** payments for tAsikaso+ (Google Play Billing) and automatic sync
-between devices. The plan limits shown on the plans page aren't enforced yet.
+**Not yet:** payments for tAsikaso+ (Google Play Billing). The plan limits
+shown on the plans page aren't enforced yet.
 Smart Study needs your own study server and Anthropic API key; it isn't
 part of the Plus plan yet, and nothing stops a user from switching it on
 once a server address is in the app.
@@ -188,6 +194,31 @@ at it in Settings → Smart Study, or bake the address and token in:
 ```bash
 flutter build apk --dart-define=STUDY_AI_URL=https://your-site.com --dart-define=STUDY_AI_TOKEN=the-APP_TOKEN
 ```
+
+**Google Drive sync.** Sign-in needs an OAuth client in *your* Google Cloud
+project (free), once:
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → New
+   project (e.g. "tAsikaso") → APIs & Services → **Enable** "Google Drive API".
+2. **OAuth consent screen**: External, app name tAsikaso, your email; add the
+   scope `.../auth/drive.appdata`; while the app is in *Testing*, add each
+   tester's Gmail under Test users (up to 100).
+3. **Credentials → Create credentials → OAuth client ID**:
+   - **Android**: package name `com.tasikaso.study_app`, SHA‑1 of the signing
+     key (`keytool -list -v -keystore android/upload-keystore.jks -alias upload`;
+     the key made on 21 Oct 2026 is `34:1D:FC:8F:E5:57:29:C3:A1:AC:C9:9C:C5:B5:11:E2:5A:02:66:3C`).
+     Nothing to paste into the app.
+   - **Web application**: Authorized JavaScript origins
+     `https://yumemicutiee.github.io` and `http://localhost:8080`. Copy the
+     client id into the build: `--dart-define=GOOGLE_CLIENT_ID=…` (GitHub:
+     repo variable `GOOGLE_CLIENT_ID`).
+
+Release builds must all carry the **same signing key**, or Google rejects
+the sign-in: `android/key.properties` + `android/upload-keystore.jks` (kept
+out of git) sign local builds; GitHub Actions signs with the secrets
+`ANDROID_KEYSTORE_BASE64` (contents of `android/upload-keystore.base64.txt`)
+and `ANDROID_KEYSTORE_PASSWORD` (from `key.properties`). Keep the keystore
+and its password safe: without them the app can't be updated later.
 
 **Android setup for notifications.** Timer alerts and the daily reminder use
 `flutter_local_notifications`, which needs two things in the generated

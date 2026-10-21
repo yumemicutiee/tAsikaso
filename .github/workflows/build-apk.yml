@@ -15,6 +15,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Release signing (Settings → Secrets and variables → Actions):
+      #   ANDROID_KEYSTORE_BASE64   the upload keystore, base64-encoded
+      #   ANDROID_KEYSTORE_PASSWORD its password
+      # Without them the APK is signed with a throw-away debug key, and
+      # Google sign-in (Drive sync) won't work in it.
+      HAS_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -53,10 +60,23 @@ jobs:
           flutter test 2>&1 | tee ci-logs/test.txt
         continue-on-error: true
 
+      - name: Release signing key (from the secrets, when set)
+        if: env.HAS_KEY == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
+          printf 'storeFile=../upload-keystore.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=upload\n' \
+            "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > android/key.properties
+
       - name: Build APK
         run: |
           set -o pipefail
-          flutter build apk --release 2>&1 | tee ci-logs/build.txt
+          flutter build apk --release \
+            --dart-define=STUDY_AI_URL="${{ vars.STUDY_AI_URL }}" \
+            --dart-define=STUDY_AI_TOKEN="${{ secrets.STUDY_AI_TOKEN }}" \
+            2>&1 | tee ci-logs/build.txt
 
       - name: Name the APK
         run: cp build/app/outputs/flutter-apk/app-release.apk tAsikaso.apk

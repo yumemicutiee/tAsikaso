@@ -5,3 +5,9 @@ build/
 .flutter-plugins-dependencies
 .idea/
 *.iml
+
+# Release signing: keep these private (losing the keystore means you can't
+# update the app on the Play Store later, so back it up somewhere safe).
+android/key.properties
+android/upload-keystore.jks
+android/upload-keystore.base64.txt

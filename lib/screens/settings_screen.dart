@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../data/app_store.dart';
 import '../data/pomodoro_controller.dart';
 import '../models/models.dart';
+import '../services/drive_sync.dart';
 import '../services/notification_service.dart';
 import '../services/scan_service.dart';
 import '../services/study_ai.dart';
@@ -503,7 +504,9 @@ class SettingsScreen extends StatelessWidget {
       context,
       title: 'Delete All Data?',
       message: 'Every folder, note, flashcard set, task and statistic will be '
-          'deleted from this device. This cannot be undone.',
+          'deleted from this device. This cannot be undone.'
+          '${DriveSync.instance.isSignedIn ? ' Your copy on Google Drive is '
+              'kept; sign in again to bring it back.' : ''}',
       confirmLabel: 'Delete Everything',
     );
     if (!sure) return;

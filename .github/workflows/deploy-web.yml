@@ -1,0 +1,62 @@
+# Publishes the web app to GitHub Pages on every push to main, at
+# https://<owner>.github.io/tAsikaso/. Turn Pages on once in the repo's
+# Settings → Pages → Source: "GitHub Actions" (the first run tries to do
+# this itself).
+#
+# Optional repo settings (Settings → Secrets and variables → Actions):
+#   variable GOOGLE_CLIENT_ID  the web OAuth client id for Google Drive sync
+#   variable STUDY_AI_URL      the study server's address
+#   secret   STUDY_AI_TOKEN    its app token
+name: Deploy web app to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build the web app
+        run: |
+          flutter build web --release --base-href /tAsikaso/ \
+            --dart-define=GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}" \
+            --dart-define=STUDY_AI_URL="${{ vars.STUDY_AI_URL }}" \
+            --dart-define=STUDY_AI_TOKEN="${{ secrets.STUDY_AI_TOKEN }}"
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
