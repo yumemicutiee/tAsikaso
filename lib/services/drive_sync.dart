@@ -38,7 +38,7 @@ class DriveSync extends ChangeNotifier {
   /// registered by package name and signing key. Another project's id can
   /// be built in with `--dart-define=GOOGLE_CLIENT_ID=…`.
   static const _defaultClientId =
-      '308120396420-bi7ag4e5qd7e2jsgpsiidlsti17qpvh8.apps.googleusercontent.com';
+      '308120396420-6n1da38mf6nok7j456s0mrmo859hbqda.apps.googleusercontent.com';
   static const _definedClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
   static String get clientId =>
       _definedClientId.isEmpty ? _defaultClientId : _definedClientId;

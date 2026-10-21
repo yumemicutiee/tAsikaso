@@ -211,10 +211,12 @@ project (free), once:
    - **Web application**: Authorized JavaScript origins
      `https://yumemicutiee.github.io` and `http://localhost:8080`. Its client
      id is built into the app (`DriveSync.clientId`, currently
-     `308120396420-…qpvh8.apps.googleusercontent.com`) and is also the
-     "server client id" the Android sign-in library needs. Another project's
-     id can be used with `--dart-define=GOOGLE_CLIENT_ID=…` (GitHub: repo
-     variable `GOOGLE_CLIENT_ID`).
+     `308120396420-…hbqda.apps.googleusercontent.com`) and is also the
+     "server client id" the Android sign-in library needs. Its client
+     *secret* is never used or stored: the app only asks Google for access
+     tokens. Another project's id can be used with
+     `--dart-define=GOOGLE_CLIENT_ID=…` (GitHub: repo variable
+     `GOOGLE_CLIENT_ID`).
 
    Both clients must be in the same Google Cloud project. Without the
    Android one, the Android app's sign-in fails with a configuration error.
