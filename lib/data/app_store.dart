@@ -36,8 +36,9 @@ class AppStore extends ChangeNotifier {
 
   static final AppStore instance = AppStore._();
 
-  /// Called after [eraseEverything] (Google Drive sync forgets the
-  /// account, so the copy on Drive isn't wiped too).
+  /// Called when [eraseEverything] starts, before anything is deleted
+  /// (Google Drive sync forgets the account, so the copy on Drive isn't
+  /// wiped too, not even by a sync that is running).
   static void Function()? onEraseEverything;
 
   /// Version of the save file this app writes. Files from a newer version are
@@ -58,6 +59,12 @@ class AppStore extends ChangeNotifier {
 
   /// Where PDFs, photos and thumbnails are read from.
   LocalStorage get _files => _paused ?? _storage;
+
+  /// The file at [key]: one added since saving was paused (kept in memory
+  /// with the rest of this session's changes), else the one on the device.
+  Future<Uint8List?> _readFile(String key) async =>
+      (_paused == null ? null : await _storage.readBytes(key)) ??
+      await _files.readBytes(key);
 
   /// False on web (for now) and in tests: data lasts until the app closes.
   /// Also false on a phone when saving was paused because the saved data
@@ -132,7 +139,11 @@ class AppStore extends ChangeNotifier {
   /// Saved data is never replaced with sample data. If it can't be read, a
   /// copy is kept, the last copy that worked is tried, and [problem] tells
   /// the user what happened.
-  Future<void> init(LocalStorage storage) async {
+  Future<void> init(LocalStorage storage) => _init(storage);
+
+  /// [init]; [checkPlan] is false for [restoreFrom], whose data carries a
+  /// plan that isn't this device's: it mustn't end one, or say it ended.
+  Future<void> _init(LocalStorage storage, {bool checkPlan = true}) async {
     _storage = storage;
     _paused = null;
     _saveFailed = false;
@@ -206,7 +217,7 @@ class AppStore extends ChangeNotifier {
     }
     await _loadThumbnails(storage);
     await _loadProfilePhoto(storage);
-    checkPlanEnded();
+    if (checkPlan) checkPlanEnded();
     notifyListeners();
   }
 
@@ -303,6 +314,7 @@ class AppStore extends ChangeNotifier {
   /// clean slate, and that removes the file that couldn't be read, so
   /// saving starts again. Returns false if some files couldn't be deleted.
   Future<bool> eraseEverything() async {
+    onEraseEverything?.call();
     final device = _paused ?? _storage;
     var clean = true;
     for (final prefix in [
@@ -338,7 +350,6 @@ class AppStore extends ChangeNotifier {
     _suggestedLog.addAll(suggested);
     _persist();
     notifyListeners();
-    onEraseEverything?.call();
     return clean;
   }
 
@@ -628,7 +639,7 @@ class AppStore extends ChangeNotifier {
 
   Uint8List? thumbnail(String noteId) => _thumbs[noteId];
 
-  Future<Uint8List?> readPdf(Note note) => _files.readBytes(note.pdfKey);
+  Future<Uint8List?> readPdf(Note note) => _readFile(note.pdfKey);
 
   Future<Note> addNote({
     required String title,
@@ -759,8 +770,10 @@ class AppStore extends ChangeNotifier {
         if (c.id == cardId)
           c.scheduled(
             interval: nextInterval(c.interval, knewIt: knewIt),
-            due: today.add(
-                Duration(days: nextInterval(c.interval, knewIt: knewIt))),
+            // Calendar days, not 24-hour steps: across a daylight-saving
+            // change those land an hour off midnight, a day early or late.
+            due: DateTime(today.year, today.month,
+                today.day + nextInterval(c.interval, knewIt: knewIt)),
           )
         else
           c,
@@ -786,7 +799,7 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<Uint8List?> readSetPhoto(FlashcardSet deck, int index) =>
-      _files.readBytes(deck.photoKey(index));
+      _readFile(deck.photoKey(index));
 
   // ---- Tasks -----------------------------------------------------------------
 
@@ -1060,7 +1073,8 @@ class AppStore extends ChangeNotifier {
 
   /// Replaces everything on this device with [json] and [files] (from a
   /// backup file or Google Drive). Throws a [FormatException] if the data
-  /// can't be used; nothing is changed in that case.
+  /// can't be used, or the storage error if the files can't be written
+  /// (e.g. the device is full); nothing is changed in either case.
   Future<void> restoreFrom({
     required String json,
     required Map<String, Uint8List> files,
@@ -1092,22 +1106,48 @@ class AppStore extends ChangeNotifier {
 
     // A restore is a clean slate, so it also ends a paused state (the
     // unreadable file is replaced).
-    final device = _paused ?? _storage;
-    await pendingSaves; // no older save may land on top of the restore
-    for (final prefix in ['notes/', 'sets/', 'profile/']) {
-      await _tryDeletePrefix(prefix, from: device);
-    }
-    for (final entry in files.entries) {
-      final key = entry.key;
-      if (key.startsWith('notes/') ||
-          key.startsWith('sets/') ||
-          key.startsWith('profile/')) {
-        await device.writeBytes(key, entry.value);
+    final (paused, storage) = (_paused, _storage);
+    final device = paused ?? storage;
+    // The data being replaced isn't saved any more: a save of it landing
+    // on top of the restore's own write would bring it back (or, written at
+    // the same moment, garble the file).
+    _pauseSaving();
+    final old = <String>{};
+    final written = <String>{};
+    try {
+      await pendingSaves; // no older save may land on top of the restore
+      for (final prefix in ['notes/', 'sets/', 'profile/']) {
+        old.addAll(await device.list(prefix));
       }
+      // The backup's files go in before this device's own are removed, so
+      // if the device runs out of space halfway, its data keeps its files.
+      for (final entry in files.entries) {
+        final key = entry.key;
+        if ((key.startsWith('notes/') ||
+                key.startsWith('sets/') ||
+                key.startsWith('profile/')) &&
+            !key.contains('..')) {
+          await device.writeBytes(key, entry.value);
+          written.add(key);
+        }
+      }
+      await device.writeJson(json);
+    } catch (_) {
+      // Back as it was: without the backup's extra files, saving again
+      // (changes made meanwhile included).
+      for (final key in written.difference(old)) {
+        await _tryDelete(key, from: device);
+      }
+      _paused = paused;
+      _storage = storage;
+      _persist();
+      rethrow;
     }
-    await device.writeJson(json);
+    for (final key in old.difference(written)) {
+      await _tryDelete(key, from: device); // not in the backup
+    }
     _paused = null;
-    await init(device);
+    await _init(device, checkPlan: false);
 
     // A server set up on this device wins; a new phone with none takes the
     // backup's address (not a secret) so Smart Study keeps working, plus

@@ -116,6 +116,55 @@ export class FakeAnthropic {
     return new Anthropic({ apiKey: "sk-ant-fake", baseURL: this.url, maxRetries: 0 });
   }
 
+  /**
+   * Like [client], and `received(type)` resolves once the SDK has been handed
+   * the whole event [type] of a streamed reply (e.g. "message_start") and has
+   * taken it in, so a test can act after it on purpose instead of after a
+   * guessed delay. (The SDK parses on promise callbacks, which have all run
+   * by the time a setImmediate fires.)
+   */
+  watchedClient(): { client: Anthropic; received: (type: string) => Promise<void> } {
+    let text = "";
+    let waiters: Array<{ type: string; resolve: () => void }> = [];
+    const has = (type: string) => {
+      const at = text.indexOf(`event: ${type}\n`);
+      return at >= 0 && text.indexOf("\n\n", at) >= 0;
+    };
+    const check = () => {
+      const pending = waiters;
+      waiters = [];
+      for (const w of pending) {
+        if (has(w.type)) setImmediate(w.resolve);
+        else waiters.push(w);
+      }
+    };
+    const watched: typeof fetch = async (input, init) => {
+      const res = await fetch(input, init);
+      if (!res.body) return res;
+      text = "";
+      const decoder = new TextDecoder();
+      const body = res.body.pipeThrough(
+        new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            // Handed on first, so the SDK has these bytes before anyone is told.
+            controller.enqueue(chunk);
+            text += decoder.decode(chunk, { stream: true });
+            check();
+          },
+        }),
+      );
+      return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+    };
+    return {
+      client: new Anthropic({ apiKey: "sk-ant-fake", baseURL: this.url, maxRetries: 0, fetch: watched }),
+      received: (type) =>
+        new Promise<void>((resolve) => {
+          waiters.push({ type, resolve });
+          check();
+        }),
+    };
+  }
+
   /** Resolves once a request has been abandoned by its client. */
   nextAbort(): Promise<void> {
     return new Promise((resolve) => this.abortWaiters.push(resolve));

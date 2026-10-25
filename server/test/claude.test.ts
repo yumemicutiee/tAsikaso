@@ -235,10 +235,13 @@ test("Anthropic overloaded (529) and a mid-stream overload are 'busy' (503)", as
 
 test("end to end: the app hanging up closes the server's stream to Anthropic", async () => {
   const logs: Array<Record<string, unknown>> = [];
+  const watched = fake.watchedClient();
   const app = createApp({
     appToken: "t",
     log: (level, msg, fields) => logs.push({ level, msg, ...fields }),
-    generators: { studyKit: (input, call) => generateStudyKit(input, { ...call, client }) },
+    generators: {
+      studyKit: (input, call) => generateStudyKit(input, { ...call, client: watched.client }),
+    },
   });
   const server = await new Promise<Server>((resolve) => {
     const s = app.listen(0, "127.0.0.1", () => resolve(s));
@@ -247,6 +250,7 @@ test("end to end: the app hanging up closes the server's stream to Anthropic", a
     const { port } = server.address() as AddressInfo;
     fake.reply({ sse: messageEvents({ content: [], inputTokens: 2000 }).slice(0, 1), hang: true });
     const anthropicClosed = fake.nextAbort();
+    const started = watched.received("message_start");
     const controller = new AbortController();
     const pending = fetch(`http://127.0.0.1:${port}/v1/study-kit`, {
       method: "POST",
@@ -254,7 +258,10 @@ test("end to end: the app hanging up closes the server's stream to Anthropic", a
       body: JSON.stringify({ text: NOTES }),
       signal: controller.signal,
     });
-    setTimeout(() => controller.abort(), 150);
+    // Hang up once the server's stream has Claude's first event (its input
+    // tokens), like an app giving up while Claude thinks.
+    await started;
+    controller.abort();
     await assert.rejects(pending);
     await anthropicClosed;
     for (let i = 0; i < 100 && !logs.some((l) => l.requestId === "gone"); i++) {
@@ -273,10 +280,13 @@ test("end to end: the app hanging up closes the server's stream to Anthropic", a
 test("aborting stops the HTTP call to Anthropic and estimates what it cost", async () => {
   // The fake sends message_start and then keeps the stream open, like Claude thinking.
   fake.reply({ sse: messageEvents({ content: [], inputTokens: 3000 }).slice(0, 1), hang: true });
+  const watched = fake.watchedClient();
   const controller = new AbortController();
   const aborted = fake.nextAbort();
-  const pending = generateStudyKit({ text: NOTES }, { client, signal: controller.signal });
-  setTimeout(() => controller.abort(), 100);
+  const started = watched.received("message_start");
+  const pending = generateStudyKit({ text: NOTES }, { client: watched.client, signal: controller.signal });
+  await started;
+  controller.abort();
   const err = await pending.catch((e: unknown) => e);
   assert.ok(err instanceof ClientGoneError, String(err));
   assert.equal(err.usage?.estimated, true);

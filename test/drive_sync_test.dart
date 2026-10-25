@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -7,6 +8,7 @@ import 'package:image/image.dart' as img;
 
 import 'package:study_app/data/app_store.dart';
 import 'package:study_app/data/plans.dart';
+import 'package:study_app/data/storage/local_storage_memory.dart';
 import 'package:study_app/screens/backup_screen.dart';
 import 'package:study_app/screens/profile_screen.dart';
 import 'package:study_app/services/drive_store.dart';
@@ -235,6 +237,145 @@ void main() {
     expect(await sync.syncNow(), 'Sign in with Google first.');
   });
 
+  test('a change made during an upload is still to be synced', () async {
+    final gated = _GatedDriveStore();
+    DriveSync.debugStore = gated;
+    await sync.debugSignIn();
+    expect(await sync.syncNow(), isNull);
+
+    store.updatePrefs(store.prefs.copyWith(userName: 'Ana'));
+    gated.gate = Completer<void>();
+    final uploading = sync.syncNow();
+    await pumpEventQueue(); // waiting on Drive
+    store.updatePrefs(store.prefs.copyWith(userName: 'Ben'));
+    gated.gate!.complete();
+    expect(await uploading, isNull);
+    expect(utf8.decode(gated.byName['data.json']!), contains('Ana'));
+    expect(sync.hasUnsyncedChanges, isTrue, reason: 'Ben is not on Drive yet');
+
+    gated.gate = null;
+    expect(await sync.syncNow(), isNull);
+    expect(utf8.decode(gated.byName['data.json']!), contains('Ben'));
+    expect(sync.hasUnsyncedChanges, isFalse);
+  });
+
+  test('a restore asked for during an upload waits for it, then restores',
+      () async {
+    final gated = _GatedDriveStore();
+    DriveSync.debugStore = gated;
+    store.addFolder('On Drive', 0xFFA9CFF5);
+    await sync.debugSignIn();
+    expect(await sync.syncNow(), isNull);
+
+    // An automatic upload of a later change fails...
+    store.addFolder('Only Here', 0xFFA9CFF5);
+    gated
+      ..gate = Completer<void>()
+      ..failNext = true;
+    final uploading = sync.syncNow();
+    await pumpEventQueue();
+    // ...while the user taps Restore from Google Drive.
+    final restoring = sync.restoreFromDrive();
+    gated.gate!.complete();
+    expect(await uploading, isNotNull);
+    expect(await restoring, isNull);
+    expect(store.folders.any((f) => f.name == 'On Drive'), isTrue);
+    expect(store.folders.any((f) => f.name == 'Only Here'), isFalse);
+  });
+
+  test("an automatic sync on a device that never synced leaves Drive's data "
+      'alone until the user chooses', () async {
+    final folder = store.folders.first;
+    await store.addSet(title: 'From phone A', folderId: folder.id, photos: [bytes]);
+    await sync.debugSignIn();
+    expect(await sync.syncNow(), isNull);
+    final onDrive = Map.of(drive.byName);
+    final uploads = drive.uploads;
+
+    // Phone B signs in. A change there syncs by itself later (or when the
+    // app is hidden), before the user answers "Restore or Keep Mine?".
+    store.resetForTesting();
+    await sync.resetForTesting();
+    store.startPlan(PlusPlan.yearly);
+    await sync.debugSignIn();
+    store.updatePrefs(store.prefs.copyWith(userName: 'Ben'));
+    expect(await sync.syncNow(), isNotNull);
+    expect(drive.uploads, uploads);
+    expect(drive.deletes, 0);
+    expect(drive.byName.keys, onDrive.keys);
+
+    // Keep Mine replaces it, as asked.
+    expect(await sync.syncNow(interactive: true), isNull);
+    expect(utf8.decode(drive.byName['data.json']!), contains('Ben'));
+    // From then on syncing is automatic again.
+    store.updatePrefs(store.prefs.copyWith(userName: 'Ben B'));
+    expect(await sync.syncNow(), isNull);
+    expect(utf8.decode(drive.byName['data.json']!), contains('Ben B'));
+  });
+
+  test('a sync running during Delete All Data leaves the copy on Drive',
+      () async {
+    final storage = _GatedStorage();
+    await store.init(storage);
+    store.startPlan(PlusPlan.yearly);
+    await store.addNote(
+      title: 'Cells',
+      folderId: store.folders.first.id,
+      pdf: bytes,
+      thumbnail: bytes,
+      pageCount: 1,
+    );
+    await sync.debugSignIn();
+    expect(await sync.syncNow(), isNull);
+    final onDrive = drive.byName.keys.toSet();
+    expect(onDrive.where((n) => n.startsWith('notes__')).length, 2);
+
+    // A change starts an upload, which is about to list this device's
+    // files...
+    store.updatePrefs(store.prefs.copyWith(userName: 'Ana'));
+    storage.listGate = Completer<void>();
+    final uploading = sync.syncNow();
+    await pumpEventQueue();
+    // ...when Delete All Data has removed the notes but not the rest yet.
+    storage.deleteGate = Completer<void>();
+    final erasing = store.eraseEverything();
+    await pumpEventQueue();
+    storage.listGate!.complete();
+    await uploading;
+    storage.deleteGate!.complete();
+    await erasing;
+
+    expect(drive.deletes, 0);
+    expect(drive.byName.keys.toSet(), containsAll(onDrive));
+    expect(sync.isSignedIn, isFalse);
+  });
+
+  test("an upload that stops halfway doesn't leave data.json naming files "
+      'that are not on Drive', () async {
+    final gated = _GatedDriveStore();
+    DriveSync.debugStore = gated;
+    await sync.debugSignIn();
+    expect(await sync.syncNow(), isNull);
+    final before = utf8.decode(gated.byName['data.json']!);
+
+    final note = await store.addNote(
+      title: 'Cells',
+      folderId: store.folders.first.id,
+      pdf: bytes,
+      thumbnail: bytes,
+      pageCount: 1,
+    );
+    gated.fileUploadsLeft = 1; // the connection drops after the PDF
+    expect(await sync.syncNow(), isNotNull);
+    expect(utf8.decode(gated.byName['data.json']!), before);
+
+    gated.fileUploadsLeft = null;
+    expect(await sync.syncNow(), isNull);
+    expect(utf8.decode(gated.byName['data.json']!), contains(note.id));
+    expect(gated.byName.keys,
+        containsAll(['notes__${note.id}.pdf', 'notes__${note.id}.jpg']));
+  });
+
   testWidgets('Backup & Sync: sign in, first sync, status', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
@@ -256,4 +397,49 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Sign in with Google'), findsOneWidget);
   });
+}
+
+/// Drive whose `data.json` uploads wait for [gate] while it is set, and
+/// fail once after [failNext]; other files fail once [fileUploadsLeft]
+/// (no limit while null) is used up.
+class _GatedDriveStore extends MemoryDriveStore {
+  Completer<void>? gate;
+  bool failNext = false;
+  int? fileUploadsLeft;
+
+  @override
+  Future<RemoteFile> upload(String name, Uint8List bytes,
+      {String? replaceId}) async {
+    if (name == DriveSync.dataName) {
+      await gate?.future;
+      if (failNext) {
+        failNext = false;
+        throw Exception('Connection reset');
+      }
+    } else if (fileUploadsLeft case final left?) {
+      if (left <= 0) throw Exception('Connection reset');
+      fileUploadsLeft = left - 1;
+    }
+    return super.upload(name, bytes, replaceId: replaceId);
+  }
+}
+
+/// Device storage on which listing `notes/` waits for [listGate] and
+/// removing `sets/` for [deleteGate] while they are set, so a sync and
+/// Delete All Data can be caught halfway.
+class _GatedStorage extends MemoryStorage {
+  Completer<void>? listGate;
+  Completer<void>? deleteGate;
+
+  @override
+  Future<List<String>> list(String prefix) async {
+    if (prefix == 'notes/') await listGate?.future;
+    return super.list(prefix);
+  }
+
+  @override
+  Future<void> deletePrefix(String prefix) async {
+    if (prefix == 'sets/') await deleteGate?.future;
+    await super.deletePrefix(prefix);
+  }
 }

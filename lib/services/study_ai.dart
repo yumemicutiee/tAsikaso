@@ -145,6 +145,12 @@ class StudyAi {
   /// Making a study kit at high effort can take a couple of minutes.
   static const timeout = Duration(minutes: 3);
 
+  /// The study server refuses notes shorter than this...
+  static const minTextLength = 20;
+
+  /// ...and quizzes on more cards than this.
+  static const maxQuizCards = 200;
+
   static AppPrefs get _prefs => AppStore.instance.prefs;
 
   static String get serverUrl {
@@ -180,6 +186,11 @@ class StudyAi {
     int quizCount = 12,
     CancelToken? cancel,
   }) async {
+    if (text.trim().length < minTextLength) {
+      // Said in words; the server's own refusal is meant for developers.
+      throw const StudyAiException(
+          'too_short', 'There is too little text here for Smart Study.');
+    }
     final trimmedTitle = title?.trim();
     final j = await _post('/v1/study-kit', {
       'text': text,
@@ -194,7 +205,8 @@ class StudyAi {
 
   /// A quiz on [cards]; each question points at its card by id. [count]
   /// questions (the server picks when null), of the given [types] only
-  /// (all four when null).
+  /// (all four when null). A set bigger than [maxQuizCards] is quizzed on
+  /// that many of its cards, picked at random.
   static Future<List<QuizQuestion>> makeQuiz({
     required String title,
     required List<Flashcard> cards,
@@ -203,10 +215,13 @@ class StudyAi {
     Set<QuestionType>? types,
     CancelToken? cancel,
   }) async {
+    final sent = cards.length > maxQuizCards
+        ? (List.of(cards)..shuffle()).sublist(0, maxQuizCards)
+        : cards;
     final j = await _post('/v1/quiz', {
       'title': title,
       'cards': [
-        for (final c in cards) {'front': c.front, 'back': c.back},
+        for (final c in sent) {'front': c.front, 'back': c.back},
       ],
       if (concepts.isNotEmpty)
         'concepts': [for (final c in concepts) c.toJson()],
@@ -216,7 +231,7 @@ class StudyAi {
     }, cancel: cancel);
     final quiz = j['quiz'];
     if (quiz is! Map<String, Object?>) throw _badReply;
-    return StudyKit.questionsFromServer(quiz['questions'], cards);
+    return StudyKit.questionsFromServer(quiz['questions'], sent);
   }
 
   /// Marks a typed answer by meaning.

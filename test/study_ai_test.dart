@@ -155,6 +155,47 @@ void main() {
     expect(sent['types'], ['multiple_choice', 'typed']);
   });
 
+  test('too little text is turned down in words, before anything is sent',
+      () async {
+    answerWith(200, kitJson);
+    await expectLater(
+      StudyAi.makeStudyKit(text: '  Chapter 3: Cells \n'),
+      throwsA(isA<StudyAiException>()
+          .having((e) => e.code, 'code', 'too_short')
+          .having((e) => e.message, 'message', isNot(contains('expected')))),
+    );
+    expect(requests, isEmpty);
+  });
+
+  test('a set bigger than the server takes is quizzed on as many cards as it '
+      'takes, and questions still find their card', () async {
+    answerWith(200, {
+      'quiz': {
+        'questions': [
+          {
+            'type': 'typed',
+            'prompt': 'Q?',
+            'options': <String>[],
+            'answerIndex': -1,
+            'answer': 'A',
+            'acceptable': <String>[],
+            'explanation': '',
+            'cardIndex': 5,
+          },
+        ],
+      },
+    });
+    final cards = [
+      for (var i = 0; i < StudyAi.maxQuizCards + 50; i++)
+        Flashcard(id: 'id$i', front: 'Front $i', back: 'Back $i'),
+    ];
+    final quiz = await StudyAi.makeQuiz(title: 'Big', cards: cards);
+    final sent = (jsonDecode(requests.single.body) as Map)['cards'] as List;
+    expect(sent.length, StudyAi.maxQuizCards);
+    final sixth = (sent[5] as Map)['front'] as String;
+    expect(quiz.single.cardId, cards.firstWhere((c) => c.front == sixth).id);
+  });
+
   test('Cancel ends a request at once and closes the connection', () async {
     final server = _SilentServer();
     StudyAi.debugClient = () => server;

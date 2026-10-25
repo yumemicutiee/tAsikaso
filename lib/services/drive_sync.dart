@@ -76,6 +76,9 @@ class DriveSync extends ChangeNotifier {
   bool _autoSync = true;
   String? _uploadedJson;
   bool _dirty = false;
+
+  /// Changes seen so far, to tell whether one came in during an upload.
+  int _changes = 0;
   bool _ignoreChanges = false;
   Timer? _timer;
   Future<String?>? _running;
@@ -295,6 +298,7 @@ class DriveSync extends ChangeNotifier {
     _autoSync = true;
     _uploadedJson = null;
     _dirty = false;
+    _changes = 0;
     _running = null;
   }
 
@@ -386,15 +390,21 @@ class DriveSync extends ChangeNotifier {
   /// new PDFs and photos; removes the files of deleted notes and sets.
   /// Returns what went wrong, or null.
   Future<String?> syncNow({bool interactive = false}) =>
-      _runOne(() => _upload(interactive: interactive));
+      _runOne(() => _upload(interactive: interactive), wait: interactive);
 
   /// Replaces everything on this device with what is on Drive. Returns
   /// what went wrong, or null.
-  Future<String?> restoreFromDrive() => _runOne(_restore);
+  Future<String?> restoreFromDrive() => _runOne(_restore, wait: true);
 
-  Future<String?> _runOne(Future<String?> Function() work) {
+  /// One Drive job at a time. An automatic sync asked for while one runs
+  /// gets that one's result; with [wait] (a restore, or a sync the user
+  /// asked for) [work] runs after it instead, so a restore is never
+  /// answered by an upload.
+  Future<String?> _runOne(Future<String?> Function() work, {bool wait = false}) {
     final running = _running;
-    if (running != null) return running;
+    if (running != null) {
+      return wait ? running.then((_) => _runOne(work, wait: true)) : running;
+    }
     _setBusy(true);
     final future = work().whenComplete(() {
       _running = null;
@@ -410,11 +420,36 @@ class DriveSync extends ChangeNotifier {
     if (!app.isPlus) return needsPlusMessage;
     try {
       final store = await _driveStore(interactive: interactive);
+      final int seen;
       try {
         await app.pendingSaves;
         final remote = {for (final f in await store.list()) f.name: f};
-        final json = app.exportJson();
+        // Signed out meanwhile (Delete All Data does that first): what is
+        // on Drive stays as it is.
+        if (!isSignedIn) return 'Sign in with Google first.';
         final data = remote[dataName];
+        if (!interactive && data != null && _lastSyncAt == null) {
+          // This device has never synced and Drive already has data (from
+          // another phone, or from before a reinstall): only the user may
+          // replace it (Backup & Sync offers Restore or Keep Mine).
+          return 'Google Drive already has data. Restore it, or tap Sync Now '
+              "to replace it with this device's.";
+        }
+        seen = _changes;
+        final json = app.exportJson();
+        final local = (await app.dataFileKeys()).toSet();
+        // Files read while Delete All Data was removing them must not
+        // delete their copies on Drive.
+        if (!isSignedIn) return 'Sign in with Google first.';
+        // New files go up before the data.json that names them, so if the
+        // upload stops halfway (or another phone restores meanwhile),
+        // Drive's data.json never points at files that aren't there.
+        for (final key in local) {
+          final name = remoteName(key);
+          if (remote.containsKey(name)) continue;
+          final bytes = await app.readFile(key);
+          if (bytes != null) await store.upload(name, bytes);
+        }
         if (data == null || json != _uploadedJson) {
           _remoteData = await store.upload(
             dataName,
@@ -425,14 +460,6 @@ class DriveSync extends ChangeNotifier {
         } else {
           _remoteData = data;
         }
-
-        final local = (await app.dataFileKeys()).toSet();
-        for (final key in local) {
-          final name = remoteName(key);
-          if (remote.containsKey(name)) continue;
-          final bytes = await app.readFile(key);
-          if (bytes != null) await store.upload(name, bytes);
-        }
         for (final f in remote.values) {
           final key = localKey(f.name);
           if (key != null && !local.contains(key)) await store.delete(f.id);
@@ -440,7 +467,11 @@ class DriveSync extends ChangeNotifier {
       } finally {
         store.close();
       }
-      _dirty = false;
+      if (_changes == seen) {
+        _dirty = false;
+      } else if (_autoSync && _canUpload) {
+        _schedule(); // a change made during the upload goes up next
+      }
       _lastSyncAt = clock.now();
       _error = null;
       await _saveState();
@@ -505,6 +536,7 @@ class DriveSync extends ChangeNotifier {
 
   void _onStoreChanged() {
     if (_ignoreChanges || !isSignedIn) return;
+    _changes++;
     _dirty = true;
     if (_autoSync && _canUpload) _schedule();
   }
