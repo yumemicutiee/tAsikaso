@@ -50,8 +50,8 @@ jobs:
       - name: Build the app
         run: flutter build apk --debug
 
-      # Android 14 with Google APIs; the back camera is the emulator's
-      # moving test pattern.
+      # Android 14 with Google APIs on a Pixel 6-sized screen; the back
+      # camera is the emulator's moving test pattern.
       - name: Run the tests on an emulator
         timeout-minutes: 35
         uses: reactivecircus/android-emulator-runner@v2
@@ -59,6 +59,7 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
+          profile: pixel_6
           ram-size: 4096M
           disk-size: 4096M
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated

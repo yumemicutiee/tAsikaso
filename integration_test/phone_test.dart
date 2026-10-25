@@ -201,6 +201,7 @@ Future<void> shot(WidgetTester tester, String name) async {
     if (!_surfaceReady) {
       await binding.convertFlutterSurfaceToImage().timeout(limit);
       _surfaceReady = true;
+      addTearDown(() => _surfaceReady = false); // the binding reverts it
     }
     await tester.pump();
     await binding.takeScreenshot(name).timeout(limit);
