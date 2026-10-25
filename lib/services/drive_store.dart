@@ -62,6 +62,11 @@ class GoogleDriveStore implements DriveStore {
   static const _folder = 'appDataFolder';
   static const _fields = 'id,name,modifiedTime,size';
 
+  /// Google documents one-request (multipart) uploads for files of up to
+  /// 5 MB. Bigger ones, such as a long Scan PDF, go up in 1 MB pieces, and
+  /// a piece the connection drops is sent again on its own.
+  static const resumableFrom = 5 * 1024 * 1024;
+
   @override
   Future<List<RemoteFile>> list() async {
     final out = <RemoteFile>[];
@@ -99,18 +104,23 @@ class GoogleDriveStore implements DriveStore {
   Future<RemoteFile> upload(String name, Uint8List bytes,
       {String? replaceId}) async {
     final media = drive.Media(Stream.value(bytes), bytes.length);
+    final options = bytes.length > resumableFrom
+        ? drive.ResumableUploadOptions()
+        : drive.UploadOptions.defaultOptions;
     final drive.File saved;
     if (replaceId != null) {
       saved = await _api.files.update(
         drive.File(),
         replaceId,
         uploadMedia: media,
+        uploadOptions: options,
         $fields: _fields,
       );
     } else {
       saved = await _api.files.create(
         drive.File(name: name, parents: const [_folder]),
         uploadMedia: media,
+        uploadOptions: options,
         $fields: _fields,
       );
     }
