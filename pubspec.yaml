@@ -1,7 +1,7 @@
 name: study_app
 description: Pomodoro timer + tasks, and lecture notes to PDF or flashcards.
 publish_to: 'none'
-version: 0.4.1+9
+version: 0.4.2+10
 
 environment:
   sdk: ^3.9.0  # Flutter 3.35 or newer
