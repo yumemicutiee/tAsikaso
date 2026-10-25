@@ -187,7 +187,7 @@ Milestones, in order. **Who** says what each one needs from the owner.
 
 | Milestone | What | Who | Status |
 |---|---|---|---|
-| **A. Robustness** | 11.35 auto-crop rejects non-page shapes · 11.27 Drive uploads over 5 MB (resumable) · 11.24 double-tap guards · 11.36 small screens · 11.30 Cancel on answer checks · 11.31 reminder after restore · more emulator tests (gallery import, Focus Mode + alert, backup ZIP round trip) | Claude alone | ⏳ next |
+| **A. Robustness** | ✅ 11.35 auto-crop rejects non-page shapes · ✅ 11.27 Drive uploads over 5 MB (resumable) · ✅ 11.24 double-tap guards · ✅ 11.36 small screens and large text · ✅ more emulator tests (big gallery photo, Focus Mode + alert, backup round trip). Left for later: 11.30 Cancel on answer checks, 11.31 reminder after restore | Claude alone | ✅ done 25 Oct |
 | **B. Smart Study live** | Section 0: API key → `npm run try` + live test → Console spend limit → deploy (Render) → app settings / `STUDY_AI_URL`. Then pick the model/effort from real costs (2.10). | Owner: API key, Render account. Claude: the rest | ⏸ waiting for the key |
 | **C. Real-phone run-through** | `docs/phone-test-checklist.md` with the live server: Google's scanner, auto-crop on paper, handwriting OCR, alert lateness without exact alarms, vibration, share-sheet backup, 10+ page scans. Can be driven from the PC over Wireless debugging. | Owner: phone. Claude: drives the tests | after B |
 | **D. Ready for strangers** | Google sign-in out of **Testing** (today only listed test users can sign in, and their sign-in lapses after 7 days); privacy policy (Anthropic's retention, Drive data); CI signing secrets (1.4); crash reports from phones; publish v0.4.1. | Owner: Google Cloud console, decisions. Claude: policy draft, code | — |
@@ -245,10 +245,10 @@ screens. Every fix has a regression test that fails on the old code (except
 
 | # | Problem | Status | Notes |
 |---|---|---|---|
-| 11.24 | Double-tap during a page transition: START can pause again, two camera screens, two offline sets. | 🟡 | Flutter lets taps through one frame after a push; needs guards in several places. |
+| 11.24 | A quick second tap starting something twice. | ✅ 25 Oct | Checked in Flutter's code: a screen that opens puts a barrier over the one behind, so START, the camera button and Make Flashcards were already safe (now tested in `robustness_test.dart`). The real gaps were buttons that wait for Android first: Import From Gallery (a second tap made Android refuse and the app said "Couldn't open your gallery") and Restore from Backup (a second confirm). Both are busy from the tap now. |
 | 11.25 | Drive status compares Drive's clock with the phone's (+5 s): a phone with a slow clock says "Google Drive has newer data" after its own sync. | 🟡 | Save Drive's own timestamp in the sync state. |
 | 11.26 | `_uploadedJson` isn't saved, so the first sync after a restart uploads data.json again. | 🟡 | Harmless, one extra upload. |
-| 11.27 | Drive uploads use multipart, which Google documents for files ≤ 5 MB. A big Scan PDF may make every sync fail. | 🟠 unverified | Check on a phone with a 10+ page scan; switch to resumable upload if it fails. |
+| 11.27 | Drive uploads used multipart, which Google documents for files ≤ 5 MB. A big Scan PDF could make every sync fail. | ✅ 25 Oct | Files over 5 MB go up as a resumable upload in 1 MB pieces, each retried on its own (`drive_store.dart`, `drive_store_test.dart`). Not yet seen against the real Drive with a big scan. |
 | 11.28 | Requests that never reached Claude (overloaded, bad key, connection) still use up the student's daily allowance; an error mid-stream isn't added to the daily spend. | 🟡 | Policy call. |
 | 11.29 | Text over 120,000 characters returns 400 with the validator's wording; the README documents `too_long` (413). | 🟡 | Pick one; a test asserts 400 today. |
 | 11.30 | Answer checks wait the full 3 minutes with no Cancel. | 🟡 | |
@@ -256,5 +256,5 @@ screens. Every fix has a regression test that fails on the old code (except
 | 11.32 | Switching the camera to Single, or closing it, drops Multiple-mode pages without asking. | 🟡 | Design question. |
 | 11.33 | The quiz ring counts partly right as 0; the quiz result counts it as half. | 🟡 | Needs a model field. |
 | 11.34 | Dashboard and Study don't roll over at midnight until something changes; Dashboard says "No tasks yet" when all are done; profile photo errors are silent. | 🟡 | |
-| 11.35 | Auto-crop accepts any bright shape: on a photo with no page (the emulator's test picture) it says "Page edges found" and draws a lopsided quadrilateral. | 🟠 | `page_detector.dart`: reject quads that are far from a rectangle (very unequal opposite sides, or a small share of their bounding box) and leave the full frame instead. |
-| 11.36 | On a 320 dp-wide screen (small budget phones), the Study screen's "Today · 0 Pomodoros · … Analysis" strip is cut off and the + button covers content. | 🟡 | Seen in the emulator's first run; fine at 411 dp (Pixel 6). |
+| 11.35 | Auto-crop accepted any bright shape: on a photo with no page (the emulator's test picture) it said "Page edges found" and drew a lopsided quadrilateral. | ✅ 25 Oct | `page_detector.dart` now also rejects a shape with big bites out of it (fills < 85 % of its outline) or with a far edge under half the near one; a strongly slanted page is still found. Still to try on real photos of paper. |
+| 11.36 | Small phones and large text. | ✅ 25 Oct | `small_screen_test.dart` opens every main screen at 320 × 568 dp, at normal and 1.3× text, with the app's real fonts. Fixed: the Study strip cut short (two lines now), folder tiles overflowing at large text (the badge shrinks), Help's answers hiding their tap ripple. The + button over the list is normal: the list scrolls clear of it. Text larger than 1.3× isn't checked. |

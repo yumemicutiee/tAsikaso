@@ -219,9 +219,10 @@ flutter test                               # widget smoke tests
 ```
 
 **On a phone or emulator.** `integration_test/phone_test.dart` checks what
-the widget tests can't: saving on the device, text recognition and the Scan
-PDF's hidden text, timer alerts, and the camera. GitHub runs it on an
-Android 14 emulator after every push (`.github/workflows/android-emulator.yml`)
+the widget tests can't: saving on the device, backup and restore, text
+recognition and the Scan PDF's hidden text, timer alerts, the camera, a big
+gallery photo cropped to its page, and a real Pomodoro in Focus Mode.
+GitHub runs it on an Android 14 emulator after every push (`.github/workflows/android-emulator.yml`)
 and saves the results, screenshots and log to the `emulator-results` branch.
 With a phone plugged in:
 

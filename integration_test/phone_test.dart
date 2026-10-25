@@ -1,10 +1,12 @@
 // Runs on an Android phone or emulator, not in `flutter test`: the parts the
-// unit tests can't reach (the phone's own storage, text recognition, timer
-// alerts, the camera). On GitHub every push runs it on an emulator
+// unit tests can't reach (the phone's own storage and backups, text
+// recognition, timer alerts, the camera, big gallery photos, Focus Mode
+// keeping the screen on). On GitHub every push runs it on an emulator
 // (.github/workflows/android-emulator.yml); on a phone plugged into this PC:
 //   flutter drive --driver=test_driver/integration_test.dart \
 //     --target=integration_test/phone_test.dart
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -15,13 +17,18 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:study_app/app.dart';
 import 'package:study_app/data/app_store.dart';
+import 'package:study_app/data/pomodoro_controller.dart';
 import 'package:study_app/data/storage/local_storage.dart';
 import 'package:study_app/models/models.dart';
+import 'package:study_app/screens/capture/capture_screen.dart';
 import 'package:study_app/screens/capture/notes_pdf.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
+import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/services/notification_service.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/widgets/bottom_nav.dart';
@@ -122,6 +129,34 @@ void main() {
     await plugin.cancelAll();
   });
 
+  testWidgets('a backup file brings everything back on the phone',
+      (tester) async {
+    final folder = store.addFolder('Backup Check', 0xFFF5C2C7);
+    final pdf = await buildNotesPdf([notesPhoto(['BACKUP'])], title: 'Backup');
+    final note = await store.addNote(
+      title: 'Backup',
+      folderId: folder.id,
+      pdf: pdf,
+      thumbnail: notesPhoto(['B']),
+      pageCount: 1,
+    );
+    await store.pendingSaves;
+    final zip = await store.createBackup();
+
+    expect(await store.eraseEverything(), isTrue);
+    expect(store.notes.any((n) => n.id == note.id), isFalse);
+    await store.restoreBackup(zip);
+    expect(await store.readPdf(store.notes.singleWhere((n) => n.id == note.id)),
+        pdf);
+
+    // Still there when the app opens again.
+    await store.pendingSaves;
+    await store.init(createDeviceStorage());
+    expect(store.folders.map((f) => f.name), contains('Backup Check'));
+    expect(await store.readPdf(store.notes.singleWhere((n) => n.id == note.id)),
+        pdf);
+  });
+
   testWidgets('the camera takes a photo that is saved as a Scan PDF',
       (tester) async {
     final known = {for (final n in store.notes) n.id};
@@ -158,6 +193,113 @@ void main() {
     await tester.pumpAndSettle();
     await shot(tester, '7-saved');
   });
+
+  testWidgets('a big gallery photo is cropped to its page and saved',
+      (tester) async {
+    // Android's photo picker can't be driven from a test, so the photo is
+    // handed over as the picker would: a 7.7-megapixel page on a desk.
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/gallery_page.jpg');
+    await file.writeAsBytes(pageOnDesk());
+    final pick = CaptureScreen.pickImages;
+    CaptureScreen.pickImages = () async => [XFile(file.path)];
+    addTearDown(() => CaptureScreen.pickImages = pick);
+    final known = {for (final n in store.notes) n.id};
+
+    await tester.pumpWidget(const StudyApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CameraButton));
+    await waitFor(tester, find.byTooltip('Import From Gallery'));
+    await tester.tap(find.byTooltip('Import From Gallery'));
+    await waitFor(tester, find.textContaining('Page edges found'),
+        timeout: const Duration(seconds: 90));
+    await tester.pumpAndSettle();
+    await shot(tester, '8-gallery-crop');
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save as PDF'));
+    bool isNew(Note n) => !known.contains(n.id);
+    final waited = Stopwatch()..start();
+    while (waited.elapsed < const Duration(seconds: 90) &&
+        !store.notes.any(isNew)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await tester.pump();
+    }
+    final saved = store.notes.singleWhere(isNew);
+    expect(saved.pageCount, 1);
+    expect((await store.readPdf(saved))!.length, greaterThan(10000));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('a one-minute Pomodoro in Focus Mode ends with an alert',
+      (tester) async {
+    final timer = PomodoroController.instance;
+    final settings = store.settings;
+    store.updateSettings(settings.copyWith(focusMinutes: 1));
+    addTearDown(() => store.updateSettings(settings));
+    timer.restart();
+    final now = clock.now();
+    final today = DateTime(now.year, now.month, now.day);
+    int sessionsToday() => store
+        .sessionsBetween(today, DateTime(now.year, now.month, now.day + 1))
+        .length;
+    final before = sessionsToday();
+
+    await tester.pumpWidget(const StudyApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(AppTab.study.icon));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('START'));
+    await waitFor(tester, find.byType(FocusScreen));
+    await Future<void>.delayed(const Duration(seconds: 1));
+    expect(await WakelockPlus.enabled, isTrue); // the screen stays on
+    await shot(tester, '9-focus');
+
+    final waited = Stopwatch()..start();
+    while (waited.elapsed < const Duration(seconds: 90) &&
+        sessionsToday() == before) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      await tester.pump();
+    }
+    expect(sessionsToday(), before + 1);
+    final android = FlutterLocalNotificationsPlugin()
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()!;
+    var shown = <ActiveNotification>[];
+    for (var i = 0; i < 15 && !shown.any((n) => n.id == 1); i++) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      shown = await android.getActiveNotifications();
+    }
+    expect(shown.where((n) => n.id == 1).map((n) => n.title),
+        contains('Pomodoro done!'));
+
+    await tester.tap(find.byTooltip('Close Focus Mode'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(await WakelockPlus.enabled, isFalse);
+    await FlutterLocalNotificationsPlugin().cancelAll();
+  });
+}
+
+/// A pale page with writing, slightly turned, on a brown desk: a
+/// 2400 × 3200 JPEG, bigger than the app keeps (it shrinks it to 2000).
+Uint8List pageOnDesk() {
+  final photo = img.Image(width: 2400, height: 3200);
+  img.fill(photo, color: img.ColorRgb8(92, 70, 52));
+  img.fillPolygon(photo,
+      vertices: [
+        img.Point(380, 300),
+        img.Point(2050, 420),
+        img.Point(1960, 2900),
+        img.Point(300, 2780),
+      ],
+      color: img.ColorRgb8(238, 234, 224));
+  for (var y = 600; y < 2500; y += 90) {
+    img.fillRect(photo,
+        x1: 520, y1: y, x2: 1750, y2: y + 14, color: img.ColorRgb8(40, 44, 70));
+  }
+  return Uint8List.fromList(img.encodeJpg(photo, quality: 85));
 }
 
 /// A white page with [lines] in large black letters, as a JPEG.
