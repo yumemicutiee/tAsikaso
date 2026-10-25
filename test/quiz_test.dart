@@ -70,6 +70,30 @@ void main() {
           isEmpty);
     });
 
+    test('answers that differ only in case, punctuation or an article are '
+        'one answer, never a "wrong" choice', () {
+      final twins = [
+        ...cards,
+        const Flashcard(
+            id: 'f', front: 'The powerhouse of the cell', back: 'Mitochondria.'),
+      ];
+      final right = normalizeAnswer('The mitochondria');
+      for (var seed = 0; seed < 20; seed++) {
+        final quiz = buildLocalQuiz(twins,
+            types: {QuestionType.multipleChoice, QuestionType.trueFalse},
+            random: Random(seed));
+        for (final q in quiz.where((q) => q.cardId == 'a' || q.cardId == 'f')) {
+          if (q.type == QuestionType.multipleChoice) {
+            expect(q.options.where((o) => normalizeAnswer(o) == right).length, 1,
+                reason: 'seed $seed: ${q.options}');
+          } else if (q.answer == 'False') {
+            expect(normalizeAnswer(q.prompt.split('\n').last), isNot(right),
+                reason: 'seed $seed: "${q.prompt}" is true, not false');
+          }
+        }
+      }
+    });
+
     test('the quiz sizes offered fit the set', () {
       expect(quizSizesFor(3, withAi: false), [3]);
       expect(quizSizesFor(6, withAi: false), [5, 6]);

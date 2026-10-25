@@ -231,6 +231,18 @@ List<QuizQuestion> _quizFor(List<QuizQuestion> questions, List<Flashcard> kept) 
   ];
 }
 
+/// [q], asked about the card [cardId] instead.
+QuizQuestion _about(QuizQuestion q, String cardId) => QuizQuestion(
+      type: q.type,
+      prompt: q.prompt,
+      answer: q.answer,
+      options: q.options,
+      answerIndex: q.answerIndex,
+      acceptable: q.acceptable,
+      explanation: q.explanation,
+      cardId: cardId,
+    );
+
 /// Cards for an existing set from the text of its photos: the study server
 /// writes them (with key concepts and a quiz) when it's on; otherwise
 /// they're suggested from the text for the user to add or skip. The free
@@ -287,6 +299,15 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
   };
 
   if (kit case final kit?) {
+    // The server's copy of a card the set already has is left out, so its
+    // questions are about the set's own card instead (or the quiz would
+    // lose them).
+    final own = {
+      for (final c in current.cards) c.front.trim().toLowerCase(): c.id,
+    };
+    final sameAs = {
+      for (final c in kit.cards) c.id: ?own[c.front.trim().toLowerCase()],
+    };
     final (:kept, :dropped) = _store.takeSuggestedCards([
       for (final c in kit.cards)
         if (fronts.add(c.front.trim().toLowerCase())) c,
@@ -296,7 +317,10 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
       sourceText: text,
       summary: kit.summary,
       concepts: kit.concepts,
-      quiz: _quizFor(kit.quiz, [...current.cards, ...kept]),
+      quiz: _quizFor([
+        for (final q in kit.quiz)
+          if (sameAs[q.cardId] case final id?) _about(q, id) else q,
+      ], [...current.cards, ...kept]),
     ));
     final made = kept.isEmpty
         ? 'No new cards to add.'

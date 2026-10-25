@@ -22,12 +22,18 @@ List<Offset>? detectPageCorners(img.Image image) {
       width: w, height: h, interpolation: img.Interpolation.average);
 
   // Brightness, smoothed so pen strokes and paper grain don't matter.
+  // Normalised channels, so 16-bit and float photos (0–65535, 0–1) read
+  // the same as ordinary 8-bit ones.
   var lum = Uint8List(w * h);
   for (var y = 0; y < h; y++) {
     for (var x = 0; x < w; x++) {
       final p = small.getPixel(x, y);
-      lum[y * w + x] =
-          (0.299 * p.r + 0.587 * p.g + 0.114 * p.b).round().clamp(0, 255);
+      lum[y * w + x] = (255 *
+              (0.299 * p.rNormalized +
+                  0.587 * p.gNormalized +
+                  0.114 * p.bNormalized))
+          .round()
+          .clamp(0, 255);
     }
   }
   lum = _boxBlur(lum, w, h, 2);

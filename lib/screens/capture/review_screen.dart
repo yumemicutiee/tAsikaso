@@ -138,10 +138,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
     // It skips the AI step; the pages are still saved.
     final onCancel = ValueNotifier<VoidCallback?>(null);
 
+    Route<Object?>? dialog; // to close this one, not one opened on top
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => ProgressDialog(text: progress, onCancel: onCancel),
+      builder: (dialogContext) {
+        dialog ??= ModalRoute.of(dialogContext);
+        return ProgressDialog(text: progress, onCancel: onCancel);
+      },
     );
 
     void toast(String text, {SnackBarAction? action}) => messenger
@@ -293,7 +297,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         ),
       );
     } on _NoTextException {
-      navigator.pop(); // progress dialog
+      closeDialog(navigator, dialog); // progress dialog
       toast("No text could be read from these pages, so a Text PDF can't "
           'be made. Save them as a Scan PDF instead.');
     } catch (e, st) {
@@ -304,7 +308,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           store.setCountIn(created.id) == 0) {
         store.deleteFolder(created.id).ignore();
       }
-      navigator.pop(); // progress dialog
+      closeDialog(navigator, dialog); // progress dialog
       toast(asCards
           ? "Couldn't save the photos. Please try again."
           : "Couldn't create the PDF. Please try again.");

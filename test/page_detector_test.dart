@@ -57,6 +57,14 @@ void main() {
     expectNear(found!, skewed);
   });
 
+  test('a 16-bit photo is read like an 8-bit one', () {
+    // Its channels run to 65535: read as 0–255 everything looked white.
+    final deep = photoOfPage(pageCorners).convert(format: img.Format.uint16);
+    final found = detectPageCorners(deep);
+    expect(found, isNotNull);
+    expectNear(found!, pageCorners);
+  });
+
   test('a page that fills the frame is left as it is', () {
     final image = img.Image(width: 400, height: 300);
     img.fill(image, color: img.ColorRgb8(236, 232, 222));

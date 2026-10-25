@@ -66,8 +66,10 @@ class _BackupScreenState extends State<BackupScreen> {
   bool _busy = false;
   final _sync = DriveSync.instance;
 
-  void _toast(String text) {
-    ScaffoldMessenger.of(context)
+  /// [messenger] when it was looked up before a wait this screen may not
+  /// outlive.
+  void _toast(String text, [ScaffoldMessengerState? messenger]) {
+    (messenger ?? ScaffoldMessenger.of(context))
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         content: Text(text),
@@ -196,6 +198,9 @@ class _BackupScreenState extends State<BackupScreen> {
   Future<void> _restore() async {
     final store = AppStore.instance;
     final navigator = Navigator.of(context);
+    // The restore can take a while, and this screen may be closed by the
+    // time it's done; the app's messenger still says how it went.
+    final messenger = ScaffoldMessenger.of(context);
     final sure = await showConfirmDialog(
       context,
       title: 'Restore from Backup?',
@@ -220,12 +225,13 @@ class _BackupScreenState extends State<BackupScreen> {
       await store.restoreBackup(bytes);
       PomodoroController.instance.restart();
       navigator.popUntil((route) => route.isFirst);
-      _toast('Backup restored.');
+      _toast('Backup restored.', messenger);
     } on FormatException catch (e) {
-      _toast(e.message);
+      _toast(e.message, messenger);
     } catch (e) {
       debugPrint('Restore failed: $e');
-      _toast("The backup couldn't be restored. Nothing was changed.");
+      _toast("The backup couldn't be restored. Nothing was changed.",
+          messenger);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
