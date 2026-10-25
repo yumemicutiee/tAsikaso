@@ -91,6 +91,43 @@ void main() {
     expect(detectPageCorners(image), isNull);
   });
 
+  test('a bright shape that only happens to have four corners is not a page',
+      () {
+    // Like the emulator's test picture: a pale area running off the top
+    // and left of the frame in steps, with no sheet of paper in it.
+    final image = img.Image(width: 400, height: 300);
+    img.fill(image, color: img.ColorRgb8(70, 58, 48));
+    img.fillPolygon(
+      image,
+      vertices: [
+        img.Point(0, 0),
+        img.Point(399, 0),
+        img.Point(399, 120),
+        img.Point(250, 120),
+        img.Point(250, 200),
+        img.Point(130, 200),
+        img.Point(130, 299),
+        img.Point(0, 299),
+      ],
+      color: img.ColorRgb8(240, 240, 236),
+    );
+    expect(detectPageCorners(image), isNull);
+  });
+
+  test('a page photographed at a slant, half off the frame, is still found',
+      () {
+    // Far edge (top) shorter than the near one; the bottom runs off.
+    const slanted = [
+      Offset(0.25, 0.10),
+      Offset(0.75, 0.10),
+      Offset(0.95, 1.0),
+      Offset(0.05, 1.0),
+    ];
+    final found = detectPageCorners(photoOfPage(slanted));
+    expect(found, isNotNull);
+    expectNear(found!, slanted);
+  });
+
   test('fromPhoto pre-sets the crop corners when asked to find the edges',
       () async {
     final png = img.encodePng(photoOfPage(pageCorners));

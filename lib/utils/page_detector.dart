@@ -80,9 +80,18 @@ List<Offset>? detectPageCorners(img.Image image) {
 
   // Not page-shaped (a round object, a mess of bright patches)?
   if (_area(quad) < 0.8 * _area(hull)) return null;
+  // One sheet fills its outline; bright clutter has big bites out of it.
+  if (page.area < 0.85 * _area(hull)) return null;
+  final sides = [
+    for (var i = 0; i < 4; i++) _dist(quad[i], quad[(i + 1) % 4]),
+  ];
   final minSide = 0.15 * math.min(w, h);
-  for (var i = 0; i < 4; i++) {
-    if (_dist(quad[i], quad[(i + 1) % 4]) < minSide) return null;
+  if (sides.any((s) => s < minSide)) return null;
+  // Perspective makes a page's far edge shorter than the near one, but not
+  // under half of it: such a shape only happens to have four corners (the
+  // emulator's test picture, a bright wall behind the desk).
+  for (final (a, b) in [(sides[0], sides[2]), (sides[1], sides[3])]) {
+    if (math.max(a, b) > 2 * math.min(a, b)) return null;
   }
 
   final corners = [
