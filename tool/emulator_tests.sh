@@ -18,7 +18,8 @@ LOGCAT=$!
 adb install -r -g build/app/outputs/flutter-apk/app-debug.apk
 adb shell appops set "$PKG" SCHEDULE_EXACT_ALARM allow || true
 
-flutter drive --no-pub \
+# A run normally takes a few minutes; 20 is the most it may wait.
+timeout 20m flutter drive --no-pub \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/phone_test.dart \
   -d emulator-5554 2>&1 | tee "$OUT/test.txt"

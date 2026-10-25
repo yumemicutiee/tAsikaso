@@ -53,6 +53,7 @@ jobs:
       # Android 14 with Google APIs; the back camera is the emulator's
       # moving test pattern.
       - name: Run the tests on an emulator
+        timeout-minutes: 35
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34

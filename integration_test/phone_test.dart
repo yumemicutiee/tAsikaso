@@ -26,10 +26,14 @@ import 'package:study_app/services/notification_service.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/widgets/bottom_nav.dart';
 
-final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+late final IntegrationTestWidgetsFlutterBinding binding;
 final store = AppStore.instance;
 
 void main() {
+  // First: it is what reports the results to `flutter drive` (a binding
+  // started by testWidgets instead never does, and the run waits forever).
+  binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
   testWidgets('saves to the phone and still has it after a restart',
       (tester) async {
     await store.init(createDeviceStorage());
@@ -192,13 +196,14 @@ var _surfaceReady = false;
 /// Saves a screenshot (through test_driver/integration_test.dart). Never
 /// fails the test: the screenshots are for people to look at.
 Future<void> shot(WidgetTester tester, String name) async {
+  const limit = Duration(seconds: 20);
   try {
     if (!_surfaceReady) {
-      await binding.convertFlutterSurfaceToImage();
+      await binding.convertFlutterSurfaceToImage().timeout(limit);
       _surfaceReady = true;
     }
     await tester.pump();
-    await binding.takeScreenshot(name);
+    await binding.takeScreenshot(name).timeout(limit);
   } catch (e) {
     debugPrint('Screenshot $name failed: $e');
   }
