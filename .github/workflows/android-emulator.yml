@@ -1,0 +1,84 @@
+# Runs the app on an Android emulator in the cloud after every push, so no
+# phone is needed: integration_test/phone_test.dart checks what the unit
+# tests can't (saving on the phone, text recognition, timer alerts, the
+# camera). The results, screenshots and the phone's log are saved to the
+# "emulator-results" branch (readable without signing in) and to the run's
+# artifacts.
+name: Android emulator tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # to save the results to the emulator-results branch
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # The emulator needs hardware acceleration (KVM). GitHub's Linux
+      # machines have it, but don't open it to the runner by default.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate the Android project
+        run: |
+          flutter create . --platforms=android --org com.tasikaso --project-name study_app
+          dart run tool/setup_android.dart
+
+      - run: flutter pub get
+
+      # Built before the emulator starts, so it waits less.
+      - name: Build the app
+        run: flutter build apk --debug
+
+      # Android 14 with Google APIs; the back camera is the emulator's
+      # moving test pattern.
+      - name: Run the tests on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          ram-size: 4096M
+          disk-size: 4096M
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated
+          disable-animations: true
+          script: bash tool/emulator_tests.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-results
+          path: emulator-results
+
+      - name: Save results
+        if: always()
+        run: |
+          mkdir -p emulator-results
+          cp -r emulator-results /tmp/emulator-results
+          cd /tmp/emulator-results
+          git init -q -b emulator-results
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Emulator results for ${{ github.sha }}" --allow-empty
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" emulator-results

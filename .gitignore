@@ -11,3 +11,6 @@ build/
 android/key.properties
 android/upload-keystore.jks
 android/upload-keystore.base64.txt
+
+# Results of tool/emulator_tests.sh
+emulator-results/

@@ -218,6 +218,17 @@ flutter run -d chrome                      # web
 flutter test                               # widget smoke tests
 ```
 
+**On a phone or emulator.** `integration_test/phone_test.dart` checks what
+the widget tests can't: saving on the device, text recognition and the Scan
+PDF's hidden text, timer alerts, and the camera. GitHub runs it on an
+Android 14 emulator after every push (`.github/workflows/android-emulator.yml`)
+and saves the results, screenshots and log to the `emulator-results` branch.
+With a phone plugged in:
+
+```bash
+flutter drive --driver=test_driver/integration_test.dart --target=integration_test/phone_test.dart
+```
+
 **Smart Study.** The AI features talk to the small Node.js server in
 `server/`, which holds your Anthropic API key (never put the key in the
 app). `server/README.md` has the setup and deployment steps. Point the app
