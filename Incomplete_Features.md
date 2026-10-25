@@ -175,13 +175,31 @@ Still for a real phone — run `docs/phone-test-checklist.md` with the study ser
 - iOS needs the reversed client id in `Info.plist` once an iOS build exists.
 - `Delete All Data` forgets the Google account on purpose (so the Drive copy survives); the Settings dialog says so.
 
-## 10. Suggested order of work
+## 10. Roadmap to 1.0 (updated 25 Oct)
 
-1. **Connect Opus 5.5** (section 0): live check, Console spend limit, deploy, point the app at it.
-2. **Phone run-through** (section 7) with the live server — the biggest unknowns are on a real device.
-3. Billing (1.1), then per-user tokens/accounts and shared limits on the server (3.1, 1.6).
-4. Web OCR or server-side OCR so Smart Study works from web scans (2.4).
-5. Sync merge instead of last-upload-wins (1.4), iOS (1.5).
+**Done:** Phases 0–4 (20 Oct: bugs, alerts, web saving, smart review,
+backup, polish) · Smart Study app + server (21 Oct) · Google Drive sync,
+working on a phone (v0.2.x) · tAsikaso+ plans with every perk enforced, as
+test purchases (v0.3.0) · sweep (v0.4.0) · bug pass, 23 fixes (v0.4.1) ·
+Android emulator tests on every push.
+
+Milestones, in order. **Who** says what each one needs from the owner.
+
+| Milestone | What | Who | Status |
+|---|---|---|---|
+| **A. Robustness** | 11.35 auto-crop rejects non-page shapes · 11.27 Drive uploads over 5 MB (resumable) · 11.24 double-tap guards · 11.36 small screens · 11.30 Cancel on answer checks · 11.31 reminder after restore · more emulator tests (gallery import, Focus Mode + alert, backup ZIP round trip) | Claude alone | ⏳ next |
+| **B. Smart Study live** | Section 0: API key → `npm run try` + live test → Console spend limit → deploy (Render) → app settings / `STUDY_AI_URL`. Then pick the model/effort from real costs (2.10). | Owner: API key, Render account. Claude: the rest | ⏸ waiting for the key |
+| **C. Real-phone run-through** | `docs/phone-test-checklist.md` with the live server: Google's scanner, auto-crop on paper, handwriting OCR, alert lateness without exact alarms, vibration, share-sheet backup, 10+ page scans. Can be driven from the PC over Wireless debugging. | Owner: phone. Claude: drives the tests | after B |
+| **D. Ready for strangers** | Google sign-in out of **Testing** (today only listed test users can sign in, and their sign-in lapses after 7 days); privacy policy (Anthropic's retention, Drive data); CI signing secrets (1.4); crash reports from phones; publish v0.4.1. | Owner: Google Cloud console, decisions. Claude: policy draft, code | — |
+| **E. Paid plans for real** | Real payments (1.1) instead of test purchases; per-user accounts on the server (Google sign-in as the account) and shared limits (3.1, 1.3), so Free vs Plus is enforced by the server too. | Owner: decisions below. Claude: build | — |
+| **F. Launch 1.0** | Distribution (Play Store listing, or APK + website with a download page), version 1.0, release notes. | Owner + Claude | — |
+| Later | Web OCR (2.4) · sync merge (1.4) · iOS (1.5) · other UI languages (1.7) · quiz history in Analysis (5.1) | — | after 1.0 |
+
+**Decisions the owner needs to make** (they shape D–F):
+1. **Where students get the app:** Google Play, or the APK from GitHub/the website.
+2. **How Plus is paid:** Google Play Billing (required on Play for digital perks), GCash/Maya through a payment provider (outside Play), or free for now.
+3. **Smart Study for Free accounts:** keep 20 suggested cards a month, or Plus only (each kit costs ≈ ₱9–26 at Opus 5.5 `high`).
+4. **Model and effort** after seeing real costs in B.
 
 ## 11. Bug pass (25 Oct)
 

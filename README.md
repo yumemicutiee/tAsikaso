@@ -340,12 +340,10 @@ server/                        the study server: Node.js + Claude (its own READM
 
 ## Next (functionality)
 
-- Google Play Billing for Plus (e.g. `in_app_purchase`), then enforce limits
-  and decide how Smart Study fits the plans
-- Automatic sync (Google Drive app folder) on top of the backup file
-- Run the phone checklist in `docs/phone-test-checklist.md` with the study
-  server on: Smart Study and the auto-crop have only been checked in tests
-  and on the web build so far
+The roadmap to 1.0 and the open items are in `Incomplete_Features.md`
+(section 10). In short: robustness fixes, Smart Study live with a real
+API key, a real-phone run-through, Google sign-in out of Testing with a
+privacy policy, real payments, then launch.
 
 Fonts: Plus Jakarta Sans (Tokotype) and Inter (Rasmus Andersson), SIL Open Font License 1.1.
 Icons: Phosphor Icons, MIT License (assets/fonts/PHOSPHOR_LICENSE.txt).
