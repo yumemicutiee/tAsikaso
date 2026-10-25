@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../models/models.dart';
+import 'answer_match.dart';
 
 /// Makes quiz questions from a set's own cards, for when the study server
 /// isn't set up or can't be reached. Each card gets at most one question
@@ -49,7 +50,9 @@ List<QuizQuestion> buildLocalQuiz(
   return out;
 }
 
-String _norm(String s) => s.trim().toLowerCase();
+/// Compared the way typed answers are judged, so "The mitochondria." and
+/// "Mitochondria" are one answer, not a right and a "wrong" choice.
+String _norm(String s) => normalizeAnswer(s);
 
 /// Other cards' answers, as wrong choices for [card].
 List<String> _otherAnswers(Flashcard card, List<Flashcard> all, Random rng) {

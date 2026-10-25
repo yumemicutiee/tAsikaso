@@ -263,6 +263,11 @@ class SetScreen extends StatelessWidget {
                             for (final c in deck.cards)
                               if (c.id != card.id) c,
                           ],
+                          // Its questions would still be counted and listed.
+                          quiz: [
+                            for (final q in deck.quiz)
+                              if (q.cardId != card.id) q,
+                          ],
                         ));
                       },
                     },
@@ -714,6 +719,9 @@ class _CardEditorState extends State<_CardEditor> {
                       store.updateSet(deck.copyWith(cards: [
                         for (final c in deck.cards)
                           if (c.id != card.id) c,
+                      ], quiz: [
+                        for (final q in deck.quiz)
+                          if (q.cardId != card.id) q,
                       ]));
                     }
                     Navigator.of(context).pop();

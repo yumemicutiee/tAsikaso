@@ -820,16 +820,22 @@ class _ProductiveHours extends StatefulWidget {
 class _ProductiveHoursState extends State<_ProductiveHours> {
   int? _picked;
 
-  /// Splits each session over the clock hours it covered.
+  /// Splits each session over the clock hours it covered. Sessions rarely
+  /// start on the minute, so each part is rounded from the session's start:
+  /// the parts still add up to the session's minutes.
   static List<int> _byHour(List<FocusSession> sessions) {
     final out = List.filled(24, 0);
     for (final s in sessions) {
-      var t = s.startedAt;
+      final start = s.startedAt;
       final end = s.endedAt;
+      var t = start;
+      var counted = 0;
       while (t.isBefore(end)) {
         final nextHour = DateTime(t.year, t.month, t.day, t.hour + 1);
         final stop = nextHour.isBefore(end) ? nextHour : end;
-        out[t.hour] += stop.difference(t).inMinutes;
+        final upTo = (stop.difference(start).inSeconds / 60).round();
+        out[t.hour] += upTo - counted;
+        counted = upTo;
         t = stop;
       }
     }

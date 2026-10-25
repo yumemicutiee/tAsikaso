@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../data/app_store.dart';
 import '../../services/scan_service.dart';
 import '../../utils/format.dart';
+import '../../widgets/dialogs.dart';
 import 'capture_screen.dart';
 import 'captured_page.dart';
 import 'review_screen.dart';
@@ -145,14 +146,18 @@ Future<(List<CapturedPage>, int)> _preparePages(
     BuildContext context, List<Uint8List> jpegs, int firstId) async {
   final navigator = Navigator.of(context);
   var open = true;
+  Route<Object?>? dialog; // to close this one, not one opened on top
   unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const PopScope(canPop: false, child: _PreparingDialog()),
+    builder: (dialogContext) {
+      dialog ??= ModalRoute.of(dialogContext);
+      return const PopScope(canPop: false, child: _PreparingDialog());
+    },
   ).whenComplete(() => open = false));
 
   final prepared = await preparePages(jpegs, firstId);
-  if (open && navigator.mounted) navigator.pop();
+  if (open && navigator.mounted) closeDialog(navigator, dialog);
   return prepared;
 }
 

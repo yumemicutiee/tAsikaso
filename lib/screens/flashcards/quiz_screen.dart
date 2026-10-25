@@ -63,6 +63,11 @@ class _QuizScreenState extends State<QuizScreen> {
   _Answered? _result;
   final List<_Answered> _answers = [];
 
+  /// Cards already scheduled for smart review in this round: like a study
+  /// round, only the first answer about a card counts, so a card asked
+  /// about twice doesn't move on two steps at once.
+  final Set<String> _scheduled = {};
+
   @override
   void dispose() {
     _typed.dispose();
@@ -121,7 +126,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final answered = _Answered(q, given, verdict, feedback);
     _answers.add(answered);
     _store.recordCardsReviewed(1);
-    if (q.cardId case final id?) {
+    if (q.cardId case final id? when _scheduled.add(id)) {
       _store.scheduleCard(widget.setId, id,
           knewIt: verdict == AnswerVerdict.correct);
     }
@@ -139,7 +144,11 @@ class _QuizScreenState extends State<QuizScreen> {
       _store.markSetStudied(widget.setId,
           known: _correct, seen: _answers.length);
     } else if (!_question.isChoice) {
-      _typedFocus.requestFocus();
+      // After the rebuild: the box was switched off while the answer
+      // showed, and a switched-off box can't take focus.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _typedFocus.requestFocus();
+      });
     }
   }
 
@@ -152,6 +161,7 @@ class _QuizScreenState extends State<QuizScreen> {
       _typed.clear();
       _result = null;
       _answers.clear();
+      _scheduled.clear();
     });
   }
 

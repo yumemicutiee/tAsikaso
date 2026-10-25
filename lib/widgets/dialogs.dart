@@ -189,10 +189,14 @@ Future<T> runWithProgress<T>(
   final label = ValueNotifier(text);
   final onCancel = ValueNotifier<VoidCallback?>(cancel.cancel);
   var open = true;
+  Route<Object?>? dialog;
   unawaited(showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => ProgressDialog(text: label, onCancel: onCancel),
+    builder: (dialogContext) {
+      dialog ??= ModalRoute.of(dialogContext);
+      return ProgressDialog(text: label, onCancel: onCancel);
+    },
   ).whenComplete(() => open = false));
   try {
     final job = work(cancel);
@@ -203,7 +207,19 @@ Future<T> runWithProgress<T>(
     if (done == null) throw StudyAiException.cancelled;
     return done.$1;
   } finally {
-    if (open && navigator.mounted) navigator.pop();
+    if (open && navigator.mounted) closeDialog(navigator, dialog);
+  }
+}
+
+/// Closes [dialog], a dialog only the app closes (null: not built yet, so
+/// it's still the top route). A plain pop would close whatever opened on
+/// top of it meanwhile instead, such as the app shell's dialog about a save
+/// that failed, and leave the spinner up for good.
+void closeDialog(NavigatorState navigator, Route<Object?>? dialog) {
+  if (dialog == null || dialog.isCurrent) {
+    navigator.pop();
+  } else if (dialog.isActive) {
+    navigator.removeRoute(dialog);
   }
 }
 
