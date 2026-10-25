@@ -65,17 +65,27 @@ class FolderCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: folder.color,
-                          borderRadius: BorderRadius.circular(11),
+                      // The room the name leaves: with large text on a
+                      // small phone the badge shrinks instead of the tile
+                      // overflowing.
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: folder.color,
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              child: const Icon(AppIcons.folder,
+                                  size: 18, color: AppColors.onFill),
+                            ),
+                          ),
                         ),
-                        child: const Icon(AppIcons.folder,
-                            size: 18, color: AppColors.onFill),
                       ),
-                      const Spacer(),
                       Text(
                         folder.name,
                         maxLines: 1,

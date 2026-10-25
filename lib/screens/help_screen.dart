@@ -111,11 +111,13 @@ class HelpScreen extends StatelessWidget {
           for (final (q, a) in _faq)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
+              // Material, not a coloured box: the tap ripple is drawn on it,
+              // and a box on top would hide it.
+              child: Material(
+                color: AppColors.surface,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
+                  side: BorderSide(color: AppColors.border),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Theme(

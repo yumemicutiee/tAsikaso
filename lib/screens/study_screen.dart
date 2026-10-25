@@ -411,9 +411,10 @@ class _TodayStrip extends StatelessWidget {
               Icon(AppIcons.chart, size: 18, color: AppColors.primaryDeep),
               const SizedBox(width: 8),
               Expanded(
+                // Two lines on a small phone, rather than cutting it short.
                 child: Text(
                   'Today · ${plural(pomodoros, 'Pomodoro')} · ${formatMinutes(minutes)}',
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12.5,
