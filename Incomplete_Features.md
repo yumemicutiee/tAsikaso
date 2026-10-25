@@ -135,11 +135,21 @@ Nothing crashed, no console errors on the web other than the expected 500s from 
 
 ## 7. Untested on a real device — must do before a release
 
-Run `docs/phone-test-checklist.md` on an Android phone with the study server running. Specifically unverified:
+**Now checked on an emulator (25 Oct):** every push runs
+`integration_test/phone_test.dart` on an Android 14 emulator on GitHub
+(`.github/workflows/android-emulator.yml`; results, screenshots and logcat on
+the `emulator-results` branch). Passing there: saving to the device and
+reading it back after a restart; ML Kit text recognition (read a printed
+test page exactly) and the hidden text layer in the Scan PDF; a timer alert
+delivered by Android 5 s after it was scheduled (exact alarms allowed); the
+daily reminder scheduled; Google's scanner failing → the app's own camera
+opening with its notice → photo → Crop Page → saved as a Scan PDF.
 
-- Google's document scanner (ML Kit), the app camera, gallery import, **auto-crop on real photos**.
-- OCR: text quality, line boxes → **selectable text in the Scan PDF** in a real viewer (Drive, Adobe).
-- Timer-end notifications and their lateness on Android 14+, daily reminder, vibration, keep-screen-on, restore after the process is killed.
+Still for a real phone — run `docs/phone-test-checklist.md` with the study server running:
+
+- Google's document scanner (ML Kit; not available on the emulator), gallery import, **auto-crop on real photos of paper** (on the emulator's test picture, which has no page, it still reported "Page edges found" with a lopsided shape — see 11.35).
+- OCR on real handwriting and photos; **selectable text in the Scan PDF** in a real viewer (Drive, Adobe).
+- Timer-alert lateness when exact alarms are *not* allowed (Android 14's default), vibration, keep-screen-on, restore after the process is killed.
 - Smart Study end to end: time per scan, card/quiz quality, error toasts when offline, the Settings ping.
 - Backup to Google Drive via the share sheet, and restore.
 - Memory/time with 10+ pages at 2000 px (page render + OCR + PDF build run one after another).
@@ -228,3 +238,5 @@ screens. Every fix has a regression test that fails on the old code (except
 | 11.32 | Switching the camera to Single, or closing it, drops Multiple-mode pages without asking. | 🟡 | Design question. |
 | 11.33 | The quiz ring counts partly right as 0; the quiz result counts it as half. | 🟡 | Needs a model field. |
 | 11.34 | Dashboard and Study don't roll over at midnight until something changes; Dashboard says "No tasks yet" when all are done; profile photo errors are silent. | 🟡 | |
+| 11.35 | Auto-crop accepts any bright shape: on a photo with no page (the emulator's test picture) it says "Page edges found" and draws a lopsided quadrilateral. | 🟠 | `page_detector.dart`: reject quads that are far from a rectangle (very unequal opposite sides, or a small share of their bounding box) and leave the full frame instead. |
+| 11.36 | On a 320 dp-wide screen (small budget phones), the Study screen's "Today · 0 Pomodoros · … Analysis" strip is cut off and the + button covers content. | 🟡 | Seen in the emulator's first run; fine at 411 dp (Pixel 6). |
