@@ -215,18 +215,25 @@ class _BackupScreenState extends State<BackupScreen> {
           'settings. This cannot be undone.',
       confirmLabel: 'Choose File',
     );
-    if (!sure) return;
+    if (!sure || !mounted) return;
+    // Busy from here: the file picker takes a moment to open, and the
+    // buttons mustn't start a second restore meanwhile.
+    setState(() => _busy = true);
     final Uint8List? bytes;
     try {
       bytes = await BackupScreen.pickFile();
     } catch (e) {
       debugPrint('Could not pick a file: $e');
-      if (mounted) _toast("Couldn't open that file.");
+      if (mounted) {
+        setState(() => _busy = false);
+        _toast("Couldn't open that file.");
+      }
       return;
     }
-    if (bytes == null || !mounted) return;
-
-    setState(() => _busy = true);
+    if (bytes == null) {
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
     try {
       await store.restoreBackup(bytes);
       PomodoroController.instance.restart();

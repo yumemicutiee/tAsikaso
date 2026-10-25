@@ -239,19 +239,24 @@ class _CaptureScreenState extends State<CaptureScreen>
 
   Future<void> _importFromGallery() async {
     if (_busy) return;
+    // Busy from the tap: the gallery takes a moment to open, and asked for
+    // again meanwhile, Android refuses ("Couldn't open your gallery").
+    setState(() => _busy = true);
     final List<XFile> files;
     try {
       files = await CaptureScreen.pickImages();
     } catch (_) {
+      if (mounted) setState(() => _busy = false);
       _showMessage("Couldn't open your gallery.");
       return;
     }
-    if (files.isEmpty || !mounted) return;
+    if (!mounted) return;
+    if (files.isEmpty) {
+      setState(() => _busy = false);
+      return;
+    }
 
-    setState(() {
-      _busy = true;
-      _notice = null;
-    });
+    setState(() => _notice = null);
     await WidgetsBinding.instance.endOfFrame;
     final imported = <CapturedPage>[];
     var failed = 0;
