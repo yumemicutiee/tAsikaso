@@ -249,10 +249,12 @@ class StudyAi {
     });
     final check = j['check'];
     if (check is! Map<String, Object?>) throw _badReply;
-    return AnswerCheck(
-      verdict: check['verdict'] as String? ?? 'wrong',
-      feedback: check['feedback'] as String? ?? '',
-    );
+    final verdict = check['verdict'] ?? 'wrong';
+    final feedback = check['feedback'] ?? '';
+    // Anything else would be thrown past the quiz, which expects only a
+    // StudyAiException, and leave its Check button spinning.
+    if (verdict is! String || feedback is! String) throw _badReply;
+    return AnswerCheck(verdict: verdict, feedback: feedback);
   }
 
   /// How long [ping] waits. A server on a free host sleeps when unused and

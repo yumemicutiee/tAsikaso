@@ -397,6 +397,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Sign in with Google'), findsOneWidget);
   });
+
+  testWidgets("Backup & Sync: when Drive can't be checked at sign-in, "
+      "this device's data doesn't go up over it", (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final flaky = _FlakyListDriveStore();
+    DriveSync.debugStore = flaky;
+    store.updatePrefs(store.prefs.copyWith(userName: 'Ana'));
+    await sync.debugSignIn();
+    expect(await sync.syncNow(), isNull);
+    final onDrive = utf8.decode(flaky.byName['data.json']!);
+    final uploads = flaky.uploads;
+
+    // Another phone signs in while Drive can't be reached for a moment.
+    store.resetForTesting();
+    await sync.resetForTesting();
+    store.startPlan(PlusPlan.yearly);
+    store.updatePrefs(store.prefs.copyWith(userName: 'Ben'));
+    flaky.failLists = 1;
+    await tester.pumpWidget(const MaterialApp(home: BackupScreen()));
+    await tester.tap(find.text('Sign in with Google'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Synced with Google Drive.'), findsNothing);
+    expect(flaky.uploads, uploads);
+    expect(utf8.decode(flaky.byName['data.json']!), onDrive);
+  });
+}
+
+/// Drive whose next [failLists] listings fail, like a dropped connection.
+class _FlakyListDriveStore extends MemoryDriveStore {
+  int failLists = 0;
+
+  @override
+  Future<List<RemoteFile>> list() async {
+    if (failLists > 0) {
+      failLists--;
+      throw Exception('Connection reset');
+    }
+    return super.list();
+  }
 }
 
 /// Drive whose `data.json` uploads wait for [gate] while it is set, and

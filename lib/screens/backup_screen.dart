@@ -88,6 +88,12 @@ class _BackupScreenState extends State<BackupScreen> {
       return;
     }
     if (!_sync.isSignedIn) return;
+    if (_sync.error case final problem? when _sync.lastSyncAt == null) {
+      // Drive couldn't be checked, so it may hold another phone's data:
+      // nothing goes up over it until the user can choose.
+      _toast(problem);
+      return;
+    }
     final plus = AppStore.instance.isPlus;
     if (_sync.remote != null && _sync.lastSyncAt == null) {
       // This device hasn't synced before and Drive already holds data

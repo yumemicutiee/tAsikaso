@@ -231,6 +231,16 @@ void main() {
     expect(check.feedback, contains('water'));
   });
 
+  test("an answer check the app can't read is a StudyAiException", () async {
+    answerWith(200, {
+      'check': {'verdict': 1, 'feedback': 'Right.'},
+    });
+    await expectLater(
+      StudyAi.checkAnswer(question: 'Q', answer: 'A', userAnswer: 'A'),
+      throwsA(isA<StudyAiException>().having((e) => e.code, 'code', 'bad_reply')),
+    );
+  });
+
   test("the server's own error code and message come through", () async {
     answerWith(401, {
       'error': {'code': 'unauthorized', 'message': "This app isn't allowed."},

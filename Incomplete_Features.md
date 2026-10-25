@@ -15,6 +15,11 @@ streaming protocol): quizzes with chosen types, a typed answer judged by
 connection. **What's left before and after adding the Opus 5.5 key is in
 section 0.**
 
+**Update — bug pass (25 Oct):** 23 bugs fixed in the app, plus a flaky
+server test; what was fixed and what was found but left is in
+**section 11**. `flutter analyze` clean, `flutter test` 190 pass, server
+57 pass (1 live test skipped).
+
 ## 0. Next step: connecting Claude Opus 5.5 for real
 
 The server is already written for Opus 5.5 (`claude-opus-5-5`, adaptive
@@ -154,7 +159,7 @@ Run `docs/phone-test-checklist.md` on an Android phone with the study server run
 ## 9b. Google Drive sync — what's left (added 21 Oct, evening)
 
 - Create the Google Cloud OAuth clients (README → "Google Drive sync") and add the GitHub secrets/variables; then test sign-in on a phone and on the Pages site.
-- Sync is last-upload-wins per file: two phones editing at the same time overwrite each other's `data.json` (notes/photos are never lost, only the small data). A merge would need per-record timestamps.
+- Sync is last-upload-wins per file: two phones editing at the same time overwrite each other's `data.json`. A sync also removes Drive files this phone doesn't have, so another phone's new PDFs and photos can go too (not only the small data). A merge would need per-record timestamps.
 - Large libraries upload each file once, but a restore downloads everything in one go with no progress bar.
 - Web sessions: after the access token expires (~1 h) the next sync says "sign in again"; a silent refresh on the web isn't wired.
 - iOS needs the reversed client id in `Info.plist` once an iOS build exists.
@@ -167,3 +172,59 @@ Run `docs/phone-test-checklist.md` on an Android phone with the study server run
 3. Billing (1.1), then per-user tokens/accounts and shared limits on the server (3.1, 1.6).
 4. Web OCR or server-side OCR so Smart Study works from web scans (2.4).
 5. Sync merge instead of last-upload-wins (1.4), iOS (1.5).
+
+## 11. Bug pass (25 Oct)
+
+Two reviewers, one on the data layer, services and server, one on the
+screens. Every fix has a regression test that fails on the old code (except
+11.5, which only fails in a time zone with daylight saving).
+
+**Fixed — data and sync**
+
+| # | What a user would have seen | Where |
+|---|---|---|
+| 11.1 | A restore that ran out of space had already deleted this phone's PDFs and photos, while saying "Nothing was changed". The backup's files now go in first. | `app_store.dart` `restoreFrom` |
+| 11.2 | A save during a restore (e.g. a Pomodoro ending) could land on top of the restored data. Saving is paused for the restore. | same |
+| 11.3 | "Your tAsikaso+ Plan Ended" after restoring an old backup, even with an active plan. | `app_store.dart` `_init(checkPlan:)` |
+| 11.4 | Delete All Data during a running sync could delete the copy on Drive. The account is now forgotten first. | `eraseEverything` |
+| 11.5 | Smart-review due dates a day off across a daylight-saving change. | `scheduleCard` |
+| 11.6 | While saving was paused (unreadable save file), notes and photos made that session wouldn't open. | `_readFile` |
+| 11.7 | Changes made during an upload were marked as synced and never reached Drive. | `drive_sync.dart` `_changes` |
+| 11.8 | "Restored from Google Drive" when a restore was tapped during an upload, but nothing was restored. | `_runOne(wait:)` |
+| 11.9 | A new phone's automatic sync could overwrite Drive's data before the user chose Restore or Keep Mine. | `_upload` |
+| 11.10 | An upload that stopped halfway left Drive's data.json naming files that weren't uploaded. New files go first now. | `_upload` |
+| 11.11 | Signing in while Drive couldn't be checked (weak connection) uploaded this phone's data over Drive's. Now it says what went wrong and uploads nothing. | `backup_screen.dart` `_signIn` |
+| 11.12 | Short text sent to Smart Study showed the server's developer message; now refused in plain words. | `study_ai.dart` |
+| 11.13 | Sets over 200 cards never got AI quizzes (server 400). 200 random cards are sent. | `makeQuiz` |
+| 11.14 | An answer check the app couldn't read left the quiz's Check button spinning. | `checkAnswer` |
+
+**Fixed — screens**
+
+| # | What a user would have seen | Where |
+|---|---|---|
+| 11.15 | A progress spinner stuck on screen for good when another dialog (e.g. "Couldn't Save") had opened above it. Dialogs now close their own route. | `dialogs.dart` `closeDialog`, `review_screen.dart`, `scan_flow.dart` |
+| 11.16 | No keyboard for the next typed quiz question. | `quiz_screen.dart` `_next` |
+| 11.17 | A card asked about twice in one quiz moved two smart-review steps. | `quiz_screen.dart` `_check` |
+| 11.18 | Deleting a card left its quiz questions counted and listed. | `set_screen.dart` |
+| 11.19 | "Make Cards with AI" a second time wiped most of the set's quiz. | `actions.dart` `makeCardsForSet` |
+| 11.20 | "Backup restored." lost (and an exception) after leaving the Backup screen. | `backup_screen.dart` `_restore` |
+| 11.21 | Offline quiz with two right choices, or a "False" that was true ("Mitochondria" vs "The mitochondria."). | `quiz_builder.dart` |
+| 11.22 | Productive Hours lost a minute for every Pomodoro across an hour. | `analysis_screen.dart` `_byHour` |
+| 11.23 | Auto-crop never found a page in a 16-bit photo. | `page_detector.dart` |
+| — | Server test: the two abort tests now wait for `message_start` instead of a fixed timer (one failed under load). | `server/test/claude.test.ts` |
+
+**Found, not fixed**
+
+| # | Problem | Status | Notes |
+|---|---|---|---|
+| 11.24 | Double-tap during a page transition: START can pause again, two camera screens, two offline sets. | 🟡 | Flutter lets taps through one frame after a push; needs guards in several places. |
+| 11.25 | Drive status compares Drive's clock with the phone's (+5 s): a phone with a slow clock says "Google Drive has newer data" after its own sync. | 🟡 | Save Drive's own timestamp in the sync state. |
+| 11.26 | `_uploadedJson` isn't saved, so the first sync after a restart uploads data.json again. | 🟡 | Harmless, one extra upload. |
+| 11.27 | Drive uploads use multipart, which Google documents for files ≤ 5 MB. A big Scan PDF may make every sync fail. | 🟠 unverified | Check on a phone with a 10+ page scan; switch to resumable upload if it fails. |
+| 11.28 | Requests that never reached Claude (overloaded, bad key, connection) still use up the student's daily allowance; an error mid-stream isn't added to the daily spend. | 🟡 | Policy call. |
+| 11.29 | Text over 120,000 characters returns 400 with the validator's wording; the README documents `too_long` (413). | 🟡 | Pick one; a test asserts 400 today. |
+| 11.30 | Answer checks wait the full 3 minutes with no Cancel. | 🟡 | |
+| 11.31 | The daily reminder isn't rescheduled when a restore changes it (fixed at next start). | 🟡 | |
+| 11.32 | Switching the camera to Single, or closing it, drops Multiple-mode pages without asking. | 🟡 | Design question. |
+| 11.33 | The quiz ring counts partly right as 0; the quiz result counts it as half. | 🟡 | Needs a model field. |
+| 11.34 | Dashboard and Study don't roll over at midnight until something changes; Dashboard says "No tasks yet" when all are done; profile photo errors are silent. | 🟡 | |
