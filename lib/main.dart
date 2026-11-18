@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -10,6 +11,12 @@ import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Help → Open-Source Licenses: the auto-crop model's notice, next to the
+  // packages' own licenses that Flutter lists by itself.
+  LicenseRegistry.addLicense(() async* {
+    final notice = await rootBundle.loadString('assets/models/DOCALIGNER_NOTICE.txt');
+    yield LicenseEntryWithLineBreaks(['DocAligner (page-corner model)'], notice);
+  });
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final store = AppStore.instance;
   await store.init(createDeviceStorage());

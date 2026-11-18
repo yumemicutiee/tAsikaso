@@ -22,10 +22,20 @@ class HelpScreen extends StatelessWidget {
       'How do I scan my notes?',
       'Tap the camera button in the middle of the bottom bar. On Android the '
           "Smart Scanner finds the page edges for you; the app's own camera "
-          "finds them too, and you can drag the four corners if they're off. "
+          'finds them too (see below), and you can drag the four corners if '
+          "they're off. "
           'Scan several pages, then save them as a Scan PDF (your photos, '
           'with the text selectable), a Text PDF (the notes typed up) or '
           'Flashcards.',
+    ),
+    (
+      'How does the app find the page edges?',
+      "The app's own camera and gallery import use a small AI model that "
+          'runs on your phone (no internet, and your photos stay on it), so it '
+          'works the same on every phone, with or without Google services, and '
+          "in the browser. If it can't find the page, drag the four corners. "
+          'The model is DocAligner by Ze Yuan (DocsaidLab), github.com/'
+          'DocsaidLab/DocAligner.',
     ),
     (
       'Can the app read the text in my photos?',
@@ -142,6 +152,16 @@ class HelpScreen extends StatelessWidget {
                 ),
               ),
             ),
+          const SizedBox(height: 6),
+          Center(
+            child: TextButton(
+              onPressed: () => showLicensePage(
+                context: context,
+                applicationName: 'tAsikaso',
+              ),
+              child: const Text('Open-Source Licenses'),
+            ),
+          ),
         ],
       ),
     );

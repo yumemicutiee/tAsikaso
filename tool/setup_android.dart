@@ -73,12 +73,27 @@ void _writeProguardRules(File file) {
 -dontwarn com.google.mlkit.vision.text.japanese.**
 -dontwarn com.google.mlkit.vision.text.korean.**
 ''';
-  final text = file.existsSync() ? file.readAsStringSync() : '';
-  if (text.contains('mlkit.vision.text.chinese')) {
+  // ONNX Runtime (auto-crop's page model) is called from native code by name.
+  const onnx = '''
+
+# ONNX Runtime (auto-crop's page model) is called from native code by name.
+-keep class ai.onnxruntime.** { *; }
+''';
+  var text = file.existsSync() ? file.readAsStringSync() : '';
+  var changed = false;
+  if (!text.contains('mlkit.vision.text.chinese')) {
+    text = '$text$rules';
+    changed = true;
+  }
+  if (!text.contains('ai.onnxruntime')) {
+    text = '$text$onnx';
+    changed = true;
+  }
+  if (!changed) {
     stdout.writeln('${file.path} already set up');
     return;
   }
-  file.writeAsStringSync('$text$rules');
+  file.writeAsStringSync(text);
   stdout.writeln('Updated ${file.path}');
 }
 

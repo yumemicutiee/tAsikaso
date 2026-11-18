@@ -34,6 +34,9 @@ dependencies:
   google_sign_in: ^7.2.0
   googleapis: ^17.0.0
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
+  # Runs the page-corner model (assets/models/) on every phone and the web,
+  # with or without Google Play services. MIT.
+  flutter_onnxruntime: ^1.9.0
 
 dev_dependencies:
   flutter_test:
@@ -44,6 +47,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    # Auto-crop's page-corner model (DocAligner, see DOCALIGNER_NOTICE.txt).
+    - assets/models/docaligner_lcnet100.onnx
+    - assets/models/DOCALIGNER_NOTICE.txt
 
   fonts:
     # Plus Jakarta Sans (headings, numbers, buttons) and Inter (body text),

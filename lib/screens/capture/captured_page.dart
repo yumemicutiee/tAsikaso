@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:image/image.dart' as img;
 
+import '../../services/page_model_service.dart';
 import '../../utils/page_detector.dart';
+import '../../utils/page_model.dart';
 
 /// A photographed or imported page, plus how the user wants it cropped and
 /// rotated. The original photo is never changed; crop and rotation are
@@ -100,19 +102,27 @@ class CapturedPage {
   /// scanner does) and the crop corners start on its edges when it's found.
   /// [quarterTurns] turns the photo clockwise first, for cameras that hand
   /// over sideways frames (the web camera on phones).
+  ///
+  /// The page-corner model ([PageModel]) is asked first; when it can't run
+  /// or sees no page, the simpler detector's answer is used.
   static Future<CapturedPage> fromPhoto(
     int id,
     Uint8List original, {
     bool findEdges = false,
     int quarterTurns = 0,
   }) async {
-    final (bytes, width, height, corners) =
-        await compute(_normalizePhoto, (original, findEdges, quarterTurns));
+    final (bytes, width, height, simple, modelInput) = await compute(
+        _normalizePhoto, (original, findEdges && PageModel.available, findEdges, quarterTurns));
     final page = CapturedPage(id: id, bytes: bytes, width: width, height: height);
-    if (corners != null) {
-      page.corners = [
-        for (var i = 0; i < 4; i++) Offset(corners[i * 2], corners[i * 2 + 1]),
+    List<Offset>? found;
+    if (modelInput != null) found = await PageModel.findCorners(modelInput);
+    if (found == null && simple != null) {
+      found = [
+        for (var i = 0; i < 4; i++) Offset(simple[i * 2], simple[i * 2 + 1]),
       ];
+    }
+    if (found != null) {
+      page.corners = found;
       page.autoDetected = true;
     }
     return page;
@@ -133,11 +143,13 @@ class CapturedPage {
 // ---------------------------------------------------------------------------
 // Image work. Top-level functions so `compute` can run them in an isolate.
 
-/// Returns the upright, scaled JPEG, its size, and the page corners found
-/// in it (as x, y fractions, 8 numbers) or null.
-(Uint8List, int, int, List<double>?) _normalizePhoto(
-    (Uint8List, bool, int) job) {
-  final (data, findEdges, quarterTurns) = job;
+/// Returns the upright, scaled JPEG, its size, the corners the simple
+/// detector found (as x, y fractions, 8 numbers) or null, and the page
+/// model's input when [forModel] (the model itself runs on the main side,
+/// through its plugin).
+(Uint8List, int, int, List<double>?, Float32List?) _normalizePhoto(
+    (Uint8List, bool, bool, int) job) {
+  final (data, forModel, findEdges, quarterTurns) = job;
   final decoded = img.decodeImage(data);
   if (decoded == null) {
     throw const FormatException('This photo format is not supported.');
@@ -164,7 +176,21 @@ class CapturedPage {
       debugPrint('Page detection failed: $e');
     }
   }
-  return (img.encodeJpg(image, quality: 88), image.width, image.height, corners);
+  Float32List? modelInput;
+  if (forModel) {
+    try {
+      modelInput = pageModelInput(image);
+    } catch (e) {
+      debugPrint('Preparing the page model input failed: $e');
+    }
+  }
+  return (
+    img.encodeJpg(image, quality: 88),
+    image.width,
+    image.height,
+    corners,
+    modelInput,
+  );
 }
 
 Uint8List _renderPage((Uint8List, int, List<double>) job) {

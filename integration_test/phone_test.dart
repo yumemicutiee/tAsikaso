@@ -26,12 +26,17 @@ import 'package:study_app/data/pomodoro_controller.dart';
 import 'package:study_app/data/storage/local_storage.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/screens/capture/capture_screen.dart';
+import 'package:study_app/screens/capture/captured_page.dart';
+import 'package:study_app/services/page_model_service.dart';
+import 'package:study_app/utils/page_model.dart';
 import 'package:study_app/screens/capture/notes_pdf.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/services/notification_service.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/widgets/bottom_nav.dart';
+
+import 'model_photos.dart';
 
 late final IntegrationTestWidgetsFlutterBinding binding;
 final store = AppStore.instance;
@@ -230,6 +235,36 @@ void main() {
     expect(saved.pageCount, 1);
     expect((await store.readPdf(saved))!.length, greaterThan(10000));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('the page model finds the page on a white desk and among clutter',
+      (tester) async {
+    // The simple detector finds nothing on a white desk; the model must, on
+    // this phone, with no help from Google Play services.
+    PageModel.reset();
+    for (final photo in modelPhotos) {
+      final truth = [for (final p in photo.truth) Offset(p[0], p[1])];
+      final jpg = base64Decode(photo.jpgBase64);
+      final input = pageModelInput(img.decodeJpg(jpg)!);
+      final took = Stopwatch()..start();
+      final corners = await PageModel.findCorners(input);
+      debugPrint('Page model on ${photo.name}: ${took.elapsedMilliseconds} ms');
+      expect(corners, isNotNull, reason: 'the model ran and saw ${photo.name}');
+      double worst(List<Offset> c) => [
+            for (var i = 0; i < 4; i++) (c[i] - truth[i]).distance,
+          ].reduce((a, b) => a > b ? a : b);
+      expect(worst(corners!), lessThan(0.02), reason: photo.name);
+      // And through the app's own import path.
+      final page = await CapturedPage.fromPhoto(1, jpg, findEdges: true);
+      expect(page.autoDetected, isTrue, reason: photo.name);
+      expect(worst(page.corners), lessThan(0.02), reason: photo.name);
+    }
+    expect(PageModel.available, isTrue);
+    // A second run is the normal case: timed for the log.
+    final input = pageModelInput(img.decodeJpg(base64Decode(modelPhotos.first.jpgBase64))!);
+    final again = Stopwatch()..start();
+    await PageModel.findCorners(input);
+    debugPrint('Page model, warm: ${again.elapsedMilliseconds} ms');
   });
 
   testWidgets('a one-minute Pomodoro in Focus Mode ends with an alert',

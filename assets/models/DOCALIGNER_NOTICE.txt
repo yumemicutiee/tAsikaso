@@ -1,0 +1,29 @@
+docaligner_lcnet100.onnx
+========================
+
+The page-corner model used by tAsikaso's auto-crop is DocAligner's
+"lcnet100" heatmap model (file lcnet100_h_e_bifpn_256_fp32.onnx, renamed),
+by Ze Yuan / DocsaidLab: https://github.com/DocsaidLab/DocAligner
+
+SHA-256: F4117B786E3A18470F3865C93F3C2BD69D9B998EDD60F385574A5C665E79594E
+
+Code license: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
+
+Model weights: the author stated in
+https://github.com/DocsaidLab/DocAligner/issues/11 (1 October 2026):
+"For the official DocAligner model weights/checkpoints, feel free to use
+them however you like. I do not impose any restrictions on their use,
+including commercial use, redistribution, conversion, quantization,
+fine-tuning, or redistribution of derived checkpoints." The author also
+noted that the third-party datasets used to train it are not his to
+license.
+
+Citation requested by the author:
+  @misc{yuan2023docaligner, author = {Ze Yuan}, title = {DocAligner},
+        year = {2023}, publisher = {GitHub},
+        url = {https://github.com/DocsaidLab/DocAligner}}
+
+Input:  "img", float32 [1, 3, 256, 256], RGB, values 0-1, the whole photo
+        resized (stretched) to 256 x 256.
+Output: "heatmap", float32 [1, 4, 128, 128], one map per corner in the order
+        top-left, top-right, bottom-right, bottom-left.
