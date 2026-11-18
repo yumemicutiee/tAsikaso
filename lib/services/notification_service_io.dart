@@ -84,6 +84,40 @@ final _vibrationDetails = NotificationDetails(
   iOS: const DarwinNotificationDetails(presentSound: false),
 );
 
+/// The three timer channels, made at start-up (Android only makes a channel
+/// when its first alert shows otherwise), so they're in the phone's
+/// notification settings from the start and match the alerts above.
+final _timerChannels = [
+  AndroidNotificationChannel(
+    'timer_alarm_vibrate',
+    'Timer: alarm and vibration',
+    description: 'When a Pomodoro or a break ends: the alarm sound and vibration',
+    importance: Importance.max,
+    sound: _alarmSound,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    enableVibration: true,
+    vibrationPattern: _buzz,
+  ),
+  const AndroidNotificationChannel(
+    'timer_alarm',
+    'Timer: alarm',
+    description: 'When a Pomodoro or a break ends: the alarm sound',
+    importance: Importance.max,
+    sound: _alarmSound,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    enableVibration: false,
+  ),
+  AndroidNotificationChannel(
+    'timer_vibrate',
+    'Timer: vibration only',
+    description: 'When a Pomodoro or a break ends: vibration, no sound',
+    importance: Importance.high,
+    playSound: false,
+    enableVibration: true,
+    vibrationPattern: _buzz,
+  ),
+];
+
 /// The notification for a "When Time Is Up" choice; null for Off.
 NotificationDetails? _timerDetailsFor({required bool sound, required bool vibrate}) =>
     sound
@@ -115,6 +149,16 @@ Future<void> init() async {
     ),
   );
   _ready = true;
+  final android = _android;
+  if (android != null) {
+    for (final channel in _timerChannels) {
+      try {
+        await android.createNotificationChannel(channel);
+      } catch (_) {
+        // Made with the first alert instead.
+      }
+    }
+  }
 }
 
 Future<bool> requestPermission() async {
