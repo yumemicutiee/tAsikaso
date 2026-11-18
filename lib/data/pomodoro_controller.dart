@@ -283,14 +283,16 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   /// closed by then.
   void _scheduleAlert() {
     final end = _endsAt;
-    if (end == null || !_store.prefs.timerAlerts) return;
+    final alert = _store.prefs.timeUpAlert;
+    if (end == null || alert == TimeUpAlert.off) return;
     final next = isFocus ? 'break' : 'Pomodoro';
     NotificationService.scheduleTimerEnd(
       end,
       isFocus ? 'Pomodoro done!' : 'Break over',
       isFocus ? 'Nice work. Time for a $next.' : 'Ready for the next $next?',
       isBreak: !isFocus,
-      vibrate: _store.prefs.vibrateOnFinish,
+      sound: alert.sound,
+      vibrate: alert.vibrate,
     );
     // Timer Alerts are on by default, so ask for permission the first time
     // they would be used (Android 13+ and iOS need it).
@@ -378,7 +380,8 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
               'Ready for the next Pomodoro?');
       return;
     }
-    if (_store.prefs.vibrateOnFinish) unawaited(Haptics.timeIsUp());
+    // Only when the choice includes vibration ("Off" means no buzz either).
+    if (_store.prefs.timeUpAlert.vibrate) unawaited(Haptics.timeIsUp());
     _say(wasFocus
         ? 'Pomodoro done! Time for a ${next.label}.'
         : 'Break over. Ready for the next Pomodoro?');

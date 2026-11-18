@@ -990,7 +990,28 @@ Meeting at 10:30 today
       await tester.pumpAndSettle();
       await tester.tap(find.text('Notifications & Reminders'));
       await tester.pumpAndSettle();
-      expect(find.text('Timer Alerts').hitTestable(), findsOneWidget);
+      expect(find.text('When Time Is Up').hitTestable(), findsOneWidget);
+    });
+
+    testWidgets('When Time Is Up offers the four choices and keeps the pick',
+        (tester) async {
+      usePhoneSize(tester);
+      await tester.pumpWidget(const StudyApp());
+      await tester.tap(find.byIcon(AppTab.profile.icon));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Notifications & Reminders'));
+      await tester.pumpAndSettle();
+      // The default: the alarm sound and vibration.
+      expect(find.text('Alarm Clock and Vibration'), findsOneWidget);
+      await tester.tap(find.text('When Time Is Up'));
+      await tester.pumpAndSettle();
+      for (final label in ['Alarm Clock', 'Vibration Only', 'Off']) {
+        expect(find.text(label), findsWidgets);
+      }
+      await tester.tap(find.text('Vibration Only'));
+      await tester.pumpAndSettle();
+      expect(AppStore.instance.prefs.timeUpAlert, TimeUpAlert.vibration);
+      expect(find.text('Vibration Only'), findsOneWidget, reason: 'shown on the row');
     });
 
     testWidgets('a name can be cleared again', (tester) async {

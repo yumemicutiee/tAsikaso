@@ -17,34 +17,78 @@ const _focusEndId = 1;
 const _reminderId = 2;
 const _breakEndId = 3;
 
-// Android fixes a channel's vibration when it is first created, so the
-// "Vibrate When Time Is Up" setting picks one of two channels.
-final _timerDetails = NotificationDetails(
+// "When Time Is Up" (Settings): Android fixes a channel's sound and
+// vibration when it is first created, so each choice has its own channel.
+// The alarm channels use the phone's own alarm sound on the alarm volume
+// (it rings even on silent, like an alarm clock) and keep ringing until the
+// notification is tapped or dismissed (FLAG_INSISTENT), for at most a minute.
+
+/// The phone's alarm sound, as chosen in its Clock app.
+const _alarmSound = UriAndroidNotificationSound('content://settings/system/alarm_alert');
+
+/// Android's Notification.FLAG_INSISTENT: the sound repeats until the user
+/// does something with the notification.
+final _insistent = Int32List.fromList([4]);
+final _buzz = Int64List.fromList([0, 600, 300, 600, 300, 600]);
+
+/// How long an alarm may ring before it stops by itself.
+const _ringFor = 60 * 1000;
+
+final _alarmAndVibrationDetails = NotificationDetails(
   android: AndroidNotificationDetails(
-    'timer',
-    'Timer',
-    channelDescription: 'When a Pomodoro or a break ends',
-    importance: Importance.high,
-    priority: Priority.high,
+    'timer_alarm_vibrate',
+    'Timer: alarm and vibration',
+    channelDescription: 'When a Pomodoro or a break ends: the alarm sound and vibration',
+    importance: Importance.max,
+    priority: Priority.max,
     category: AndroidNotificationCategory.alarm,
+    sound: _alarmSound,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
     enableVibration: true,
-    vibrationPattern: Int64List.fromList([0, 400, 200, 400]),
+    vibrationPattern: _buzz,
+    additionalFlags: _insistent,
+    timeoutAfter: _ringFor,
   ),
   iOS: const DarwinNotificationDetails(presentSound: true),
 );
 
-const _quietTimerDetails = NotificationDetails(
+final _alarmDetails = NotificationDetails(
   android: AndroidNotificationDetails(
-    'timer_quiet',
-    'Timer (no vibration)',
-    channelDescription: 'When a Pomodoro or a break ends, without vibrating',
+    'timer_alarm',
+    'Timer: alarm',
+    channelDescription: 'When a Pomodoro or a break ends: the alarm sound',
+    importance: Importance.max,
+    priority: Priority.max,
+    category: AndroidNotificationCategory.alarm,
+    sound: _alarmSound,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    enableVibration: false,
+    additionalFlags: _insistent,
+    timeoutAfter: _ringFor,
+  ),
+  iOS: const DarwinNotificationDetails(presentSound: true),
+);
+
+final _vibrationDetails = NotificationDetails(
+  android: AndroidNotificationDetails(
+    'timer_vibrate',
+    'Timer: vibration only',
+    channelDescription: 'When a Pomodoro or a break ends: vibration, no sound',
     importance: Importance.high,
     priority: Priority.high,
     category: AndroidNotificationCategory.alarm,
-    enableVibration: false,
+    playSound: false,
+    enableVibration: true,
+    vibrationPattern: _buzz,
   ),
-  iOS: DarwinNotificationDetails(presentSound: true),
+  iOS: const DarwinNotificationDetails(presentSound: false),
 );
+
+/// The notification for a "When Time Is Up" choice; null for Off.
+NotificationDetails? _timerDetailsFor({required bool sound, required bool vibrate}) =>
+    sound
+        ? (vibrate ? _alarmAndVibrationDetails : _alarmDetails)
+        : (vibrate ? _vibrationDetails : null);
 
 const _reminderDetails = NotificationDetails(
   android: AndroidNotificationDetails(
@@ -110,15 +154,16 @@ Future<AndroidScheduleMode> _mode() async {
 }
 
 Future<void> scheduleTimerEnd(DateTime at, String title, String body,
-    {required bool isBreak, required bool vibrate}) async {
+    {required bool isBreak, required bool sound, required bool vibrate}) async {
   await init();
   final id = isBreak ? _breakEndId : _focusEndId;
   await _plugin.cancel(id: id);
-  if (!at.isAfter(clock.now())) return;
+  final details = _timerDetailsFor(sound: sound, vibrate: vibrate);
+  if (details == null || !at.isAfter(clock.now())) return;
   await _plugin.zonedSchedule(
     id: id,
     scheduledDate: tz.TZDateTime.from(at.toUtc(), tz.UTC),
-    notificationDetails: vibrate ? _timerDetails : _quietTimerDetails,
+    notificationDetails: details,
     androidScheduleMode: await _mode(),
     title: title,
     body: body,

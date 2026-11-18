@@ -11,7 +11,7 @@ Future<bool> exactTimingAllowed() async => true;
 Future<bool> requestExactTiming() async => true;
 
 Future<void> scheduleTimerEnd(DateTime at, String title, String body,
-    {required bool isBreak, required bool vibrate}) async {}
+    {required bool isBreak, required bool sound, required bool vibrate}) async {}
 
 Future<void> cancelTimerEnd() async {}
 

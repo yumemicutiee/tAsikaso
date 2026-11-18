@@ -883,6 +883,22 @@ class Subscription {
   }
 }
 
+/// What happens when a Pomodoro or break ends (Settings → When Time Is Up).
+enum TimeUpAlert {
+  alarmAndVibration('Alarm Clock and Vibration', sound: true, vibrate: true),
+  alarm('Alarm Clock', sound: true, vibrate: false),
+  vibration('Vibration Only', sound: false, vibrate: true),
+  off('Off', sound: false, vibrate: false);
+
+  const TimeUpAlert(this.label, {required this.sound, required this.vibrate});
+
+  final String label;
+
+  /// The phone's alarm sound, on the alarm volume.
+  final bool sound;
+  final bool vibrate;
+}
+
 /// Personal preferences and app behaviour (Settings).
 @immutable
 class AppPrefs {
@@ -908,6 +924,7 @@ class AppPrefs {
     this.profilePhotoUrl = '',
     this.crashReports = true,
     this.installId = '',
+    this.alarmSound = true,
   });
 
   /// Shown in greetings ("Hello, Budi!").
@@ -979,6 +996,32 @@ class AppPrefs {
   /// a restored phone makes its own.
   final String installId;
 
+  /// The alarm sound when a Pomodoro or break ends (with [timerAlerts]);
+  /// see [timeUpAlert].
+  final bool alarmSound;
+
+  /// What happens when time is up: the four choices in Settings, made of
+  /// [timerAlerts], [alarmSound] and [vibrateOnFinish].
+  TimeUpAlert get timeUpAlert => !timerAlerts
+      ? TimeUpAlert.off
+      : alarmSound && vibrateOnFinish
+          ? TimeUpAlert.alarmAndVibration
+          : alarmSound
+              ? TimeUpAlert.alarm
+              : vibrateOnFinish
+                  ? TimeUpAlert.vibration
+                  : TimeUpAlert.off;
+
+  /// These settings with [alert] chosen. Off keeps the sound and vibration
+  /// choices, so turning alerts back on brings them back.
+  AppPrefs withTimeUpAlert(TimeUpAlert alert) => alert == TimeUpAlert.off
+      ? copyWith(timerAlerts: false)
+      : copyWith(
+          timerAlerts: true,
+          alarmSound: alert.sound,
+          vibrateOnFinish: alert.vibrate,
+        );
+
   AppPrefs copyWith({
     String? userName,
     bool? smartScanner,
@@ -1002,6 +1045,7 @@ class AppPrefs {
     String? profilePhotoUrl,
     bool? crashReports,
     String? installId,
+    bool? alarmSound,
   }) =>
       AppPrefs(
         userName: userName ?? this.userName,
@@ -1026,6 +1070,7 @@ class AppPrefs {
         profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
         crashReports: crashReports ?? this.crashReports,
         installId: installId ?? this.installId,
+        alarmSound: alarmSound ?? this.alarmSound,
       );
 
   Json toJson() => {
@@ -1050,6 +1095,7 @@ class AppPrefs {
         if (profilePhotoUrl.isNotEmpty) 'photoUrl': profilePhotoUrl,
         'crash': crashReports,
         if (installId.isNotEmpty) 'install': installId,
+        'alarm': alarmSound,
       };
 
   factory AppPrefs.fromJson(Json j) => AppPrefs(
@@ -1084,5 +1130,6 @@ class AppPrefs {
         profilePhotoUrl: j['photoUrl'] as String? ?? '',
         crashReports: j['crash'] != false,
         installId: j['install'] as String? ?? '',
+        alarmSound: j['alarm'] != false,
       );
 }

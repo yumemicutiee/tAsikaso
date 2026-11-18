@@ -121,8 +121,11 @@ lecture-note capture → PDF or flashcards.
 - **Settings** (Profile, or the gear on Study): your name and daily focus
   goal; Pomodoro presets (Classic 25–5–15, Short 15–3–10, Deep Work
   50–10–30, or Custom, which remembers your own lengths), lengths you can type
-  or step, auto-start and **Reset to Default** (with Undo); Focus Mode (keep screen on, vibrate);
-  notifications (timer alerts that sound even when the app is closed, a daily
+  or step, auto-start and **Reset to Default** (with Undo); Focus Mode (keep screen on);
+  **When Time Is Up**: Alarm Clock (the phone's own alarm sound, on the alarm
+  volume so it rings on silent too, until the alert is tapped, up to a
+  minute), Vibration Only, Alarm Clock and Vibration (default) or Off, even
+  when the app is closed; notifications (a daily
   study reminder at a time you pick, and on Android 14+ an **Allow Exact
   Timing** row while the phone would deliver alerts late); Smart Scanner;
   Smart Study (the AI switch, the study server's address — checked when you

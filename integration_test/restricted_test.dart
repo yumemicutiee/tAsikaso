@@ -65,7 +65,7 @@ void main() {
     // goes to the log (a real phone in a pocket can be later still).
     final due = clock.now().add(const Duration(seconds: 5));
     await NotificationService.scheduleTimerEnd(due, 'Pomodoro done', 'Late check.',
-        isBreak: false, vibrate: false);
+        isBreak: false, sound: false, vibrate: true);
     var shown = <ActiveNotification>[];
     final waited = Stopwatch()..start();
     while (waited.elapsed < const Duration(minutes: 12) &&

@@ -30,16 +30,19 @@ class NotificationService {
 
   /// Shows [title]/[body] at [at]. Pomodoro and break alerts use separate
   /// slots, so starting a break never cancels the Pomodoro alert that is
-  /// just going off. [vibrate] follows the "Vibrate When Time Is Up" setting.
+  /// just going off. [sound] (the phone's alarm sound, ringing until the
+  /// alert is tapped, at most a minute) and [vibrate] follow Settings → When
+  /// Time Is Up; with neither, nothing is scheduled.
   static Future<void> scheduleTimerEnd(
     DateTime at,
     String title,
     String body, {
     required bool isBreak,
+    required bool sound,
     required bool vibrate,
   }) =>
       _guard(() => impl.scheduleTimerEnd(at, title, body,
-          isBreak: isBreak, vibrate: vibrate));
+          isBreak: isBreak, sound: sound, vibrate: vibrate));
 
   static Future<void> cancelTimerEnd() => _guard(impl.cancelTimerEnd);
 

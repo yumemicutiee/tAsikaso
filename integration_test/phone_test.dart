@@ -111,10 +111,47 @@ void main() {
       'Pomodoro done',
       'Time for a short break.',
       isBreak: false,
+      sound: true,
       vibrate: true,
     );
     expect((await plugin.pendingNotificationRequests()).map((r) => r.id),
         contains(1));
+
+    // The other "When Time Is Up" choices make their own channels.
+    for (final (sound, vibrate) in [(true, false), (false, true)]) {
+      await NotificationService.scheduleTimerEnd(
+          clock.now().add(const Duration(hours: 1)), 'Check', 'Channel check.',
+          isBreak: true, sound: sound, vibrate: vibrate);
+    }
+    await NotificationService.scheduleTimerEnd(
+        clock.now().add(const Duration(hours: 1)), 'Off', 'Nothing.',
+        isBreak: true, sound: false, vibrate: false);
+    expect((await plugin.pendingNotificationRequests()).map((r) => r.id),
+        isNot(contains(3)), reason: 'Off schedules nothing');
+
+    // What Android made of them: the phone's alarm sound, on the alarm
+    // volume (rings even on silent), loud enough to wake; vibration as chosen.
+    final channels = {
+      for (final c in await android.getNotificationChannels() ?? const []) c.id: c,
+    };
+    debugPrint('Timer channels: ${[
+      for (final c in channels.values)
+        '${c.id}: sound=${(c.sound as dynamic)?.sound} usage=${c.audioAttributesUsage} '
+            'vibrate=${c.enableVibration} importance=${c.importance}',
+    ]}');
+    for (final id in ['timer_alarm_vibrate', 'timer_alarm']) {
+      final c = channels[id];
+      expect(c, isNotNull, reason: id);
+      expect(c!.playSound, isTrue, reason: id);
+      expect((c.sound as dynamic).sound.toString(), contains('alarm_alert'), reason: id);
+      expect(c.audioAttributesUsage, AudioAttributesUsage.alarm, reason: id);
+      // Max is asked for; Android may keep it as high (heads-up with sound).
+      expect(c.importance.value, greaterThanOrEqualTo(Importance.high.value), reason: id);
+    }
+    expect(channels['timer_alarm_vibrate']!.enableVibration, isTrue);
+    expect(channels['timer_alarm']!.enableVibration, isFalse);
+    expect(channels['timer_vibrate']!.playSound, isFalse);
+    expect(channels['timer_vibrate']!.enableVibration, isTrue);
 
     var shown = <ActiveNotification>[];
     final waited = Stopwatch()..start();

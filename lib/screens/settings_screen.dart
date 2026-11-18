@@ -15,6 +15,7 @@ import '../theme/app_theme.dart';
 import '../theme/brand.dart';
 import '../widgets/app_header.dart';
 import '../widgets/color_picker_sheet.dart';
+import '../widgets/common.dart' show SheetTitle;
 import '../widgets/dialogs.dart';
 import '../widgets/number_field.dart';
 import '../widgets/segmented_tabs.dart';
@@ -199,11 +200,6 @@ class SettingsScreen extends StatelessWidget {
                   onChanged: (v) => prefs(p.copyWith(keepScreenOn: v)),
                 ),
                 _Switch(
-                  label: 'Vibrate When Time Is Up',
-                  value: p.vibrateOnFinish,
-                  onChanged: (v) => prefs(p.copyWith(vibrateOnFinish: v)),
-                ),
-                _Switch(
                   label: 'Moving Bubbles',
                   value: p.focusBubbles,
                   onChanged: (v) => prefs(p.copyWith(focusBubbles: v)),
@@ -215,12 +211,13 @@ class SettingsScreen extends StatelessWidget {
                 child: const _Heading('Notifications'),
               ),
               _Group(children: [
-                _Switch(
-                  label: 'Timer Alerts',
-                  value: p.timerAlerts,
-                  onChanged: (v) => _setTimerAlerts(context, v),
+                _TapRow(
+                  label: 'When Time Is Up',
+                  value: p.timeUpAlert.label,
+                  onTap: () => _pickTimeUpAlert(context),
                 ),
-                if (p.timerAlerts && NotificationService.isSupported)
+                if (p.timeUpAlert != TimeUpAlert.off &&
+                    NotificationService.isSupported)
                   const _ExactTimingRow(),
                 _Switch(
                   label: 'Daily Study Reminder',
@@ -465,12 +462,58 @@ class SettingsScreen extends StatelessWidget {
     store.updatePrefs(store.prefs.copyWith(userName: name.trim()));
   }
 
-  static Future<void> _setTimerAlerts(BuildContext context, bool on) async {
+  /// The four "When Time Is Up" choices in a sheet.
+  static Future<void> _pickTimeUpAlert(BuildContext context) async {
+    final current = AppStore.instance.prefs.timeUpAlert;
+    final picked = await showModalBottomSheet<TimeUpAlert>(
+      context: context,
+      // As tall as its four choices (the default half-height cut off "Off"
+      // on a phone), scrolling only when the text is very large.
+      isScrollControlled: true,
+      builder: (sheet) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SheetTitle('When Time Is Up',
+                subtitle: 'When a Pomodoro or a break ends'),
+            const SizedBox(height: 8),
+            for (final a in TimeUpAlert.values)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(a.label, style: AppText.itemTitle),
+                subtitle: Text(_timeUpAlertNote(a)),
+                trailing: a == current
+                    ? Icon(AppIcons.check, color: AppColors.primaryDeep, size: 20)
+                    : null,
+                onTap: () => Navigator.of(sheet).pop(a),
+              ),
+          ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    await _setTimeUpAlert(context, picked);
+  }
+
+  static String _timeUpAlertNote(TimeUpAlert a) => switch (a) {
+        TimeUpAlert.alarmAndVibration =>
+          "Your phone's alarm sound and vibration, until you tap it (up to a minute)",
+        TimeUpAlert.alarm =>
+          "Your phone's alarm sound, until you tap it (up to a minute)",
+        TimeUpAlert.vibration => 'Vibration, no sound',
+        TimeUpAlert.off => 'No sound, no vibration, no notification',
+      };
+
+  static Future<void> _setTimeUpAlert(BuildContext context, TimeUpAlert alert) async {
     final store = AppStore.instance;
+    final on = alert != TimeUpAlert.off;
     if (on && !await _askPermission(context)) return;
-    store.updatePrefs(store.prefs.copyWith(timerAlerts: on));
+    store.updatePrefs(store.prefs.withTimeUpAlert(alert));
     if (on) {
-      // Covers the phase that's already running.
+      // Covers the phase that's already running, with the new choice.
       PomodoroController.instance.refreshAlert();
     } else {
       await NotificationService.cancelTimerEnd();

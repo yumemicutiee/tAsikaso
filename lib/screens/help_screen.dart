@@ -79,8 +79,16 @@ class HelpScreen extends StatelessWidget {
           'a whole day and the streak starts again.',
     ),
     (
+      'What happens when a Pomodoro or break ends?',
+      'Settings → When Time Is Up: Alarm Clock (your phone\'s alarm sound), '
+          'Vibration Only, Alarm Clock and Vibration, or Off. The alarm '
+          'rings on the alarm volume, so it works even when the phone is on '
+          'silent, and keeps ringing until you tap the alert, for up to a '
+          'minute. It sounds even when the app is closed.',
+    ),
+    (
       "Why didn't I get a notification?",
-      'Check that Timer Alerts is on in Settings and that notifications are '
+      'Check that When Time Is Up isn\'t Off in Settings and that notifications are '
           "allowed for the app in your phone's settings. Some phones delay "
           'alerts to save battery; allowing "Alarms & reminders" for the app '
           'makes them exact.',
