@@ -33,6 +33,10 @@ a release build needs an `https://` address, which any host gives you.
 
 ## Deploy
 
+**Live:** `https://tasikaso-study-server.onrender.com` (Render service
+`tasikaso-study-server`, free plan, Singapore, `TRUST_PROXY=3`). Render
+rebuilds it on every push to `main` that changes something in `server/`.
+
 A study kit at `high` effort takes 30–120 seconds, so the server needs a
 host that keeps a normal, long-running Node process. **Serverless
 functions with short time limits (Vercel, Netlify and the like) will cut
