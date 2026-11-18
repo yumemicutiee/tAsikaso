@@ -18,12 +18,33 @@ LOGCAT=$!
 adb install -r -g build/app/outputs/flutter-apk/app-debug.apk
 adb shell appops set "$PKG" SCHEDULE_EXACT_ALARM allow || true
 
-# A run normally takes a few minutes; 20 is the most it may wait.
-timeout 20m flutter drive --no-pub \
+# The real study server (server/, built by the workflow) on this machine,
+# with tool/fake_claude.mjs standing in for Anthropic's API: the app on the
+# emulator reaches it at 10.0.2.2, so Smart Study is tested end to end
+# without a key and without cost.
+node tool/fake_claude.mjs > "$OUT/fake-claude.log" 2>&1 &
+FAKE=$!
+(cd server && ANTHROPIC_API_KEY=sk-ant-fake ANTHROPIC_BASE_URL=http://127.0.0.1:8797 \
+  APP_TOKEN=emulator-token PORT=8787 node dist/index.js) > "$OUT/study-server.log" 2>&1 &
+SERVER=$!
+STUDY_SERVER=""
+for _ in $(seq 1 30); do
+  if curl -fs http://127.0.0.1:8787/health > /dev/null; then
+    STUDY_SERVER=http://10.0.2.2:8787
+    break
+  fi
+  sleep 1
+done
+echo "study server for the tests: ${STUDY_SERVER:-none}"
+
+# A run normally takes several minutes; 30 is the most it may wait.
+timeout 30m flutter drive --no-pub \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/phone_test.dart \
+  --dart-define=E2E_STUDY_SERVER="$STUDY_SERVER" \
   -d emulator-5554 2>&1 | tee "$OUT/test.txt"
 STATUS=${PIPESTATUS[0]}
+kill "$SERVER" "$FAKE" 2>/dev/null || true
 
 adb shell dumpsys notification --noredact > "$OUT/notifications.txt" 2>&1 || true
 kill "$LOGCAT" 2>/dev/null || true

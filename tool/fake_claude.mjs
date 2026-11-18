@@ -39,7 +39,21 @@ function answerFor(body) {
     }
     return { questions: qs };
   }
-  return { title: "E2E", summary: "E2E summary", notes: "# E2E", concepts: [], cards: [{ front: "E2E front", back: "E2E back" }], quiz: [] };
+  // A study kit, shaped like a real one (the emulator test checks each part).
+  return {
+    title: "E2E",
+    summary: "E2E summary: how cells make energy.",
+    notes: "# E2E notes\n\n## Energy\n\n- Mitochondria make ATP.\n- Ribosomes make proteins.",
+    concepts: [{ term: "E2E concept: ATP", explanation: "The cell's energy currency." }],
+    cards: [
+      { front: "E2E front", back: "E2E back" },
+      { front: "E2E front: what makes ATP?", back: "Mitochondria" },
+      { front: "E2E front: what do ribosomes make?", back: "Proteins" },
+    ],
+    quiz: [
+      { type: "multiple_choice", prompt: "E2E question: what makes ATP?", options: ["Ribosome", "Mitochondria", "Nucleus", "Golgi"], answerIndex: 1, answer: "Mitochondria", acceptable: [], explanation: "E2E explanation.", cardIndex: 1 },
+    ],
+  };
 }
 
 http.createServer((req, res) => {

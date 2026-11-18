@@ -34,6 +34,7 @@ import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/services/notification_service.dart';
 import 'package:study_app/services/scan_service.dart';
+import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/widgets/bottom_nav.dart';
 
 import 'model_photos.dart';
@@ -284,6 +285,165 @@ void main() {
     final again = Stopwatch()..start();
     await PageModel.findCorners(warm);
     debugPrint('Page models, warm: ${again.elapsedMilliseconds} ms');
+  });
+
+  testWidgets('Smart Study end to end: the app, the study server and Claude',
+      (tester) async {
+    // tool/emulator_tests.sh runs the real study server on the machine that
+    // hosts the emulator (10.0.2.2), with a stand-in for Claude, and passes
+    // its address in; elsewhere this test has nothing to talk to.
+    const url = String.fromEnvironment('E2E_STUDY_SERVER');
+    if (url.isEmpty) {
+      markTestSkipped('No study server for this run.');
+      return;
+    }
+    final before = store.prefs;
+    addTearDown(() => store.updatePrefs(before));
+    void useServer(String address, String token) => store.updatePrefs(store.prefs
+        .copyWith(useAi: true, aiServerUrl: address, aiToken: token));
+    const notes = 'Mitochondria make ATP for the cell. Ribosomes make '
+        'proteins. The nucleus holds the DNA.';
+
+    useServer(url, 'emulator-token');
+    expect(await StudyAi.ping(url), isTrue, reason: 'Settings → Connected');
+
+    final kit = await StudyAi.makeStudyKit(text: notes, title: 'Cells');
+    expect(kit.cards, hasLength(3));
+    expect(kit.summary, contains('E2E summary'));
+    expect(kit.notes, contains('Mitochondria make ATP'));
+    expect(kit.concepts.single.term, contains('ATP'));
+    expect(kit.quiz.single.prompt, contains('E2E question'));
+    expect(kit.quiz.single.cardId, kit.cards[1].id,
+        reason: 'the question points at the card it tests');
+
+    final quiz = await StudyAi.makeQuiz(title: 'Cells', cards: kit.cards);
+    expect(quiz, isNotEmpty);
+    expect(quiz.first.prompt, startsWith('E2E'));
+
+    final check = await StudyAi.checkAnswer(
+        question: 'Which organelle makes ATP?',
+        answer: 'Mitochondria',
+        userAnswer: 'the mitochondrion');
+    expect(check.partly, isTrue);
+    expect(check.feedback, contains('E2E feedback'));
+
+    // A wrong token: the server refuses, and the app says why.
+    useServer(url, 'not-the-token');
+    await expectLater(
+        StudyAi.makeStudyKit(text: notes),
+        throwsA(isA<StudyAiException>()
+            .having((e) => e.code, 'code', 'unauthorized')));
+
+    // Nothing at that address (the phone offline, a wrong address).
+    const nobody = 'http://10.0.2.2:9';
+    expect(await StudyAi.ping(nobody), isFalse,
+        reason: 'Settings → no study server answered there');
+    useServer(nobody, 'emulator-token');
+    await expectLater(
+        StudyAi.makeStudyKit(text: notes),
+        throwsA(isA<StudyAiException>().having((e) => e.code, 'code', 'offline')));
+
+    // The whole way through the screens: a photo of notes from the gallery
+    // → read on the phone (ML Kit) → sent to the server → a flashcard set.
+    useServer(url, 'emulator-token');
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/notes_for_ai.jpg');
+    await file.writeAsBytes(notesPhoto([
+      'Mitochondria make ATP',
+      'Ribosomes make proteins',
+      'The nucleus holds the DNA',
+    ]));
+    final pick = CaptureScreen.pickImages;
+    CaptureScreen.pickImages = () async => [XFile(file.path)];
+    addTearDown(() => CaptureScreen.pickImages = pick);
+    final knownSets = {for (final s in store.sets) s.id};
+
+    await tester.pumpWidget(const StudyApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CameraButton));
+    await waitFor(tester, find.byTooltip('Import From Gallery'));
+    await tester.tap(find.byTooltip('Import From Gallery'));
+    await waitFor(tester, find.byType(ReviewScreen),
+        timeout: const Duration(seconds: 90));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Flashcards').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Make Flashcards'));
+    final waited = Stopwatch()..start();
+    bool isNew(FlashcardSet s) => !knownSets.contains(s.id);
+    while (waited.elapsed < const Duration(seconds: 120) && !store.sets.any(isNew)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await tester.pump();
+    }
+    final made = store.sets.singleWhere(isNew);
+    debugPrint('Smart Study save flow: ${waited.elapsedMilliseconds} ms');
+    expect(made.cards.map((c) => c.front), contains('E2E front'),
+        reason: 'the cards came from Claude via the server, not the offline guesser');
+    expect(made.summary, contains('E2E summary'));
+    expect(made.sourceText, contains('Mitochondria'),
+        reason: 'the photo was read on the phone first');
+    await tester.pumpAndSettle();
+    await shot(tester, '10-smart-study-set');
+  });
+
+  testWidgets('a 12-page scan from the gallery becomes one searchable Scan PDF',
+      (tester) async {
+    // Each page is a large photo (1500 × 2000), so the phone crops, reads
+    // (OCR) and lays out twelve of them one after another, as with a long
+    // lecture. Time and memory go to the log.
+    final dir = await getTemporaryDirectory();
+    final files = <XFile>[];
+    for (var i = 1; i <= 12; i++) {
+      final page = img.Image(width: 1500, height: 2000);
+      img.fill(page, color: img.ColorRgb8(255, 255, 255));
+      for (var line = 0; line < 8; line++) {
+        img.drawString(page, line == 0 ? 'Lecture page $i' : 'Line $line of page $i',
+            font: img.arial48, x: 100, y: 150 + line * 200, color: img.ColorRgb8(0, 0, 0));
+      }
+      final f = File('${dir.path}/long_scan_$i.jpg');
+      await f.writeAsBytes(img.encodeJpg(page, quality: 90));
+      files.add(XFile(f.path));
+    }
+    final pick = CaptureScreen.pickImages;
+    CaptureScreen.pickImages = () async => files;
+    addTearDown(() => CaptureScreen.pickImages = pick);
+    final known = {for (final n in store.notes) n.id};
+    final rssBefore = ProcessInfo.currentRss;
+
+    await tester.pumpWidget(const StudyApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CameraButton));
+    await waitFor(tester, find.byTooltip('Import From Gallery'));
+    final took = Stopwatch()..start();
+    await tester.tap(find.byTooltip('Import From Gallery'));
+    await waitFor(tester, find.byType(ReviewScreen),
+        timeout: const Duration(minutes: 3));
+    await tester.pumpAndSettle();
+    final imported = took.elapsedMilliseconds;
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save as PDF'));
+    bool isNew(Note n) => !known.contains(n.id);
+    while (took.elapsed < const Duration(minutes: 6) && !store.notes.any(isNew)) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      await tester.pump();
+    }
+    final saved = store.notes.singleWhere(isNew);
+    debugPrint('12-page scan: imported in $imported ms, saved in '
+        '${took.elapsedMilliseconds} ms; memory ${rssBefore >> 20} MB → '
+        '${ProcessInfo.currentRss >> 20} MB, peak ${ProcessInfo.maxRss >> 20} MB');
+    expect(saved.pageCount, 12);
+    // Read on the phone, page by page: the last page's text is in the
+    // note (search) and hidden in the PDF (select and copy).
+    expect(saved.text.toLowerCase(), contains('lecture page 12'));
+    final pdf = (await store.readPdf(saved))!;
+    expect(pdfPageCount(pdf), 12);
+    // Invisible text (rendering mode 3) on every page: selectable, searchable.
+    expect(RegExp(r'\b3 Tr\b').allMatches(inflated(pdf)).length,
+        greaterThanOrEqualTo(12));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('a one-minute Pomodoro in Focus Mode ends with an alert',
