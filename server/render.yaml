@@ -24,9 +24,11 @@ services:
         sync: false
       - key: APP_TOKEN
         sync: false
-      # Render's proxy puts the client's address in X-Forwarded-For.
+      # Requests pass Cloudflare, then Render's own proxy, so the client's
+      # address is the third hop from the right in X-Forwarded-For (checked
+      # live on 18 Nov 2026: 1 gave a 10.x address, 2 a Cloudflare one).
       - key: TRUST_PROXY
-        value: "1"
+        value: "3"
       - key: CLAUDE_MODEL
         value: claude-opus-5-5
       - key: CLAUDE_EFFORT

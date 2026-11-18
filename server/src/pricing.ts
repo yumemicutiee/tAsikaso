@@ -30,6 +30,7 @@ export const PRICES: Readonly<Record<string, ModelPrice>> = {
   "claude-sonnet-5-5": price(2, 10, 0.2),
   "claude-sonnet-5": price(2, 10),
   "claude-sonnet-4-6": price(3, 15),
+  "claude-haiku-5-5": price(0.1, 0.5),
   "claude-haiku-4-5": price(1, 5),
   "claude-fable-5-1": price(10, 50, 0.25),
   "claude-fable-5": price(10, 50),
