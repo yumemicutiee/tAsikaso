@@ -39,9 +39,18 @@ void main() {
     final plugin = FlutterLocalNotificationsPlugin();
     final android = plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>()!;
-    expect(await android.areNotificationsEnabled(), isTrue);
     expect(await NotificationService.exactTimingAllowed(), isFalse,
-        reason: 'the test script denied exact alarms');
+        reason: "exact alarms are allowed: the test script's setup didn't take");
+    // The script grants notifications when it sees this (a grant doesn't
+    // restart the app; tool/emulator_tests.sh).
+    debugPrint('TASIKASO_SETUP grant-notifications');
+    final granted = Stopwatch()..start();
+    while (!(await android.areNotificationsEnabled() ?? false) &&
+        granted.elapsed < const Duration(seconds: 60)) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    expect(await android.areNotificationsEnabled(), isTrue,
+        reason: 'the test script grants notifications for this run');
 
     // Settings shows the row that leads to the phone's own setting.
     await tester.pumpWidget(const StudyApp());
@@ -78,6 +87,16 @@ void main() {
       markTestSkipped('Runs with RESTRICTED=notifications.');
       return;
     }
+    final android = FlutterLocalNotificationsPlugin()
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()!;
+    expect(await android.areNotificationsEnabled(), isFalse,
+        reason: 'a fresh install has not been granted notifications');
+    // The script marks them "Don't allow" (fixed) when it sees this, so
+    // Android refuses at once instead of asking; that doesn't restart the app.
+    debugPrint('TASIKASO_SETUP fix-notifications-refused');
+    await Future<void>.delayed(const Duration(seconds: 8));
+
     // As on a fresh install: alerts on, never asked yet.
     store.updatePrefs(store.prefs
         .copyWith(timerAlerts: true, askedNotifications: false));

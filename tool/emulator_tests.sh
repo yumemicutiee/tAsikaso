@@ -47,10 +47,23 @@ STATUS=${PIPESTATUS[0]}
 kill "$SERVER" "$FAKE" 2>/dev/null || true
 
 # The permission states a real student is likely to have, one run each
-# (integration_test/restricted_test.dart). flutter drive reinstalls over the
-# app, which keeps what is set here.
-#  1. Android 14's default for new installs: exact alarms not allowed.
+# (integration_test/restricted_test.dart). flutter drive may install the app
+# afresh, wiping permission states set beforehand, and revoking a permission
+# from a running app restarts it. So the state is set while the test runs:
+# the test logs "TASIKASO_SETUP <step>" when it is ready, this script makes a
+# change that doesn't restart the app (a grant, or a flag), and the test
+# waits until it sees the change.
+when_logged() { # <marker> <adb shell command...>
+  local marker=$1; shift
+  ( timeout 20m adb logcat -v brief -s flutter:I | grep -m1 -q "$marker" \
+      && adb shell "$@" && echo "set up: $*" ) &
+}
+
+#  1. Exact alarms not allowed (Android 14's default for new installs), with
+#     notifications allowed.
 adb shell appops set "$PKG" SCHEDULE_EXACT_ALARM deny || true
+when_logged "TASIKASO_SETUP grant-notifications" \
+  pm grant "$PKG" android.permission.POST_NOTIFICATIONS
 timeout 16m flutter drive --no-pub \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/restricted_test.dart \
@@ -60,9 +73,11 @@ EXACT=${PIPESTATUS[0]}
 adb shell appops set "$PKG" SCHEDULE_EXACT_ALARM allow || true
 
 #  2. Notifications refused, and fixed so (as after "Don't allow"): Android
-#     answers no straight away, with no dialog.
+#     answers no straight away, with no dialog. A fresh install hasn't been
+#     granted them; the flag is set once the app runs.
 adb shell pm revoke "$PKG" android.permission.POST_NOTIFICATIONS || true
-adb shell pm set-permission-flags "$PKG" android.permission.POST_NOTIFICATIONS user-fixed || true
+when_logged "TASIKASO_SETUP fix-notifications-refused" \
+  pm set-permission-flags "$PKG" android.permission.POST_NOTIFICATIONS user-fixed
 timeout 10m flutter drive --no-pub \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/restricted_test.dart \
