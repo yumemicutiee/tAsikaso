@@ -5,4 +5,4 @@ const kAppName = 'tAsikaso';
 const kPlusName = 'tAsikaso+';
 
 /// Shown in Settings and written into backup files.
-const kAppVersion = '0.5.0';
+const kAppVersion = '0.5.1';

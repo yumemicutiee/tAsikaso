@@ -1,0 +1,130 @@
+tAsikaso - Milestones and progress
+==================================
+Updated: 18 November 2026
+Latest version: 0.5.1 (Android APK, version code 12)
+Download: https://github.com/yumemicutiee/tAsikaso/releases
+Web app: https://yumemicutiee.github.io/tAsikaso/
+Study server (Claude): https://tasikaso-study-server.onrender.com
+Privacy policy: https://yumemicutiee.github.io/tAsikaso/privacy.html
+Details for developers: Incomplete_Features.md (sections 0, 10, 12)
+
+
+WHERE THE APP IS TODAY
+----------------------
+tAsikaso is a study app for Android (and the web) with:
+- Pomodoro timer with Focus Mode, breaks, tasks, statistics and analysis
+- "When Time Is Up": Alarm Clock (the phone's alarm sound), Vibration
+  Only, Alarm Clock and Vibration, or Off; rings even when the app is closed
+- Scanning notes with auto-crop that finds the page on any phone (AI
+  models inside the app, no internet needed), text recognition, and PDFs
+  whose text can be selected and searched
+- Smart Study with Claude (Opus 5.5): typed-up notes, summaries, key
+  concepts, flashcards, quizzes, and typed answers judged by meaning
+- Flashcards with smart review, quizzes, library and folders, search
+- Google Drive sync, backup and restore, dark mode, app colours
+- tAsikaso+ plans (test purchases for now; real payments not connected)
+
+Progress: 5 of 8 milestones done (A, B, B2, R and most of C); the app can
+be installed and used today.
+
+
+MILESTONES
+----------
+[DONE] A. Robustness (25 Oct, v0.4.2)
+       Auto-crop safety checks, large Drive uploads, double-tap guards,
+       small screens and large text, more emulator tests.
+
+[DONE] B. Smart Study live (18 Nov)
+       Study server deployed on Render (Singapore), connected to Claude
+       Opus 5.5 with the owner's key, rebuilds itself on every push.
+       First real costs: about PHP 6.50 per one-page study kit, about
+       PHP 0.18 per answer check. Built into the app since v0.5.0.
+       Left for the owner: set a monthly spend limit in the Claude Console.
+
+[DONE] B2. Auto-crop for every phone (18 Nov)
+       DocAligner page-corner models run inside the app (big model, then
+       with a border, then the small model, plus a guard against boxes
+       printed on the page). On 96 test photos: 90 right, 5 wrong (the old
+       detector found 60). About 0.5 s per photo on the Android emulator.
+       Left: test on 10-20 real photos of real notes.
+
+[DONE] R. Release v0.5.0 (18 Nov) and v0.5.1 (18 Nov)
+       Signed with the upload key; install over older versions keeps data.
+
+[MOSTLY DONE] C. Verified without a phone (changed 18 Nov)
+       A real-phone run-through wasn't possible, so every item of the phone
+       checklist is checked by automated tests, an Android 14 emulator on
+       GitHub after every push, and checks on the built APK.
+       Passing on the emulator:
+         - saving on the phone and after a restart; backup and restore
+         - text recognition and selectable text in the Scan PDF
+         - timer alerts, a real 1-minute Pomodoro in Focus Mode
+         - alerts when exact alarms are NOT allowed (Android 14 default):
+           still arrive (about 1 s late on the emulator)
+         - notifications refused: alerts switch off and the app says why
+         - camera to PDF, gallery import, auto-crop on hard photos
+         - Smart Study end to end (app -> server -> Claude stand-in):
+           cards, quiz, answer check, wrong token, no server; about 6 s
+         - a 12-page scan to one searchable PDF (about 1-1.5 min, memory flat)
+         - the APK: only approved permissions, ready for Android 15+ phones
+       Unit and widget tests: 237 (app) and 63 (server), all passing.
+       Still being checked: the alarm channels of "When Time Is Up" on the
+       emulator (sound, alarm volume, vibration), and timing on a slow,
+       cheap-phone emulator profile.
+       Only a real phone can confirm (known risks): Google's own document
+       scanner screen, real camera photos and handwriting, hearing the
+       alarm and feeling the vibration, battery savers on some brands
+       delaying alerts, sharing a backup to the Drive app.
+
+[IN PROGRESS] D. Ready for other students
+       Done (18 Nov):
+         - privacy policy, linked in Settings and Help
+         - crash reports to the study server's log (never notes or names),
+           with a switch in Settings
+         - daily Smart Study limits per phone instead of per Wi-Fi network
+         - unused fingerprint permissions removed
+       Left for the owner (a few clicks each):
+         - Google Cloud Console: take Google sign-in out of "Testing"
+           (today only listed testers can sign in, and they are signed out
+           after 7 days); the privacy policy URL above is ready for it
+         - GitHub: add the signing secrets so the automatic test builds
+           can install over releases
+       Known limits: one shared app token, limits reset when the server
+       restarts, a $5/day spending cap for the whole server (real accounts
+       come with milestone E).
+
+[NOT STARTED] E. Paid plans for real
+       Real payments instead of test purchases, and accounts on the server
+       so Free vs Plus is enforced there too. Needs the owner's decisions.
+
+[NOT STARTED] F. Launch 1.0
+       Distribution, version 1.0, announcement.
+
+
+DECISIONS THE OWNER NEEDS TO MAKE (for D-F)
+-------------------------------------------
+1. Where students get the app: Google Play, or the APK from GitHub/website.
+2. How tAsikaso+ is paid: Google Play Billing, GCash/Maya, or free for now.
+3. Smart Study for free users: 20 suggested cards a month (today) or Plus only.
+4. Model and effort for Claude after seeing real costs from students.
+
+
+HOUSEKEEPING FOR THE OWNER
+--------------------------
+- Delete the Render API key that was shared in chat
+  (Render -> Account Settings -> API Keys).
+- Set a monthly spend limit in the Claude Console.
+- Try v0.5.1 on a phone: a scan saved as Flashcards (Smart Study), the
+  auto-crop corners, and Settings -> When Time Is Up -> Alarm Clock.
+
+
+VERSION HISTORY (recent)
+------------------------
+0.5.1  18 Nov  When Time Is Up (alarm/vibration/both/off), privacy policy,
+               crash reports, per-phone limits, fingerprint permissions removed
+0.5.0  18 Nov  Smart Study built in (Claude Opus 5.5), auto-crop with
+               DocAligner models on every phone
+0.4.2  25 Oct  Robustness milestone A
+0.4.0  21 Oct  Frontend and backend sweep
+0.3.0  21 Oct  tAsikaso+ plans with every perk enforced (test purchases)
+0.2.x  21 Oct  Google Drive sync, profile photo
