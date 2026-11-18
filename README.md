@@ -33,14 +33,18 @@ lecture-note capture → PDF or flashcards.
   the gallery. You can still check each page before saving. If it's turned off in Settings, or the phone
   can't run it, or you're on the web, the app's own camera opens instead
   (Single / Multiple, flash, gallery, rotate, four-corner crop). The app's
-  camera and gallery import **find the page edges too**, with a small AI
-  model built into the app (DocAligner, `assets/models/`, run by ONNX
-  Runtime): on the phone, offline, the same on every phone with or without
-  Google Play services, and in the browser. The crop corners start on the
-  page, and you drag them if they're off. If the model can't run, the older
-  pure-Dart detector (`lib/utils/page_detector.dart`) is used. On 72 test
-  photos it found the page in 71 (white desks, shadows, glare, clutter, a
-  hand in the shot), against 48 for the older detector.
+  camera and gallery import **find the page edges too**, with AI models
+  built into the app (DocAligner's fastvit_sa24 and lcnet100,
+  `assets/models/`, run by ONNX Runtime): on the phone, offline, the same on
+  every phone with or without Google Play services, and in the browser. The
+  big model looks first, then again with a border around the photo, then
+  the small one; when the older pure-Dart detector
+  (`lib/utils/page_detector.dart`) finds a clearly bigger sheet around what
+  they found, they took a box on the page for the page and the sheet wins.
+  The crop corners start on the page, and you drag them if they're off. On
+  96 test photos (white desks, shadows, glare, clutter, a hand in the shot,
+  pages with printed borders, tables and ruled blocks) this found 90 pages
+  right and 5 wrong; the older detector alone found 60.
 - **Text recognition (OCR):** when you save, the text on the pages is read
   on the phone (no internet). It goes into the Scan PDF as a hidden text
   layer, so the text can be selected, searched and copied in any PDF viewer;

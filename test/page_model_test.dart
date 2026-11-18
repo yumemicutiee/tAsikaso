@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:study_app/screens/capture/captured_page.dart';
 import 'package:study_app/services/page_model_service.dart';
+import 'package:study_app/utils/page_detector.dart';
 import 'package:study_app/utils/page_model.dart';
 
 /// Fixtures from the PC check of the model (the same ONNX file, run with
@@ -83,6 +84,107 @@ void main() {
         expect(input.reduce(math.min), greaterThanOrEqualTo(0));
       });
     }
+  });
+
+  group('the bordered input', () {
+    for (final name in ['white_desk_00', 'clutter_02']) {
+      test('matches what the models were checked with ($name)', () {
+        final photo = img.decodeJpg(File('$_dir/page_$name.jpg').readAsBytesSync())!;
+        final ref = img.decodePng(
+            File('$_dir/page_${name}_input_padded.png').readAsBytesSync())!;
+        final input = pageModelInputPadded(photo);
+        const s = pageModelInputSize;
+        var diff = 0.0;
+        for (var y = 0; y < s; y++) {
+          for (var x = 0; x < s; x++) {
+            final p = ref.getPixel(x, y);
+            final i = y * s + x;
+            diff += (input[i] * 255 - p.r).abs() +
+                (input[s * s + i] * 255 - p.g).abs() +
+                (input[2 * s * s + i] * 255 - p.b).abs();
+          }
+        }
+        expect(diff / (3 * s * s), lessThan(5));
+      });
+    }
+
+    test('corners found in it map back onto the photo', () {
+      // A 1000 × 1500 photo with a 20% border is 1400 × 2100; a corner at
+      // the photo's own (100, 150) sits at (300, 450) in the bordered one.
+      const inBordered = [
+        Offset(300 / 1400, 450 / 2100),
+        Offset(1100 / 1400, 450 / 2100),
+        Offset(1100 / 1400, 1650 / 2100),
+        Offset(300 / 1400, 1650 / 2100),
+      ];
+      final back = unpadCorners(inBordered, 1000, 1500)!;
+      expect(back[0].dx, closeTo(0.1, 1e-9));
+      expect(back[0].dy, closeTo(0.1, 1e-9));
+      expect(back[2].dx, closeTo(0.9, 1e-9));
+      expect(back[2].dy, closeTo(0.9, 1e-9));
+    });
+
+    test('a shape that ends up off the photo is dropped', () {
+      // All four corners in the border: nothing of the photo is left.
+      const inBorder = [
+        Offset(0.01, 0.01), Offset(0.1, 0.01), Offset(0.1, 0.1), Offset(0.01, 0.1),
+      ];
+      expect(unpadCorners(inBorder, 1000, 1500), isNull);
+    });
+  });
+
+  group('preferEnclosingSheet', () {
+    const sheet = [Offset(0.1, 0.1), Offset(0.9, 0.12), Offset(0.88, 0.9), Offset(0.12, 0.88)];
+    const linesOnIt = [Offset(0.25, 0.2), Offset(0.75, 0.2), Offset(0.75, 0.75), Offset(0.25, 0.75)];
+
+    test('the sheet wins when the models found a box printed on it', () {
+      expect(preferEnclosingSheet(linesOnIt, sheet), sheet);
+    });
+
+    test('the models win when they and the sheet agree', () {
+      const nearly = [Offset(0.11, 0.11), Offset(0.89, 0.13), Offset(0.87, 0.89), Offset(0.13, 0.87)];
+      expect(preferEnclosingSheet(nearly, sheet), nearly);
+    });
+
+    test('the models win when the sheet is somewhere else (clutter)', () {
+      const elsewhere = [Offset(0.5, 0.5), Offset(0.95, 0.5), Offset(0.95, 0.95), Offset(0.5, 0.95)];
+      expect(preferEnclosingSheet(linesOnIt, elsewhere), linesOnIt);
+    });
+
+    test('the models win when there is no sheet', () {
+      expect(preferEnclosingSheet(linesOnIt, null), linesOnIt);
+    });
+
+    test('the emulator\'s photo: ruled lines with wide margins crop to the sheet', () {
+      // integration_test's pageOnDesk(): a cream sheet with dark ruled
+      // lines well inside it, on a brown desk.
+      final photo = img.Image(width: 2400, height: 3200);
+      img.fill(photo, color: img.ColorRgb8(92, 70, 52));
+      img.fillPolygon(photo,
+          vertices: [
+            img.Point(380, 300), img.Point(2050, 420),
+            img.Point(1960, 2900), img.Point(300, 2780),
+          ],
+          color: img.ColorRgb8(238, 234, 224));
+      for (var y = 600; y < 2500; y += 90) {
+        img.fillRect(photo,
+            x1: 520, y1: y, x2: 1750, y2: y + 14, color: img.ColorRgb8(40, 44, 70));
+      }
+      // What all three model runs answered on the PC: the block of lines.
+      const modelSaw = [Offset(0.214, 0.185), Offset(0.727, 0.188), Offset(0.729, 0.784), Offset(0.216, 0.783)];
+      const truth = [
+        Offset(380 / 2400, 300 / 3200), Offset(2050 / 2400, 420 / 3200),
+        Offset(1960 / 2400, 2900 / 3200), Offset(300 / 2400, 2780 / 3200),
+      ];
+      final simple = detectPageCorners(photo);
+      expect(simple, isNotNull);
+      expect(_worst(preferEnclosingSheet(modelSaw, simple), truth), lessThan(0.02));
+    });
+
+    test('quadArea', () {
+      expect(quadArea(const [Offset(0, 0), Offset(1, 0), Offset(1, 1), Offset(0, 1)]), 1);
+      expect(quadArea(linesOnIt), closeTo(0.275, 1e-9));
+    });
   });
 
   group('corners from the model\'s real answers', () {

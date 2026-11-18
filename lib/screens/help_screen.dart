@@ -30,12 +30,12 @@ class HelpScreen extends StatelessWidget {
     ),
     (
       'How does the app find the page edges?',
-      "The app's own camera and gallery import use a small AI model that "
-          'runs on your phone (no internet, and your photos stay on it), so it '
-          'works the same on every phone, with or without Google services, and '
-          "in the browser. If it can't find the page, drag the four corners. "
-          'The model is DocAligner by Ze Yuan (DocsaidLab), github.com/'
-          'DocsaidLab/DocAligner.',
+      "The app's own camera and gallery import use AI models that run on "
+          'your phone (no internet, and your photos stay on it), so they work '
+          'the same on every phone, with or without Google services, and in '
+          "the browser. If the corners aren't right, drag them. The models "
+          'are DocAligner by Ze Yuan (DocsaidLab), github.com/DocsaidLab/'
+          'DocAligner.',
     ),
     (
       'Can the app read the text in my photos?',

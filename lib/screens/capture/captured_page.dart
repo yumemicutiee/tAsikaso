@@ -103,24 +103,25 @@ class CapturedPage {
   /// [quarterTurns] turns the photo clockwise first, for cameras that hand
   /// over sideways frames (the web camera on phones).
   ///
-  /// The page-corner model ([PageModel]) is asked first; when it can't run
-  /// or sees no page, the simpler detector's answer is used.
+  /// The page-corner models ([PageModel]) are asked first. When they can't
+  /// run or see no page, the simpler detector's answer is used; and when
+  /// the simpler detector finds a clearly bigger sheet holding what the
+  /// models found, the models took a box on the page for the page, so the
+  /// sheet wins ([preferEnclosingSheet]).
   static Future<CapturedPage> fromPhoto(
     int id,
     Uint8List original, {
     bool findEdges = false,
     int quarterTurns = 0,
   }) async {
-    final (bytes, width, height, simple, modelInput) = await compute(
+    final (bytes, width, height, simpleXY, modelInputs) = await compute(
         _normalizePhoto, (original, findEdges && PageModel.available, findEdges, quarterTurns));
     final page = CapturedPage(id: id, bytes: bytes, width: width, height: height);
-    List<Offset>? found;
-    if (modelInput != null) found = await PageModel.findCorners(modelInput);
-    if (found == null && simple != null) {
-      found = [
-        for (var i = 0; i < 4; i++) Offset(simple[i * 2], simple[i * 2 + 1]),
-      ];
-    }
+    final simple = simpleXY == null
+        ? null
+        : [for (var i = 0; i < 4; i++) Offset(simpleXY[i * 2], simpleXY[i * 2 + 1])];
+    var found = modelInputs == null ? null : await PageModel.findCorners(modelInputs);
+    found = found == null ? simple : preferEnclosingSheet(found, simple);
     if (found != null) {
       page.corners = found;
       page.autoDetected = true;
@@ -145,9 +146,9 @@ class CapturedPage {
 
 /// Returns the upright, scaled JPEG, its size, the corners the simple
 /// detector found (as x, y fractions, 8 numbers) or null, and the page
-/// model's input when [forModel] (the model itself runs on the main side,
-/// through its plugin).
-(Uint8List, int, int, List<double>?, Float32List?) _normalizePhoto(
+/// models' inputs when [forModel] (the models themselves run on the main
+/// side, through their plugin).
+(Uint8List, int, int, List<double>?, PageModelInputs?) _normalizePhoto(
     (Uint8List, bool, bool, int) job) {
   final (data, forModel, findEdges, quarterTurns) = job;
   final decoded = img.decodeImage(data);
@@ -176,10 +177,11 @@ class CapturedPage {
       debugPrint('Page detection failed: $e');
     }
   }
-  Float32List? modelInput;
+  PageModelInputs? modelInput;
   if (forModel) {
     try {
-      modelInput = pageModelInput(image);
+      modelInput = PageModelInputs(pageModelInput(image),
+          pageModelInputPadded(image), image.width, image.height);
     } catch (e) {
       debugPrint('Preparing the page model input failed: $e');
     }

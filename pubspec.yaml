@@ -49,7 +49,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    # Auto-crop's page-corner model (DocAligner, see DOCALIGNER_NOTICE.txt).
+    # Auto-crop's page-corner models (DocAligner, see DOCALIGNER_NOTICE.txt).
+    - assets/models/docaligner_fastvit_sa24.onnx
     - assets/models/docaligner_lcnet100.onnx
     - assets/models/DOCALIGNER_NOTICE.txt
 

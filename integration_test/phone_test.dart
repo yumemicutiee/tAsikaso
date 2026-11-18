@@ -237,34 +237,53 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('the page model finds the page on a white desk and among clutter',
-      (tester) async {
-    // The simple detector finds nothing on a white desk; the model must, on
+  testWidgets('the page models find the page on a white desk, among clutter '
+      'and around ruled lines', (tester) async {
+    // The simple detector finds nothing on a white desk; the models must, on
     // this phone, with no help from Google Play services.
     PageModel.reset();
+    double worst(List<Offset> c, List<Offset> truth) => [
+          for (var i = 0; i < 4; i++) (c[i] - truth[i]).distance,
+        ].reduce((a, b) => a > b ? a : b);
+    PageModelInputs inputsFor(Uint8List jpg) {
+      final image = img.decodeJpg(jpg)!;
+      return PageModelInputs(pageModelInput(image), pageModelInputPadded(image),
+          image.width, image.height);
+    }
+
     for (final photo in modelPhotos) {
       final truth = [for (final p in photo.truth) Offset(p[0], p[1])];
       final jpg = base64Decode(photo.jpgBase64);
-      final input = pageModelInput(img.decodeJpg(jpg)!);
       final took = Stopwatch()..start();
-      final corners = await PageModel.findCorners(input);
-      debugPrint('Page model on ${photo.name}: ${took.elapsedMilliseconds} ms');
-      expect(corners, isNotNull, reason: 'the model ran and saw ${photo.name}');
-      double worst(List<Offset> c) => [
-            for (var i = 0; i < 4; i++) (c[i] - truth[i]).distance,
-          ].reduce((a, b) => a > b ? a : b);
-      expect(worst(corners!), lessThan(0.02), reason: photo.name);
+      final corners = await PageModel.findCorners(inputsFor(jpg));
+      debugPrint('Page models on ${photo.name}: ${took.elapsedMilliseconds} ms');
+      expect(corners, isNotNull, reason: 'the models ran and saw ${photo.name}');
+      expect(worst(corners!, truth), lessThan(0.02), reason: photo.name);
       // And through the app's own import path.
       final page = await CapturedPage.fromPhoto(1, jpg, findEdges: true);
       expect(page.autoDetected, isTrue, reason: photo.name);
-      expect(worst(page.corners), lessThan(0.02), reason: photo.name);
+      expect(worst(page.corners, truth), lessThan(0.02), reason: photo.name);
     }
     expect(PageModel.available, isTrue);
+
+    // The gallery test's page: ruled lines with wide margins, which the
+    // models take for the page. The crop must still be the whole sheet.
+    final sheet = await CapturedPage.fromPhoto(2, pageOnDesk(), findEdges: true);
+    const sheetTruth = [
+      Offset(380 / 2400, 300 / 3200),
+      Offset(2050 / 2400, 420 / 3200),
+      Offset(1960 / 2400, 2900 / 3200),
+      Offset(300 / 2400, 2780 / 3200),
+    ];
+    expect(sheet.autoDetected, isTrue);
+    expect(worst(sheet.corners, sheetTruth), lessThan(0.02),
+        reason: 'cropped to the sheet, not the lines on it: ${sheet.corners}');
+
     // A second run is the normal case: timed for the log.
-    final input = pageModelInput(img.decodeJpg(base64Decode(modelPhotos.first.jpgBase64))!);
+    final warm = inputsFor(base64Decode(modelPhotos.first.jpgBase64));
     final again = Stopwatch()..start();
-    await PageModel.findCorners(input);
-    debugPrint('Page model, warm: ${again.elapsedMilliseconds} ms');
+    await PageModel.findCorners(warm);
+    debugPrint('Page models, warm: ${again.elapsedMilliseconds} ms');
   });
 
   testWidgets('a one-minute Pomodoro in Focus Mode ends with an alert',
