@@ -205,7 +205,7 @@ test purchases (v0.3.0) · sweep (v0.4.0) · bug pass, 23 fixes (v0.4.1) ·
 Android emulator tests on every push · milestone A + v0.4.2 published
 (25 Oct) · **Smart Study live on Render (18 Nov)** · **auto-crop with
 DocAligner models, the same on every phone (18 Nov)** · CI pinned to
-Flutter 3.47.7 (18 Nov).
+Flutter 3.47.7 (18 Nov) · **v0.5.0 published (18 Nov)**.
 
 Milestones, in order. **Who** says what each one needs from the owner.
 
@@ -214,8 +214,8 @@ Milestones, in order. **Who** says what each one needs from the owner.
 | **A. Robustness** | ✅ 11.35 auto-crop rejects non-page shapes · ✅ 11.27 Drive uploads over 5 MB (resumable) · ✅ 11.24 double-tap guards · ✅ 11.36 small screens and large text · ✅ more emulator tests (big gallery photo, Focus Mode + alert, backup round trip). Left for later: 11.30 Cancel on answer checks, 11.31 reminder after restore | Claude alone | ✅ done 25 Oct |
 | **B. Smart Study live** | ✅ deployed on Render, `TRUST_PROXY=3`, auto-deploy from GitHub, first real kits (section 0). Left: the app pointed at the server (Settings, or built into the APK), Console spend limit, model/effort from real costs (2.10). | Owner: choose Settings vs built-in; Console limit. Claude: build | 🟢 server live 18 Nov — app hookup left |
 | **B2. Auto-crop for every phone** (added 18 Nov) | ✅ DocAligner models in the app (4.1), checked on the Android emulator and 96 synthetic photos. Left: 10–20 **real** photos scored old vs new (`Downloads\crop-tests`); boxed pages on a white desk are the weak spot. | Owner: photos. Claude: scoring, fixes | 🟢 built — real photos left |
-| **R. Release v0.5.0** (next) | Signed APK with B + B2 (and, if chosen, the server address/token built in), release notes, GitHub release. | Owner: approve publishing. Claude: build | — |
-| **C. Real-phone run-through** | `docs/phone-test-checklist.md` with the live server and v0.5.0: Google's scanner, the new auto-crop on paper, handwriting OCR, Smart Study end to end (time and quality per scan), alert lateness without exact alarms, vibration, share-sheet backup, 10+ page scans. Can be driven from the PC over Wireless debugging. | Owner: phone. Claude: drives the tests | after R |
+| **R. Release v0.5.0** | ✅ https://github.com/yumemicutiee/tAsikaso/releases/tag/v0.5.0 — signed with the upload key (SHA-1 34:1D…66:3C), Smart Study address and token built in (owner's choice; not in the web build), both DocAligner models inside, 252.7 MB. Download link checked (HTTP 200, full size). | Owner approved. Claude built and published | ✅ done 18 Nov |
+| **C. Real-phone run-through** (next) | `docs/phone-test-checklist.md` with the live server and v0.5.0: Google's scanner, the new auto-crop on paper, handwriting OCR, Smart Study end to end (time and quality per scan), alert lateness without exact alarms, vibration, share-sheet backup, 10+ page scans. Can be driven from the PC over Wireless debugging. | Owner: phone. Claude: drives the tests | ⏳ now |
 | **D. Ready for strangers** | Per-user limits on Claude use before strangers arrive (today only the server's $5/day cap stops a heavy user or a leaked token: type-up, quizzes and answer checks aren't capped for Free); Google sign-in out of **Testing** (today only listed test users can sign in, and their sign-in lapses after 7 days); privacy policy (Anthropic's retention, Drive data; the page models run on the phone); CI signing secrets (1.4) so CI APKs match releases; crash reports from phones. | Owner: Google Cloud console, decisions. Claude: policy draft, code | — |
 | **E. Paid plans for real** | Real payments (1.1) instead of test purchases; per-user accounts on the server (Google sign-in as the account) and shared limits (3.1, 1.3), so Free vs Plus is enforced by the server too. | Owner: decisions below. Claude: build | — |
 | **F. Launch 1.0** | Distribution (Play Store listing, or APK + website with a download page), version 1.0, release notes. | Owner + Claude | — |
