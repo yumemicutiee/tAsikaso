@@ -20,27 +20,48 @@ server test; what was fixed and what was found but left is in
 **section 11**. `flutter analyze` clean, `flutter test` 190 pass, server
 57 pass (1 live test skipped).
 
-## 0. Next step: connecting Claude Opus 5.5 for real
+**Update — 18 Nov: Smart Study live, auto-crop rebuilt.** The study
+server runs on Render with the owner's Claude key and made its first real
+study kits (section 0). Auto-crop now uses DocAligner's page models inside
+the app, the same on every phone with or without Google Play services
+(4.1). CI is pinned to Flutter 3.47.7 after a newer Flutter deprecated
+`material.dart`. `flutter test` 223 pass; all CI jobs and 9 emulator tests
+green. The roadmap (section 10) is updated.
 
-The server is already written for Opus 5.5 (`claude-opus-5-5`, adaptive
-thinking, effort `high`, structured JSON, refusal fallbacks); only a real key
-and a host are missing. In order:
+## 0. Claude Opus 5.5: connected (18 Nov)
 
-1. Get an API key at platform.claude.com, put it in `server/.env`, run
-   `npm run try` and `LIVE_CLAUDE=1 npm test` (PowerShell:
-   `$env:LIVE_CLAUDE=1; npm test`). Look at the cards and quiz it makes and
-   how long it takes. (2.1)
-2. Set a **monthly spend limit in the Claude Console** — the server's own
-   daily cap (`DAILY_BUDGET_USD`, $5 default) restarts from zero whenever the
-   server restarts or a free instance wakes up.
-3. Deploy with `server/render.yaml` (README → Deploy), with a random
-   `APP_TOKEN`. Check `https://<service>.onrender.com/health`.
-4. Point the app at it: Settings → Smart Study, or set the GitHub variable
-   `STUDY_AI_URL` and secret `STUDY_AI_TOKEN` so CI builds carry them.
-5. From two phones on different networks, call `/v1/usage`; if both show the
-   same `you.address`, set `TRUST_PROXY=2`.
+**Live:** `https://tasikaso-study-server.onrender.com` (Render, free plan,
+Singapore, rebuilds by itself on every push that changes `server/`). Opus 5.5,
+effort `high` (answer checks `low`), adaptive thinking, structured JSON,
+Anthropic's default refusal fallbacks. The Claude key was pasted into Render
+by the owner (never in chat or git); `APP_TOKEN` is in `server/.env` (not in
+git) and on Render.
+
+Done:
+1. ✅ Deployed and checked: `/health`, token required (401 without),
+   `/v1/usage`.
+2. ✅ `TRUST_PROXY=3`: requests pass Cloudflare and Render's proxy; with `1`
+   or `2` every student shared one address (one daily limit for everyone).
+   Checked: the real address shows and a forged `X-Forwarded-For` can't
+   change it.
+3. ✅ First live calls: an answer check in 4 s (≈ ₱0.18) and a study kit
+   from a one-page biology lecture in 57 s, 2.3k tokens in / 5k out
+   (≈ ₱6.50): typed-up notes, summary, 10 key concepts, 20 cards, 12 quiz
+   questions of all four types.
+
+Still to do:
+4. **Point the app at it** — owner's choice: type the address and token in
+   Settings → Smart Study on each phone, or build them into the APK
+   (GitHub variable `STUDY_AI_URL` + secret `STUDY_AI_TOKEN`). Not into the
+   public web build: its token can be read from the page.
+5. Set a **monthly spend limit in the Claude Console** if not done (the
+   server's $5/day cap restarts when a free instance wakes up).
 6. Phone run-through of Smart Study (section 7), then tune `CLAUDE_EFFORT`
    and `DAILY_BUDGET_USD` from real costs (2.10).
+7. Small: numbered lists in typed-up notes come back as "- 1." (the prompt
+   allows only "- " bullets).
+8. Delete the Render API key used for the setup (Render → Account Settings
+   → API Keys).
 
 **How this was checked**
 - Code review of `lib/` and `server/src/` against the README's claims.
@@ -69,7 +90,7 @@ Status key: 🔴 blocks a feature · 🟠 feature works but is incomplete · �
 
 | # | Gap | Status | Where / what to do |
 |---|---|---|---|
-| 2.1 | **Never run against the real Claude API** | 🔴 | `server/src/claude.ts` is written from the current SDK typings and type-checks, but no live call was possible here. First thing: `cd server`, put a real key in `.env`, `npm run try`. Check the JSON comes back, the quiz types are sensible, and how long Opus 5.5 at `high` takes on 2–3 pages. |
+| 2.1 | **Never run against the real Claude API** | ✅ 18 Nov | Live on Render (section 0): a one-page study kit in 57 s with all parts present and sensible; an answer check in 4 s. Still to see: 2–3 page notes, and quality on real handwriting OCR. |
 | 2.2 | **Type up a note with AI** | ✅ v0.4.0 | "Type Up with AI" / "Type Up Again" on the note's text screen (`typeUpNote` in `actions.dart`); doesn't use suggested-card allowance. |
 | 2.3 | **Cancel while waiting** | ✅ v0.4.0 | `CancelToken` in `study_ai.dart`; every AI wait has Cancel. Cancel drops the connection, and the server then aborts the Claude call (3.6) — seen end to end. In the save flow Cancel saves without AI. |
 | 2.4 | **On the web, Smart Study can't start from a scan** | 🟠 | There is no OCR on web, so scans have no text and the server is never called. Only "Make Cards with AI" on a set that already has `sourceText` works. Either accept (document) or add a web OCR (Tesseract.js) or let the server OCR the photos (it could send images to Claude directly — costlier). |
@@ -78,7 +99,7 @@ Status key: 🔴 blocks a feature · 🟠 feature works but is incomplete · �
 | 2.7 | **Search summary and key concepts** | ✅ v0.4.0 | Notes and sets match typed-up text, summary and concepts. |
 | 2.8 | **Partly right** | ✅ v0.4.0 | Counts as half a point; the result says so. Smart review still treats it as not known. |
 | 2.9 | **App token in backups** | ✅ v0.4.0 (web caveat stays) | Left out of backup ZIPs and the Drive copy; a restore keeps this device's server settings (a new phone takes the backup's address, not a token). A token built into a **web** build with `--dart-define` is still visible in its JavaScript — per-user tokens (3.1) are the real fix. |
-| 2.10 | **Costs are per scan at Opus 5.5 `high`** | 🟡 | ≈ ₱9–26 per study kit (see `server/README.md`). `CLAUDE_EFFORT=medium` or Sonnet 5.5 roughly halve it. Decide before many students use it; see 1.3. |
+| 2.10 | **Costs are per scan at Opus 5.5 `high`** | 🟡 | Measured 18 Nov: ≈ ₱6.50 ($0.11) for a one-page study kit, ≈ ₱0.18 per answer check; longer notes cost more (estimate ≈ ₱9–26 for several pages). `CLAUDE_EFFORT=medium` would cut it. Decide before many students use it; see 1.3. |
 | 2.11 | **Toast covers the quiz's Check button** | ✅ v0.4.0 | The quiz now shows such messages as a banner at the top; three similar toasts on the camera and review screens became on-screen text. |
 | 2.12 | **Text sent to the server = text sent to Anthropic** | ✅ v0.4.0 (retention not mentioned) | Help & FAQ and the Smart Study note say only text leaves the phone (never photos) and goes to the study server and Anthropic. Anthropic's 30-day retention isn't mentioned; add it to a privacy policy before launch. |
 | 2.13 | **Web: no OCR, so Smart Study can't start from a web scan** | 🟠 | Same as 2.4; still open. |
@@ -102,7 +123,7 @@ Status key: 🔴 blocks a feature · 🟠 feature works but is incomplete · �
 
 | # | Gap | Status | Where / what to do |
 |---|---|---|---|
-| 4.1 | **Auto-crop (app camera) is unproven on real photos** | 🟠 | `lib/utils/page_detector.dart` finds a *bright page on a darker background* (Otsu threshold + largest blob + hull corners). It gives up on white desks, low contrast (< 40 levels) and strong shadows, and does no line fitting, so corners can be a few pixels off. Test on 20 real photos; if it's weak, fit lines on the edge map (Hough) or use OpenCV (`opencv_dart`) on phones. |
+| 4.1 | **Auto-crop (app camera)** | ✅ rebuilt 18 Nov — real photos still to check | The old brightness detector gave up on white desks and clutter. Now DocAligner's models run in the app with ONNX Runtime (`assets/models/`, `lib/services/page_model_service.dart`, `lib/utils/page_model.dart`; credit in Help → Open-Source Licenses): fastvit_sa24, again with a border, then lcnet100; the old detector's sheet wins when it clearly holds their answer (a box printed on the page), and is the last fallback. On 96 synthetic photos: 90 right / 5 wrong (old detector 60 right; small model alone 80 / 13). On the Android emulator: 1.5 s for the first photo, ≈ 0.5 s after; the emulator test checks crops against the true corners. APK is 179 MB+ with the models (owner: accuracy over size). **Next:** score 10–20 real photos (`Downloads\crop-tests`); boxed pages on a white desk are the weakest case. |
 | 4.2 | **Google's scanner, OCR and the text layer never ran on a phone** | 🔴 | Everything in `scan_service_mlkit.dart` (scanner, `readPages` with line boxes) is untested on a device. The Scan PDF's hidden text uses axis-aligned line boxes, so selection on slanted lines will sit slightly off. Check with `docs/phone-test-checklist.md`. |
 | 4.3 | **OCR is Latin script only** | 🟡 | `TextRecognitionScript.latin`. Fine for English/Filipino; Chinese/Japanese/Korean notes won't be read. |
 | 4.4 | **Text PDF thumbnail is the first photo** | 🟡 | `review_screen.dart` uses `CapturedPage.thumbnail(jpegs.first)`; a rendered first page of the document would look right in lists. |
@@ -175,22 +196,27 @@ Still for a real phone — run `docs/phone-test-checklist.md` with the study ser
 - iOS needs the reversed client id in `Info.plist` once an iOS build exists.
 - `Delete All Data` forgets the Google account on purpose (so the Drive copy survives); the Settings dialog says so.
 
-## 10. Roadmap to 1.0 (updated 25 Oct)
+## 10. Roadmap to 1.0 (updated 18 Nov)
 
 **Done:** Phases 0–4 (20 Oct: bugs, alerts, web saving, smart review,
 backup, polish) · Smart Study app + server (21 Oct) · Google Drive sync,
 working on a phone (v0.2.x) · tAsikaso+ plans with every perk enforced, as
 test purchases (v0.3.0) · sweep (v0.4.0) · bug pass, 23 fixes (v0.4.1) ·
-Android emulator tests on every push.
+Android emulator tests on every push · milestone A + v0.4.2 published
+(25 Oct) · **Smart Study live on Render (18 Nov)** · **auto-crop with
+DocAligner models, the same on every phone (18 Nov)** · CI pinned to
+Flutter 3.47.7 (18 Nov).
 
 Milestones, in order. **Who** says what each one needs from the owner.
 
 | Milestone | What | Who | Status |
 |---|---|---|---|
 | **A. Robustness** | ✅ 11.35 auto-crop rejects non-page shapes · ✅ 11.27 Drive uploads over 5 MB (resumable) · ✅ 11.24 double-tap guards · ✅ 11.36 small screens and large text · ✅ more emulator tests (big gallery photo, Focus Mode + alert, backup round trip). Left for later: 11.30 Cancel on answer checks, 11.31 reminder after restore | Claude alone | ✅ done 25 Oct |
-| **B. Smart Study live** | Section 0: API key → `npm run try` + live test → Console spend limit → deploy (Render) → app settings / `STUDY_AI_URL`. Then pick the model/effort from real costs (2.10). | Owner: API key, Render account. Claude: the rest | ⏸ waiting for the key |
-| **C. Real-phone run-through** | `docs/phone-test-checklist.md` with the live server: Google's scanner, auto-crop on paper, handwriting OCR, alert lateness without exact alarms, vibration, share-sheet backup, 10+ page scans. Can be driven from the PC over Wireless debugging. | Owner: phone. Claude: drives the tests | after B |
-| **D. Ready for strangers** | Google sign-in out of **Testing** (today only listed test users can sign in, and their sign-in lapses after 7 days); privacy policy (Anthropic's retention, Drive data); CI signing secrets (1.4); crash reports from phones; publish v0.4.1. | Owner: Google Cloud console, decisions. Claude: policy draft, code | — |
+| **B. Smart Study live** | ✅ deployed on Render, `TRUST_PROXY=3`, auto-deploy from GitHub, first real kits (section 0). Left: the app pointed at the server (Settings, or built into the APK), Console spend limit, model/effort from real costs (2.10). | Owner: choose Settings vs built-in; Console limit. Claude: build | 🟢 server live 18 Nov — app hookup left |
+| **B2. Auto-crop for every phone** (added 18 Nov) | ✅ DocAligner models in the app (4.1), checked on the Android emulator and 96 synthetic photos. Left: 10–20 **real** photos scored old vs new (`Downloads\crop-tests`); boxed pages on a white desk are the weak spot. | Owner: photos. Claude: scoring, fixes | 🟢 built — real photos left |
+| **R. Release v0.5.0** (next) | Signed APK with B + B2 (and, if chosen, the server address/token built in), release notes, GitHub release. | Owner: approve publishing. Claude: build | — |
+| **C. Real-phone run-through** | `docs/phone-test-checklist.md` with the live server and v0.5.0: Google's scanner, the new auto-crop on paper, handwriting OCR, Smart Study end to end (time and quality per scan), alert lateness without exact alarms, vibration, share-sheet backup, 10+ page scans. Can be driven from the PC over Wireless debugging. | Owner: phone. Claude: drives the tests | after R |
+| **D. Ready for strangers** | Per-user limits on Claude use before strangers arrive (today only the server's $5/day cap stops a heavy user or a leaked token: type-up, quizzes and answer checks aren't capped for Free); Google sign-in out of **Testing** (today only listed test users can sign in, and their sign-in lapses after 7 days); privacy policy (Anthropic's retention, Drive data; the page models run on the phone); CI signing secrets (1.4) so CI APKs match releases; crash reports from phones. | Owner: Google Cloud console, decisions. Claude: policy draft, code | — |
 | **E. Paid plans for real** | Real payments (1.1) instead of test purchases; per-user accounts on the server (Google sign-in as the account) and shared limits (3.1, 1.3), so Free vs Plus is enforced by the server too. | Owner: decisions below. Claude: build | — |
 | **F. Launch 1.0** | Distribution (Play Store listing, or APK + website with a download page), version 1.0, release notes. | Owner + Claude | — |
 | Later | Web OCR (2.4) · sync merge (1.4) · iOS (1.5) · other UI languages (1.7) · quiz history in Analysis (5.1) | — | after 1.0 |
@@ -198,8 +224,9 @@ Milestones, in order. **Who** says what each one needs from the owner.
 **Decisions the owner needs to make** (they shape D–F):
 1. **Where students get the app:** Google Play, or the APK from GitHub/the website.
 2. **How Plus is paid:** Google Play Billing (required on Play for digital perks), GCash/Maya through a payment provider (outside Play), or free for now.
-3. **Smart Study for Free accounts:** keep 20 suggested cards a month, or Plus only (each kit costs ≈ ₱9–26 at Opus 5.5 `high`).
-4. **Model and effort** after seeing real costs in B.
+3. **Smart Study for Free accounts:** keep 20 suggested cards a month, or Plus only (measured: ≈ ₱6.50 for a one-page kit at Opus 5.5 `high`, more for longer notes).
+4. **Model and effort** after seeing real costs from the first students.
+5. **How phones reach the study server:** typed into Settings, or built into the APK (now — needed for R).
 
 ## 11. Bug pass (25 Oct)
 
