@@ -54,9 +54,23 @@ kill "$SERVER" "$FAKE" 2>/dev/null || true
 # change that doesn't restart the app (a grant, or a flag), and the test
 # waits until it sees the change.
 when_logged() { # <marker> <adb shell command...>
+  # Snapshots of the log (logcat -d prints what's there and exits), once a
+  # second: a live `logcat | grep -m1` would wait for the app's *next* log
+  # line before going on, while the test waits silently for this change.
   local marker=$1; shift
-  ( timeout 20m adb logcat -v brief -s flutter:I | grep -m1 -q "$marker" \
-      && adb shell "$@" && echo "set up: $*" ) &
+  (
+    for _ in $(seq 1 1200); do
+      # grep reads all of it (no -q): stopping early would cut adb off,
+      # and with pipefail the pipe would count as failed despite a match.
+      if adb logcat -d -s flutter:I 2>/dev/null | grep -F "$marker" > /dev/null; then
+        adb shell "$@"
+        echo "set up: $*" >> "$OUT/restricted-setup.txt"
+        exit 0
+      fi
+      sleep 1
+    done
+    echo "never saw: $marker" >> "$OUT/restricted-setup.txt"
+  ) &
 }
 
 #  1. Exact alarms not allowed (Android 14's default for new installs), with
@@ -91,4 +105,6 @@ done
 
 adb shell dumpsys notification --noredact > "$OUT/notifications.txt" 2>&1 || true
 kill "$LOGCAT" 2>/dev/null || true
+# Any setup watcher still waiting (its test failed before it was ready).
+kill $(jobs -p) 2>/dev/null || true
 exit "$STATUS"
