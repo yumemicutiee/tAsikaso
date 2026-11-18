@@ -1,0 +1,5 @@
+fake Claude on 8797
+2026-11-18T16:20:44.567Z POST /v1/messages?beta=true model=claude-opus-5-5 effort=high thinking=adaptive fallbacks=default beta=server-side-fallback-2026-07-01 schema=[title,summary,notes,concepts,cards,quiz] max_tokens=64000
+2026-11-18T16:20:45.017Z POST /v1/messages?beta=true model=claude-opus-5-5 effort=high thinking=adaptive fallbacks=default beta=server-side-fallback-2026-07-01 schema=[questions] max_tokens=16000
+2026-11-18T16:20:45.522Z POST /v1/messages?beta=true model=claude-opus-5-5 effort=low thinking=adaptive fallbacks=default beta=server-side-fallback-2026-07-01 schema=[verdict,feedback] max_tokens=4000
+2026-11-18T16:20:56.952Z POST /v1/messages?beta=true model=claude-opus-5-5 effort=high thinking=adaptive fallbacks=default beta=server-side-fallback-2026-07-01 schema=[title,summary,notes,concepts,cards,quiz] max_tokens=64000
