@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { ConfigError, readConfig } from "../src/config.js";
-import { DailyLedger } from "../src/ledger.js";
+import { DailyLedger, SHARED_ADDRESS_FACTOR } from "../src/ledger.js";
 import { costUsd, priceFor } from "../src/pricing.js";
 
 // Prices, the daily ledger and the settings that drive them.
@@ -53,6 +53,34 @@ test("ledger: clients are counted separately", () => {
   assert.equal(ledger.admit("a", "study", "/v1/quiz").ok, false);
   assert.equal(ledger.admit("b", "study", "/v1/quiz").ok, true);
   assert.equal(ledger.admit("a", "check", "/v1/check-answer").ok, true);
+});
+
+test("ledger: installs on one address (a school's Wi-Fi) each get their own daily limit", () => {
+  const ledger = new DailyLedger({ timeZone: "UTC", dailyLimit: 2, dailyCheckLimit: 5, budgetUsd: 0 });
+  const school = "203.0.113.7";
+  for (const install of ["phone-aaaaaaaaaaaaaaaa", "phone-bbbbbbbbbbbbbbbb"]) {
+    assert.equal(ledger.admit({ address: school, install }, "study", "/v1/study-kit").ok, true);
+    assert.equal(ledger.admit({ address: school, install }, "study", "/v1/study-kit").ok, true);
+    const third = ledger.admit({ address: school, install }, "study", "/v1/study-kit");
+    assert.equal(third.ok, false, "each install still has its own limit");
+  }
+  // An older app (no install id) on the same address is counted as before.
+  assert.equal(ledger.admit(school, "study", "/v1/study-kit").ok, true);
+  assert.equal(ledger.admit({ address: school }, "study", "/v1/study-kit").ok, true);
+  assert.equal(ledger.admit({ address: school }, "study", "/v1/study-kit").ok, false);
+  assert.equal(ledger.report({ address: school, install: "phone-aaaaaaaaaaaaaaaa" }).you.study, 2);
+});
+
+test("ledger: made-up install ids can't get past the address's shared ceiling", () => {
+  const ledger = new DailyLedger({ timeZone: "UTC", dailyLimit: 1, dailyCheckLimit: 1, budgetUsd: 0 });
+  let admitted = 0;
+  for (let i = 0; i < SHARED_ADDRESS_FACTOR * 3; i++) {
+    const install = `fake-${String(i).padStart(16, "0")}`;
+    if (ledger.admit({ address: "198.51.100.1", install }, "study", "/v1/quiz").ok) admitted++;
+  }
+  assert.equal(admitted, SHARED_ADDRESS_FACTOR);
+  // Another address is not affected.
+  assert.equal(ledger.admit({ address: "198.51.100.2", install: "real-0000000000000001" }, "study", "/v1/quiz").ok, true);
 });
 
 test("settings: defaults", () => {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -163,6 +164,20 @@ class StudyAi {
     return typed.isNotEmpty ? typed : _builtInToken.trim();
   }
 
+  /// This install's id, sent as X-Install-Id so the study server counts its
+  /// daily limits per phone rather than per Wi-Fi network (a school's
+  /// students share one address). Random, made once, saved with the settings.
+  static String get installId {
+    final saved = _prefs.installId;
+    if (saved.isNotEmpty) return saved;
+    final rng = math.Random.secure();
+    final made = [
+      for (var i = 0; i < 16; i++) rng.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ].join();
+    AppStore.instance.updatePrefs(_prefs.copyWith(installId: made));
+    return made;
+  }
+
   /// A server address is known.
   static bool get hasServer => serverUrl.isNotEmpty;
 
@@ -301,6 +316,7 @@ class StudyAi {
             headers: {
               'content-type': 'application/json',
               if (token.isNotEmpty) 'authorization': 'Bearer $token',
+              'x-install-id': installId,
             },
             body: jsonEncode(body),
           )

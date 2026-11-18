@@ -201,6 +201,23 @@ test("a crash report is logged with only its own short fields, and needs the tok
   assert.equal((await post("/v1/crash", { ...report, stack: "s".repeat(5000) })).status, 400);
 });
 
+test("the daily limit follows X-Install-Id, so phones on one Wi-Fi don't share it", async () => {
+  const { post } = await start({ generators: fakes(), dailyLimit: 1 });
+  const as = (install: string) => ({ headers: { "x-install-id": install } });
+  assert.equal((await post("/v1/study-kit", { text: NOTES }, "secret", as("aaaaaaaaaaaaaaaa1"))).status, 200);
+  assert.equal((await post("/v1/study-kit", { text: NOTES }, "secret", as("aaaaaaaaaaaaaaaa1"))).status, 429);
+  assert.equal((await post("/v1/study-kit", { text: NOTES }, "secret", as("bbbbbbbbbbbbbbbb2"))).status, 200);
+  // A malformed id is ignored: counted by address, as an older app is.
+  assert.equal((await post("/v1/study-kit", { text: NOTES }, "secret", as("x y"))).status, 200);
+  assert.equal((await post("/v1/study-kit", { text: NOTES }, "secret", as("x y"))).status, 429);
+});
+
+test("browsers may send X-Install-Id (CORS)", async () => {
+  const { base } = await start({ generators: fakes() });
+  const res = await fetch(base + "/v1/study-kit", { method: "OPTIONS" });
+  assert.match(res.headers.get("access-control-allow-headers") ?? "", /X-Install-Id/);
+});
+
 test("crash reports don't use up the daily study limit", async () => {
   const { post } = await start({ generators: fakes(), dailyLimit: 1 });
   const report = { message: "boom", version: "0.5.0", platform: "web" };

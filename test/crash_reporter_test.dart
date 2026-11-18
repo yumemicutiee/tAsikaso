@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:study_app/data/app_store.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/services/crash_reporter.dart';
+import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/brand.dart';
 
 void main() {
@@ -83,6 +84,24 @@ void main() {
   test('a server that is down is ignored', () async {
     CrashReporter.debugClient = () => MockClient((_) async => throw Exception('offline'));
     expect(await CrashReporter.report(StateError('z'), null), isFalse);
+  });
+
+  test('Smart Study requests carry a lasting install id, which backups leave out',
+      () async {
+    final seen = <String?>[];
+    StudyAi.debugClient = () => MockClient((req) async {
+          seen.add(req.headers['x-install-id']);
+          return http.Response(jsonEncode({'check': {'verdict': 'correct', 'feedback': ''}}), 200);
+        });
+    addTearDown(() => StudyAi.debugClient = null);
+    for (var i = 0; i < 2; i++) {
+      await StudyAi.checkAnswer(question: 'q', answer: 'a', userAnswer: 'a');
+    }
+    expect(seen.first, matches(RegExp(r'^[0-9a-f]{32}$')));
+    expect(seen.last, seen.first, reason: 'made once, then kept');
+    expect(store.prefs.installId, seen.first);
+    final exported = jsonDecode(store.exportJson()) as Map;
+    expect((exported['prefs'] as Map).containsKey('install'), isFalse);
   });
 
   test('the switch is saved, and on unless turned off', () {

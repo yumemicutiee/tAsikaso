@@ -506,7 +506,7 @@ class AppStore extends ChangeNotifier {
         if (_suggestedLog.isNotEmpty) 'suggestedLog': _suggestedLog,
         'sessions': [for (final s in _sessions) s.toJson()],
         'breaks': [for (final b in _breaks) b.toJson()],
-        'prefs': (forExport ? _prefs.copyWith(aiToken: '') : _prefs).toJson(),
+        'prefs': (forExport ? _prefs.copyWith(aiToken: '', installId: '') : _prefs).toJson(),
         if (_timer case final t?) 'timer': t.toJson(),
       };
 
@@ -1103,6 +1103,8 @@ class AppStore extends ChangeNotifier {
     final keepSuggested = Map.of(_suggestedLog);
     final keepServerUrl = _prefs.aiServerUrl;
     final keepToken = _prefs.aiToken;
+    // This phone stays this phone (its daily limits on the study server).
+    final keepInstall = _prefs.installId;
 
     // A restore is a clean slate, so it also ends a paused state (the
     // unreadable file is replaced).
@@ -1157,6 +1159,7 @@ class AppStore extends ChangeNotifier {
       clearSubscription: keepPlan == null,
       aiServerUrl: keepServerUrl.isNotEmpty ? keepServerUrl : null,
       aiToken: keepServerUrl.isNotEmpty || keepToken.isNotEmpty ? keepToken : null,
+      installId: keepInstall,
     );
     for (final e in keepSuggested.entries) {
       final restored = _suggestedLog[e.key] ?? 0;

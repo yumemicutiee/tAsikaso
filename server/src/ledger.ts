@@ -18,6 +18,21 @@ export interface LedgerOptions {
   now?: () => number;
 }
 
+/**
+ * Who a request is counted for. With an install id (a random id the app
+ * makes once and sends as X-Install-Id), the daily limits apply per install,
+ * so students on one school Wi-Fi (one address) each get their own; their
+ * address together gets SHARED_ADDRESS_FACTOR times the limit, so inventing
+ * ids doesn't buy more than that. Without one (older apps), the address alone.
+ */
+export interface Client {
+  address: string;
+  install?: string;
+}
+
+/** How many installs' worth of requests one address may make in a day. */
+export const SHARED_ADDRESS_FACTOR = 10;
+
 export type Admission =
   | { ok: true }
   | { ok: false; reason: "daily_limit"; kind: RequestKind; limit: number }
@@ -87,7 +102,7 @@ export class DailyLedger {
    * Checks the server-wide budget and [client]'s allowance for [kind]; when
    * both allow it, counts the request against them.
    */
-  admit(client: string, kind: RequestKind, route: string): Admission {
+  admit(client: string | Client, kind: RequestKind, route: string): Admission {
     this.rollOver();
     const { budgetUsd } = this.opts;
     if (budgetUsd > 0 && this.spent >= budgetUsd) {
@@ -95,13 +110,21 @@ export class DailyLedger {
       return { ok: false, reason: "budget" };
     }
     const limit = kind === "study" ? this.opts.dailyLimit : this.opts.dailyCheckLimit;
-    const mine = this.clients.get(client) ?? { study: 0, check: 0 };
-    if (limit > 0 && mine[kind] >= limit) {
-      this.refused.daily_limit++;
-      return { ok: false, reason: "daily_limit", kind, limit };
+    // Each counter that must allow the request, with its limit.
+    const counters: [string, number][] = [];
+    for (const [key, max] of keysFor(client, limit)) {
+      counters.push([key, max]);
+      const day = this.clients.get(key) ?? { study: 0, check: 0 };
+      if (limit > 0 && day[kind] >= max) {
+        this.refused.daily_limit++;
+        return { ok: false, reason: "daily_limit", kind, limit: max };
+      }
     }
-    mine[kind]++;
-    this.clients.set(client, mine);
+    for (const [key] of counters) {
+      const day = this.clients.get(key) ?? { study: 0, check: 0 };
+      day[kind]++;
+      this.clients.set(key, day);
+    }
     this.byRoute[route] = (this.byRoute[route] ?? 0) + 1;
     return { ok: true };
   }
@@ -122,10 +145,12 @@ export class DailyLedger {
     return Math.max(1, 86_400 - elapsed);
   }
 
-  report(client?: string): UsageReport {
+  report(client?: string | Client): UsageReport {
     this.rollOver();
     const { budgetUsd, dailyLimit, dailyCheckLimit, timeZone } = this.opts;
-    const mine = (client && this.clients.get(client)) || { study: 0, check: 0 };
+    // The counter that is the client's own: its install, else its address.
+    const own = client === undefined ? undefined : keysFor(client, 1)[0]?.[0];
+    const mine = (own && this.clients.get(own)) || { study: 0, check: 0 };
     const requests = Object.values(this.byRoute).reduce((a, b) => a + b, 0);
     return {
       day: this.day,
@@ -160,3 +185,17 @@ export class DailyLedger {
 }
 
 const round = (usd: number) => Math.round(usd * 10_000) / 10_000;
+
+/**
+ * The counters a request from [client] goes on, each with its limit: the
+ * install's own and its address's shared one, or (no install id, or a plain
+ * address string) the address alone, as before install ids.
+ */
+function keysFor(client: string | Client, limit: number): [string, number][] {
+  if (typeof client === "string") return [[client, limit]];
+  if (!client.install) return [[client.address, limit]];
+  return [
+    [`install:${client.install}`, limit],
+    [`shared:${client.address}`, limit * SHARED_ADDRESS_FACTOR],
+  ];
+}

@@ -907,6 +907,7 @@ class AppPrefs {
     this.aiToken = '',
     this.profilePhotoUrl = '',
     this.crashReports = true,
+    this.installId = '',
   });
 
   /// Shown in greetings ("Hello, Budi!").
@@ -973,6 +974,11 @@ class AppPrefs {
   /// (the error and where in the code; never notes). Settings → Your Data.
   final bool crashReports;
 
+  /// A random id made once on this install and sent to the study server, so
+  /// its daily limits count per phone, not per Wi-Fi network. Not in backups:
+  /// a restored phone makes its own.
+  final String installId;
+
   AppPrefs copyWith({
     String? userName,
     bool? smartScanner,
@@ -995,6 +1001,7 @@ class AppPrefs {
     String? aiToken,
     String? profilePhotoUrl,
     bool? crashReports,
+    String? installId,
   }) =>
       AppPrefs(
         userName: userName ?? this.userName,
@@ -1018,6 +1025,7 @@ class AppPrefs {
         aiToken: aiToken ?? this.aiToken,
         profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
         crashReports: crashReports ?? this.crashReports,
+        installId: installId ?? this.installId,
       );
 
   Json toJson() => {
@@ -1041,6 +1049,7 @@ class AppPrefs {
         if (aiToken.isNotEmpty) 'aiToken': aiToken,
         if (profilePhotoUrl.isNotEmpty) 'photoUrl': profilePhotoUrl,
         'crash': crashReports,
+        if (installId.isNotEmpty) 'install': installId,
       };
 
   factory AppPrefs.fromJson(Json j) => AppPrefs(
@@ -1074,5 +1083,6 @@ class AppPrefs {
         aiToken: j['aiToken'] as String? ?? '',
         profilePhotoUrl: j['photoUrl'] as String? ?? '',
         crashReports: j['crash'] != false,
+        installId: j['install'] as String? ?? '',
       );
 }

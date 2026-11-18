@@ -24,7 +24,7 @@ import {
   TooLongError,
 } from "./claude.js";
 import { DEFAULTS } from "./config.js";
-import { type Admission, DailyLedger, type RequestKind } from "./ledger.js";
+import { type Admission, type Client, DailyLedger, type RequestKind } from "./ledger.js";
 import { jsonLogger, type Logger } from "./log.js";
 import {
   type AnswerCheck,
@@ -127,7 +127,7 @@ export function createApp(options: AppOptions = {}) {
   // The Flutter web build runs on another origin.
   app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-Id");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-Id, X-Install-Id");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Expose-Headers", "X-Request-Id, Retry-After");
     if (req.method === "OPTIONS") {
@@ -150,7 +150,7 @@ export function createApp(options: AppOptions = {}) {
   app.use(requireToken(options.appToken ?? ""));
 
   app.get("/v1/usage", (req, res) => {
-    const report = ledger.report(clientKey(req));
+    const report = ledger.report(clientOf(req));
     // The address the limits are counted for, so you can check TRUST_PROXY:
     // two phones on different networks should see different addresses.
     res.json({ ...report, you: { ...report.you, address: clientKey(req) } });
@@ -178,7 +178,7 @@ export function createApp(options: AppOptions = {}) {
         next(new HttpError(400, "bad_request", where + (issue?.message ?? "Bad request.")));
         return;
       }
-      const admission = ledger.admit(clientKey(req), kind, req.path);
+      const admission = ledger.admit(clientOf(req), kind, req.path);
       if (!admission.ok) {
         next(refusal(admission, ledger.secondsToMidnight()));
         return;
@@ -248,9 +248,21 @@ export function createApp(options: AppOptions = {}) {
   return app;
 }
 
-/** The client the limits are counted for: its IP address. */
+/** The client's IP address (rate limit, logs). */
 function clientKey(req: Request): string {
   return req.ip ?? req.socket.remoteAddress ?? "unknown";
+}
+
+const INSTALL_ID = /^[A-Za-z0-9-]{16,64}$/;
+
+/**
+ * Who the daily limits are counted for: the app's install id (X-Install-Id,
+ * a random id made once per install) with its address, or the address alone
+ * for a request without a usable one. See `Client` in ledger.ts.
+ */
+function clientOf(req: Request): Client {
+  const id = req.get("x-install-id")?.trim();
+  return { address: clientKey(req), ...(id && INSTALL_ID.test(id) ? { install: id } : {}) };
 }
 
 const REQUEST_ID = /^[\w.:-]{1,128}$/;
