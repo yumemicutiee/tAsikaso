@@ -82,6 +82,15 @@ jobs:
             --dart-define=STUDY_AI_TOKEN="${{ secrets.STUDY_AI_TOKEN }}" \
             2>&1 | tee ci-logs/build.txt
 
+      # What a phone test can't see: no unexpected permissions, and native
+      # libraries built for Android 15+ phones with 16 KB memory pages.
+      - name: Check the APK
+        run: |
+          set -o pipefail
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          python3 tool/check_apk.py build/app/outputs/flutter-apk/app-release.apk \
+            "$BT/aapt2" "$BT/zipalign" 2>&1 | tee ci-logs/apk-check.txt
+
       - name: Name the APK
         run: cp build/app/outputs/flutter-apk/app-release.apk tAsikaso.apk
 

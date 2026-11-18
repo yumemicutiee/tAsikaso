@@ -162,6 +162,9 @@ void _patchManifest(File file) {
   }
   const extras = [
     '    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>',
+    // androidx.biometric (a dependency's) asks for these; nothing uses them.
+    '    <uses-permission android:name="android.permission.USE_BIOMETRIC" tools:node="remove"/>',
+    '    <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove"/>',
     '    <uses-feature android:name="android.hardware.camera.any" android:required="false" tools:replace="android:required"/>',
     '    <uses-feature android:name="android.hardware.camera" android:required="false"/>',
   ];

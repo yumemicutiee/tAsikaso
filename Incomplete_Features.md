@@ -215,8 +215,8 @@ Milestones, in order. **Who** says what each one needs from the owner.
 | **B. Smart Study live** | ✅ deployed on Render, `TRUST_PROXY=3`, auto-deploy from GitHub, first real kits (section 0). Left: the app pointed at the server (Settings, or built into the APK), Console spend limit, model/effort from real costs (2.10). | Owner: choose Settings vs built-in; Console limit. Claude: build | 🟢 server live 18 Nov — app hookup left |
 | **B2. Auto-crop for every phone** (added 18 Nov) | ✅ DocAligner models in the app (4.1), checked on the Android emulator and 96 synthetic photos. Left: 10–20 **real** photos scored old vs new (`Downloads\crop-tests`); boxed pages on a white desk are the weak spot. | Owner: photos. Claude: scoring, fixes | 🟢 built — real photos left |
 | **R. Release v0.5.0** | ✅ https://github.com/yumemicutiee/tAsikaso/releases/tag/v0.5.0 — signed with the upload key (SHA-1 34:1D…66:3C), Smart Study address and token built in (owner's choice; not in the web build), both DocAligner models inside, 252.7 MB. Download link checked (HTTP 200, full size). | Owner approved. Claude built and published | ✅ done 18 Nov |
-| **C. Real-phone run-through** (next) | `docs/phone-test-checklist.md` with the live server and v0.5.0: Google's scanner, the new auto-crop on paper, handwriting OCR, Smart Study end to end (time and quality per scan), alert lateness without exact alarms, vibration, share-sheet backup, 10+ page scans. Can be driven from the PC over Wireless debugging. | Owner: phone. Claude: drives the tests | ⏳ now |
-| **D. Ready for strangers** | Per-user limits on Claude use before strangers arrive (today only the server's $5/day cap stops a heavy user or a leaked token: type-up, quizzes and answer checks aren't capped for Free); Google sign-in out of **Testing** (today only listed test users can sign in, and their sign-in lapses after 7 days); privacy policy (Anthropic's retention, Drive data; the page models run on the phone); CI signing secrets (1.4) so CI APKs match releases; crash reports from phones. | Owner: Google Cloud console, decisions. Claude: policy draft, code | — |
+| **C. Verified without a phone** (changed 18 Nov; was "real-phone run-through") | The owner can't run a phone test, so every item of `docs/phone-test-checklist.md` is verified by automated tests, the Android emulator on GitHub, or checks on the built APK instead — see **section 12** for the item-by-item plan and status. What truly needs a phone is listed there and stays a known risk. | Claude alone | ⏳ in progress |
+| **D. Ready for strangers** | Claude, no owner needed: per-user limits on Claude use (today only the server's $5/day cap stops a heavy user or a leaked token: type-up, quizzes and answer checks aren't capped for Free); privacy policy page (Anthropic's retention, Drive data; the page models run on the phone) with a link in the app; crash reports from phones to the study server's log (no third party). Owner, a few clicks each: Google sign-in out of **Testing** (needs the privacy policy URL); CI signing secrets (1.4) so CI APKs match releases. | Claude: code + policy. Owner: Google Cloud console, GitHub secrets | — |
 | **E. Paid plans for real** | Real payments (1.1) instead of test purchases; per-user accounts on the server (Google sign-in as the account) and shared limits (3.1, 1.3), so Free vs Plus is enforced by the server too. | Owner: decisions below. Claude: build | — |
 | **F. Launch 1.0** | Distribution (Play Store listing, or APK + website with a download page), version 1.0, release notes. | Owner + Claude | — |
 | Later | Web OCR (2.4) · sync merge (1.4) · iOS (1.5) · other UI languages (1.7) · quiz history in Analysis (5.1) | — | after 1.0 |
@@ -227,6 +227,31 @@ Milestones, in order. **Who** says what each one needs from the owner.
 3. **Smart Study for Free accounts:** keep 20 suggested cards a month, or Plus only (measured: ≈ ₱6.50 for a one-page kit at Opus 5.5 `high`, more for longer notes).
 4. **Model and effort** after seeing real costs from the first students.
 5. **How phones reach the study server:** typed into Settings, or built into the APK (now — needed for R).
+
+## 12. Milestone C: verified without a phone (started 18 Nov)
+
+Each area of `docs/phone-test-checklist.md`, how it is checked without a
+real phone, and where it stands. ✅ automated and passing · 🔧 being added ·
+📱 needs a real phone (a known risk, said plainly).
+
+| Area | How it's verified | Status |
+|---|---|---|
+| APK itself: permissions, Android 15+ 16 KB pages, signing, SDK levels | `tool/check_apk.py` on every CI build (fails on a new permission or a library not built for 16 KB pages); signature checked with apksigner at release | ✅ 18 Nov — found and removed `USE_BIOMETRIC` / `USE_FINGERPRINT` (from `androidx.biometric`, never used) |
+| First launch, tasks, settings, presets, dark mode, small screens | widget tests (`test/`, 223) | ✅ |
+| Saving on the device, restart, backup + restore round trip | emulator (`integration_test/phone_test.dart`) | ✅ |
+| Timer: Focus Mode, real 1-minute Pomodoro, alert delivered, wakelock | emulator | ✅ |
+| Timer: alert with exact alarms **denied** (Android 14's default), notification permission **refused** | emulator with permissions revoked by the test script | 🔧 |
+| Timer restore after the app is killed | widget tests of `PomodoroController.restore` | ✅ |
+| OCR + hidden text layer in the Scan PDF | emulator (ML Kit runs there) | ✅ |
+| App camera → crop → Scan PDF; gallery import; auto-crop accuracy | emulator + 96-photo benchmark | ✅ |
+| 10+ page scan (memory, time) | emulator, 12 large gallery photos → Scan PDF + OCR | 🔧 |
+| Smart Study end to end: app → study server → Claude, offline fallback, wrong server address | emulator against the real server code with a fake Claude in CI (free), plus one live call on demand | 🔧 |
+| A cheap phone: speed and memory of the auto-crop models | emulator with a low-end profile (2 GB RAM, 2 cores); time and memory logged | 🔧 |
+| Library, search, flashcards, quizzes, smart review, analysis | widget tests | ✅ |
+| Google's document scanner screen | 📱 not on emulators; the app falls back to its own camera when it's missing, and that fallback is tested | 📱 |
+| Real camera optics, real handwriting OCR quality | 📱 (printed-text OCR is tested) | 📱 |
+| A physical vibration; OEM battery savers delaying alerts | 📱 (the vibration call and alert scheduling are tested) | 📱 |
+| Share sheet → Google Drive app | 📱 (the backup file itself is tested) | 📱 |
 
 ## 11. Bug pass (25 Oct)
 
