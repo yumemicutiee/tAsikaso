@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
+import 'actions.dart';
 
 Future<void> openHelp(BuildContext context) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const HelpScreen()),
@@ -153,6 +154,12 @@ class HelpScreen extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 6),
+          Center(
+            child: TextButton(
+              onPressed: () => openPrivacyPolicy(context),
+              child: const Text('Privacy Policy'),
+            ),
+          ),
           Center(
             child: TextButton(
               onPressed: () => showLicensePage(

@@ -46,6 +46,34 @@ timeout 30m flutter drive --no-pub \
 STATUS=${PIPESTATUS[0]}
 kill "$SERVER" "$FAKE" 2>/dev/null || true
 
+# The permission states a real student is likely to have, one run each
+# (integration_test/restricted_test.dart). flutter drive reinstalls over the
+# app, which keeps what is set here.
+#  1. Android 14's default for new installs: exact alarms not allowed.
+adb shell appops set "$PKG" SCHEDULE_EXACT_ALARM deny || true
+timeout 16m flutter drive --no-pub \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/restricted_test.dart \
+  --dart-define=RESTRICTED=exact \
+  -d emulator-5554 2>&1 | tee "$OUT/restricted-exact.txt"
+EXACT=${PIPESTATUS[0]}
+adb shell appops set "$PKG" SCHEDULE_EXACT_ALARM allow || true
+
+#  2. Notifications refused, and fixed so (as after "Don't allow"): Android
+#     answers no straight away, with no dialog.
+adb shell pm revoke "$PKG" android.permission.POST_NOTIFICATIONS || true
+adb shell pm set-permission-flags "$PKG" android.permission.POST_NOTIFICATIONS user-fixed || true
+timeout 10m flutter drive --no-pub \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/restricted_test.dart \
+  --dart-define=RESTRICTED=notifications \
+  -d emulator-5554 2>&1 | tee "$OUT/restricted-notifications.txt"
+REFUSED=${PIPESTATUS[0]}
+
+for s in "$EXACT" "$REFUSED"; do
+  if [ "$STATUS" -eq 0 ] && [ "$s" -ne 0 ]; then STATUS=$s; fi
+done
+
 adb shell dumpsys notification --noredact > "$OUT/notifications.txt" 2>&1 || true
 kill "$LOGCAT" 2>/dev/null || true
 exit "$STATUS"

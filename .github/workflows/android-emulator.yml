@@ -17,7 +17,7 @@ permissions:
 jobs:
   emulator:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
 
@@ -51,8 +51,17 @@ jobs:
       - run: flutter pub get
 
       # Built before the emulator starts, so it waits less.
+      # The log goes to the results branch (readable without signing in);
+      # a second try rides out a download hiccup on the build machine.
       - name: Build the app
-        run: flutter build apk --debug
+        run: |
+          mkdir -p emulator-results
+          flutter build apk --debug > emulator-results/build.txt 2>&1 || {
+            echo "First build failed; trying once more." | tee -a emulator-results/build.txt
+            tail -40 emulator-results/build.txt
+            flutter build apk --debug >> emulator-results/build.txt 2>&1
+          }
+          tail -5 emulator-results/build.txt
 
       # The study server, run next to the emulator for the Smart Study test
       # (tool/emulator_tests.sh starts it with a stand-in for Claude).
@@ -66,7 +75,7 @@ jobs:
       # Android 14 with Google APIs on a Pixel 6-sized screen; the back
       # camera is the emulator's moving test pattern.
       - name: Run the tests on an emulator
-        timeout-minutes: 45
+        timeout-minutes: 75
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34

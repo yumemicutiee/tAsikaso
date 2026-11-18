@@ -29,6 +29,7 @@ import { jsonLogger, type Logger } from "./log.js";
 import {
   type AnswerCheck,
   CheckAnswerRequest,
+  CrashReport,
   type Quiz,
   QuizRequest,
   type StudyKit,
@@ -226,6 +227,19 @@ export function createApp(options: AppOptions = {}) {
   app.post("/v1/study-kit", handle(StudyKitRequest, generators.studyKit, "kit", "study"));
   app.post("/v1/quiz", handle(QuizRequest, generators.quiz, "quiz", "study"));
   app.post("/v1/check-answer", handle(CheckAnswerRequest, generators.checkAnswer, "check", "check"));
+
+  // A crash report from the app: one log line, nothing stored. Behind the
+  // token and the per-client rate limit; doesn't count against the daily
+  // study limits or the budget (Claude isn't called).
+  app.post("/v1/crash", (req, res, next) => {
+    const parsed = CrashReport.safeParse(req.body);
+    if (!parsed.success) {
+      next(new HttpError(400, "bad_request", "Not a crash report."));
+      return;
+    }
+    log("warn", "app crash", { requestId: ctxOf(res).id, ...parsed.data });
+    res.status(204).end();
+  });
 
   app.use((_req, _res, next) => {
     next(new HttpError(404, "not_found", "No such endpoint."));

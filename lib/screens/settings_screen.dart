@@ -18,6 +18,7 @@ import '../widgets/color_picker_sheet.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/number_field.dart';
 import '../widgets/segmented_tabs.dart';
+import 'actions.dart' show openPrivacyPolicy;
 import 'backup_screen.dart';
 import 'help_screen.dart';
 import 'plans_screen.dart';
@@ -302,12 +303,27 @@ class SettingsScreen extends StatelessWidget {
                   icon: AppIcons.backup,
                   onTap: () => openBackup(context),
                 ),
+                _Switch(
+                  label: 'Send Crash Reports',
+                  value: p.crashReports,
+                  onChanged: (v) =>
+                      store.updatePrefs(store.prefs.copyWith(crashReports: v)),
+                ),
+                _TapRow(
+                  label: 'Privacy Policy',
+                  icon: AppIcons.help,
+                  onTap: () => openPrivacyPolicy(context),
+                ),
                 _TapRow(
                   label: 'Delete All Data',
                   danger: true,
                   onTap: () => _eraseAll(context),
                 ),
               ]),
+              const SizedBox(height: 6),
+              const _Note('Crash reports hold the error and where in the app '
+                  "it happened, never your notes, photos or name. They go to "
+                  'the study server.'),
 
               const _Heading('About'),
               _Group(children: [

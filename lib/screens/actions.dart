@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/app_store.dart';
 import '../data/plans.dart';
@@ -563,6 +564,23 @@ Widget setTile(BuildContext context, FlashcardSet deck) => SetTile(
     );
 
 // ---- Settings ----------------------------------------------------------------
+
+/// The privacy policy, published with the web app (web/privacy.html).
+const kPrivacyPolicyUrl = 'https://yumemicutiee.github.io/tAsikaso/privacy.html';
+
+/// Opens the privacy policy in the browser; says where it is if that fails.
+Future<void> openPrivacyPolicy(BuildContext context) async {
+  var opened = false;
+  try {
+    opened = await launchUrl(Uri.parse(kPrivacyPolicyUrl),
+        mode: LaunchMode.externalApplication);
+  } catch (e) {
+    debugPrint('Opening the privacy policy failed: $e');
+  }
+  if (!opened && context.mounted) {
+    _toast(context, 'Open $kPrivacyPolicyUrl in your browser.');
+  }
+}
 
 /// Opens Settings, scrolled to [section] if given.
 void openSettings(BuildContext context, {SettingsSection? section}) {

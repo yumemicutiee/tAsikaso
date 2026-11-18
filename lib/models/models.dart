@@ -906,6 +906,7 @@ class AppPrefs {
     this.aiServerUrl = '',
     this.aiToken = '',
     this.profilePhotoUrl = '',
+    this.crashReports = true,
   });
 
   /// Shown in greetings ("Hello, Budi!").
@@ -968,6 +969,10 @@ class AppPrefs {
   /// empty for a photo the user chose themselves, or no photo.
   final String profilePhotoUrl;
 
+  /// Send a short report to the study server when the app hits an error
+  /// (the error and where in the code; never notes). Settings → Your Data.
+  final bool crashReports;
+
   AppPrefs copyWith({
     String? userName,
     bool? smartScanner,
@@ -989,6 +994,7 @@ class AppPrefs {
     String? aiServerUrl,
     String? aiToken,
     String? profilePhotoUrl,
+    bool? crashReports,
   }) =>
       AppPrefs(
         userName: userName ?? this.userName,
@@ -1011,6 +1017,7 @@ class AppPrefs {
         aiServerUrl: aiServerUrl ?? this.aiServerUrl,
         aiToken: aiToken ?? this.aiToken,
         profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
+        crashReports: crashReports ?? this.crashReports,
       );
 
   Json toJson() => {
@@ -1033,6 +1040,7 @@ class AppPrefs {
         if (aiServerUrl.isNotEmpty) 'aiUrl': aiServerUrl,
         if (aiToken.isNotEmpty) 'aiToken': aiToken,
         if (profilePhotoUrl.isNotEmpty) 'photoUrl': profilePhotoUrl,
+        'crash': crashReports,
       };
 
   factory AppPrefs.fromJson(Json j) => AppPrefs(
@@ -1065,5 +1073,6 @@ class AppPrefs {
         aiServerUrl: j['aiUrl'] as String? ?? '',
         aiToken: j['aiToken'] as String? ?? '',
         profilePhotoUrl: j['photoUrl'] as String? ?? '',
+        crashReports: j['crash'] != false,
       );
 }

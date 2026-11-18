@@ -114,3 +114,18 @@ export const CheckAnswerRequest = z.object({
   userAnswer: z.string().trim().min(1).max(2000),
 });
 export type CheckAnswerRequest = z.infer<typeof CheckAnswerRequest>;
+
+/**
+ * A crash report from the app. Only these fields are kept (zod drops any
+ * others), each short, so nothing a student wrote can end up in the log:
+ * the app sends the error and where in its code it happened, never notes.
+ */
+export const CrashReport = z.object({
+  message: z.string().trim().min(1).max(1000),
+  stack: z.string().max(4000).optional(),
+  /** Where the app caught it, e.g. "flutter" or "platform". */
+  source: z.string().max(40).optional(),
+  version: z.string().max(40),
+  platform: z.string().max(120),
+});
+export type CrashReport = z.infer<typeof CrashReport>;

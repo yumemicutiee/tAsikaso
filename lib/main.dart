@@ -6,6 +6,7 @@ import 'app.dart';
 import 'data/app_store.dart';
 import 'data/pomodoro_controller.dart';
 import 'data/storage/local_storage.dart';
+import 'services/crash_reporter.dart';
 import 'services/drive_sync.dart';
 import 'services/notification_service.dart';
 
@@ -20,6 +21,8 @@ Future<void> main() async {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final store = AppStore.instance;
   await store.init(createDeviceStorage());
+  // After the saved settings are loaded: they say whether reports may go.
+  CrashReporter.install();
   // A Pomodoro that was running when the app was closed carries on.
   PomodoroController.instance.restore();
   runApp(const StudyApp());

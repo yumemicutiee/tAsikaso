@@ -176,6 +176,38 @@ test("a missing or wrong token is refused", async () => {
   assert.equal((await get("/v1/usage", null)).status, 401);
 });
 
+test("a crash report is logged with only its own short fields, and needs the token", async () => {
+  const { post, logFor, logs } = await start({ generators: fakes() });
+  const report = {
+    message: "Null check operator used on a null value",
+    stack: "#0 ReviewScreen._save (package:study_app/screens/capture/review_screen.dart:191)",
+    source: "flutter",
+    version: "0.5.0",
+    platform: "android 14",
+    notes: "a student's notes must never be logged",
+  };
+  const res = await post("/v1/crash", report);
+  assert.equal(res.status, 204);
+  const line = await logFor(res.headers.get("x-request-id")!);
+  assert.equal(line.level, "warn");
+  assert.equal(line.msg, "app crash");
+  assert.equal(line.message, report.message);
+  assert.equal(line.version, "0.5.0");
+  assert.equal(line.platform, "android 14");
+  assert.ok(!JSON.stringify(logs).includes("student's notes"), "unknown fields are dropped");
+
+  assert.equal((await post("/v1/crash", report, null)).status, 401);
+  assert.equal((await post("/v1/crash", { message: "x" })).status, 400, "version and platform needed");
+  assert.equal((await post("/v1/crash", { ...report, stack: "s".repeat(5000) })).status, 400);
+});
+
+test("crash reports don't use up the daily study limit", async () => {
+  const { post } = await start({ generators: fakes(), dailyLimit: 1 });
+  const report = { message: "boom", version: "0.5.0", platform: "web" };
+  for (let i = 0; i < 3; i++) assert.equal((await post("/v1/crash", report)).status, 204);
+  assert.equal((await post("/v1/study-kit", { text: NOTES })).status, 200);
+});
+
 test("unknown paths are 404 JSON", async () => {
   const { get } = await start({ generators: fakes() });
   const res = await get("/nothing");
