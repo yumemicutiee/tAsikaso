@@ -232,7 +232,9 @@ flutter drive --driver=test_driver/integration_test.dart --target=integration_te
 
 **Smart Study.** The AI features talk to the small Node.js server in
 `server/`, which holds your Anthropic API key (never put the key in the
-app). `server/README.md` has the setup and deployment steps. Point the app
+app). `server/README.md` has the setup and deployment steps. The live
+server is `https://tasikaso-study-server.onrender.com` (Render, free plan,
+Singapore); it rebuilds by itself on every push to `main`. Point the app
 at it in Settings → Smart Study, or bake the address and token in:
 
 ```bash
