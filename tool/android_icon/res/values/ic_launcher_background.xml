@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Sky, the default palette's fill (Palette.navy in lib/theme/app_colors.dart). -->
-    <color name="ic_launcher_background">#9FCBF5</color>
+    <!-- White behind the logo: Android's adaptive icons can't be transparent.
+         The letters are Sky, the default palette's fill (Palette.navy). -->
+    <color name="ic_launcher_background">#FFFFFF</color>
 </resources>
