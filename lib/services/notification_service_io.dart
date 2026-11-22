@@ -158,8 +158,20 @@ Future<void> init() async {
         // Made with the first alert instead.
       }
     }
+    // The channels of 0.5.0 and older ("Timer", "Timer (no vibration)"),
+    // replaced by the three above: gone from the phone's settings.
+    for (final old in _oldTimerChannels) {
+      try {
+        await android.deleteNotificationChannel(channelId: old);
+      } catch (_) {
+        // Never made on this phone, or already gone.
+      }
+    }
   }
 }
+
+/// Timer channels from before "When Time Is Up".
+const _oldTimerChannels = ['timer', 'timer_quiet'];
 
 Future<bool> requestPermission() async {
   await init();

@@ -120,6 +120,8 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
+0.5.2  22 Nov  QA fixes (typed quiz answers judged strictly, alarm notice after
+               updating, web works without CDNs, and more), the tAsikaso logo
 0.5.1  18 Nov  When Time Is Up (alarm/vibration/both/off), privacy policy,
                crash reports, per-phone limits, fingerprint permissions removed
 0.5.0  18 Nov  Smart Study built in (Claude Opus 5.5), auto-crop with

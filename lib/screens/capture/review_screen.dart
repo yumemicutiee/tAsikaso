@@ -756,7 +756,9 @@ class _SaveSheetState extends State<_SaveSheet> {
               subtitle: (ai && canReadText
                       ? 'Cards and a quiz made from your notes'
                       : 'Write cards while looking at your photos') +
-                  switch (AppStore.instance.suggestedCardsLeft) {
+                  // Where no text is read (the web), no cards are
+                  // suggested, so the monthly allowance doesn't apply.
+                  switch (canReadText ? AppStore.instance.suggestedCardsLeft : null) {
                     null => '',
                     0 => " · this month's suggested cards are used up",
                     final left =>

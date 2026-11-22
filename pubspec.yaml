@@ -1,7 +1,7 @@
 name: study_app
 description: Pomodoro timer + tasks, and lecture notes to PDF or flashcards.
 publish_to: 'none'
-version: 0.5.1+12
+version: 0.5.2+13
 
 environment:
   sdk: ^3.9.0  # Flutter 3.35 or newer
@@ -54,6 +54,9 @@ flutter:
     - assets/models/docaligner_fastvit_sa24.onnx
     - assets/models/docaligner_lcnet100.onnx
     - assets/models/DOCALIGNER_NOTICE.txt
+    # The logo, as two masks tinted with the app's colors (widgets/app_logo.dart).
+    - assets/brand/logo_outline.png
+    - assets/brand/logo_fill.png
 
   fonts:
     # Plus Jakarta Sans (headings, numbers, buttons) and Inter (body text),

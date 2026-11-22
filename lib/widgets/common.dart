@@ -64,18 +64,27 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The title and its action are read as two things (a heading, then a
+    // button), not as one button saying both.
     return Row(
       children: [
         Expanded(
-          child: Text(
-            title,
-            style: AppText.sectionTitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: Semantics(
+            container: true,
+            header: true,
+            child: Text(
+              title,
+              style: AppText.sectionTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
         if (onViewAll != null)
-          InkWell(
+          Semantics(
+            container: true,
+            button: true,
+            child: InkWell(
             onTap: onViewAll,
             borderRadius: BorderRadius.circular(4),
             child: Padding(
@@ -89,6 +98,7 @@ class SectionHeader extends StatelessWidget {
                 ),
               ),
             ),
+          ),
           ),
       ],
     );

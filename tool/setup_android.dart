@@ -34,7 +34,30 @@ void main() {
   _writeProguardRules(File('android/app/proguard-rules.pro'));
   _writeNotificationIcon(
       File('android/app/src/main/res/drawable/ic_stat_notify.xml'));
+  _copyLauncherIcons(Directory('tool/android_icon/res'),
+      Directory('android/app/src/main/res'));
   stdout.writeln('Done. Now run: flutter pub get && flutter run');
+}
+
+/// tAsikaso's launcher icon (tool/android_icon/res, in the default Navy &
+/// Sky colors): the classic icons, the adaptive icon of Android 8+ and the
+/// one-color icon for Android 13's themed icons. Always copied, replacing
+/// the Flutter logo that `flutter create` puts there.
+void _copyLauncherIcons(Directory from, Directory to) {
+  if (!from.existsSync()) {
+    stderr.writeln('${from.path} is missing; the launcher icon stays Flutter\'s.');
+    return;
+  }
+  var copied = 0;
+  for (final entity in from.listSync(recursive: true)) {
+    if (entity is! File) continue;
+    final relative = entity.path.substring(from.path.length + 1);
+    final target = File('${to.path}/$relative');
+    target.parent.createSync(recursive: true);
+    entity.copySync(target.path);
+    copied++;
+  }
+  stdout.writeln('Copied the launcher icon ($copied files)');
 }
 
 /// The status-bar icon for timer alerts (white on transparent, as Android

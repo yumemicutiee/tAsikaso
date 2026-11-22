@@ -336,8 +336,9 @@ class AppStore extends ChangeNotifier {
       _paused = null;
       _saveFailed = false;
     }
-    // Keep the look, the tAsikaso+ plan and this month's suggested-card
-    // count (a plan and its limits aren't study data).
+    // Keep the look, the tAsikaso+ plan, this month's suggested-card count
+    // and this install's id (a plan and its limits aren't study data, and
+    // the study server's daily limit stays this phone's).
     final keep = _prefs;
     final suggested = Map.of(_suggestedLog);
     _clear();
@@ -346,6 +347,7 @@ class AppStore extends ChangeNotifier {
       palette: keep.palette,
       customHue: keep.customHue,
       subscription: keep.subscription,
+      installId: keep.installId,
     );
     _suggestedLog.addAll(suggested);
     _persist();

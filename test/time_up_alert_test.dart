@@ -47,4 +47,19 @@ void main() {
     expect(AppPrefs.fromJson(const {'alerts': false, 'vibrate': true}).timeUpAlert,
         TimeUpAlert.off);
   });
+
+  test('updating from before the alarm choice says once that alerts now ring '
+      'like an alarm', () {
+    expect(AppPrefs.fromJson(const {'alerts': true, 'vibrate': true}).alarmNotice,
+        isTrue);
+    expect(AppPrefs.fromJson(const {'alerts': false}).alarmNotice, isFalse);
+    // Saved by 0.5.1 or later: nothing changed for them.
+    expect(AppPrefs.fromJson(const {'alerts': true, 'alarm': true}).alarmNotice,
+        isFalse);
+    expect(const AppPrefs().alarmNotice, isFalse);
+    // Seen: the next save drops it, and it stays gone.
+    final seen = AppPrefs.fromJson(const {'alerts': true})
+        .copyWith(alarmNotice: false);
+    expect(AppPrefs.fromJson(seen.toJson()).alarmNotice, isFalse);
+  });
 }

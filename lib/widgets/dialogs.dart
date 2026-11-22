@@ -115,12 +115,15 @@ class _TextInputDialogState extends State<_TextInputDialog> {
   }
 }
 
-/// Yes/no question. Returns true only if confirmed.
+/// Yes/no question. Returns true only if confirmed. The confirm button is
+/// red unless [danger] is false.
 Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
   required String message,
   String confirmLabel = 'Delete',
+  String cancelLabel = 'Cancel',
+  bool danger = true,
 }) async {
   final ok = await showDialog<bool>(
     context: context,
@@ -130,13 +133,13 @@ Future<bool> showConfirmDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(cancelLabel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.streakRed,
-            foregroundColor: Colors.white,
+            backgroundColor: danger ? AppColors.streakRed : AppColors.primary,
+            foregroundColor: danger ? Colors.white : AppColors.onFill,
           ),
           child: Text(confirmLabel),
         ),

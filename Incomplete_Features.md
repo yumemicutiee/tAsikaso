@@ -312,3 +312,29 @@ screens. Every fix has a regression test that fails on the old code (except
 | 11.34 | Dashboard and Study don't roll over at midnight until something changes; Dashboard says "No tasks yet" when all are done; profile photo errors are silent. | 🟡 | |
 | 11.35 | Auto-crop accepted any bright shape: on a photo with no page (the emulator's test picture) it said "Page edges found" and drew a lopsided quadrilateral. | ✅ 25 Oct | `page_detector.dart` now also rejects a shape with big bites out of it (fills < 85 % of its outline) or with a far edge under half the near one; a strongly slanted page is still found. Still to try on real photos of paper. |
 | 11.36 | Small phones and large text. | ✅ 25 Oct | `small_screen_test.dart` opens every main screen at 320 × 568 dp, at normal and 1.3× text, with the app's real fonts. Fixed: the Study strip cut short (two lines now), folder tiles overflowing at large text (the badge shrinks), Help's answers hiding their tap ripple. The + button over the list is normal: the list scrolls clear of it. Text larger than 1.3× isn't checked. |
+
+## 13. QA pass of v0.5.1 and fixes in 0.5.2 (22 Nov)
+
+A web build in a browser, a 155-screen walkthrough on the Android 14
+emulator (light/free, dark/tAsikaso+, 320 × 568 at 1.5× text: no overflows,
+no errors) and a code read. Fixed in 0.5.2:
+
+| # | What a user saw | Fix |
+|---|---|---|
+| 13.1 | Wrong typed quiz answers marked "Correct!": "3" for −3, "+1" for −1, "Efferent" for Afferent, 10^22 for 10^23, "not proteins" for Proteins. Smart Study never got to judge them. | `answer_match.dart`: signs, operators and numbers must match; no typo allowance in numbers, short words or the first two letters; "contains" only on whole words, never when negated; hedging ("A or B") is partly right. Only a word-for-word answer skips the study server (`judgeAnswerDetailed(...).exact`). Tests in `quiz_test.dart`. |
+| 13.2 | After updating to 0.5.1, timer alerts rang like an alarm, even on silent, without a word. | One-time notice after the update with a Change button (`AppPrefs.alarmNotice`, `home_shell.dart`); Settings says the alarm rings on silent. |
+| 13.3 | The public web build would carry the study server's token if the secret is set. | `deploy-web.yml` no longer builds the address or token in. The APK still carries them (one shared token, see 3.1). |
+| 13.4 | Old "Timer" and "Timer (no vibration)" channels stayed in the phone's settings. | Deleted at start-up. |
+| 13.5 | Web: notes never opened (endless spinner) where unpkg.com is blocked; auto-crop's runtime came from jsDelivr. | pdf.js 6.2.108 (`web/pdfjs/`) and onnxruntime-web 1.30.0, CPU build (`web/ort/`), served from the site. |
+| 13.6 | With no folders (after Delete All Data), New Set said "Create a folder first." | The set goes in a new "My Notes" folder, as a saved scan does. |
+| 13.7 | Delete All Data reset more than its dialog said, and reset the per-phone Smart Study limit. | The dialog says settings reset and the plan and colors stay; the install id is kept. |
+| 13.8 | The web save sheet offered suggested cards it can't make. | The allowance is shown only where text is read. |
+| 13.9 | Focus Mode greeted with the full name. | First name, as on the Dashboard. |
+| 13.10 | Section headers read as one button with their action (6.4). | Heading and button are separate semantics nodes. |
+| 13.11 | Offline multiple choice drew obviously wrong choices (5.3). | Wrong choices are the most alike answers first (a number for a number, similar length). |
+
+Also in 0.5.2: the tAsikaso logo. Launcher icon (classic, adaptive and
+Android 13 themed) in the default Navy & Sky colors from
+`tool/android_icon/`, copied by `tool/setup_android.dart`; web icons,
+favicon and manifest; in the app (`widgets/app_logo.dart`, Settings → About
+and the licenses page) it follows the chosen App Color.

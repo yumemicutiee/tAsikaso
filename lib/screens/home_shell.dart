@@ -14,6 +14,7 @@ import 'capture/scan_flow.dart';
 import 'dashboard_screen.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
+import 'settings_screen.dart' show SettingsSection;
 import 'study_screen.dart';
 import 'task_editor.dart';
 
@@ -43,6 +44,7 @@ class _HomeShellState extends State<HomeShell> {
       final message = timer.takePendingMessage();
       if (message != null) _showMessage(message);
       _showProblem();
+      _showAlarmNotice();
     });
   }
 
@@ -70,6 +72,29 @@ class _HomeShellState extends State<HomeShell> {
     if (problem == null || !mounted) return;
     store.problem.value = null;
     showInfoDialog(context, title: problem.title, message: problem.message);
+  }
+
+  /// Once, after updating from a version whose time-up alert was a plain
+  /// notification sound: it now rings like an alarm clock, even on silent.
+  Future<void> _showAlarmNotice() async {
+    final store = AppStore.instance;
+    if (!store.prefs.alarmNotice || !mounted) return;
+    store.updatePrefs(store.prefs.copyWith(alarmNotice: false));
+    if (!store.prefs.timeUpAlert.sound) return;
+    final change = await showConfirmDialog(
+      context,
+      title: 'Timer Alerts Ring Like an Alarm Now',
+      message: "When a Pomodoro or a break ends, your phone's alarm sound "
+          'plays, even when the phone is on silent, until you tap it (up to '
+          'a minute). To keep your phone quiet in class, choose Vibration '
+          'Only in Settings → When Time Is Up.',
+      confirmLabel: 'Change',
+      cancelLabel: 'Keep Alarm',
+      danger: false,
+    );
+    if (change && mounted) {
+      openSettings(context, section: SettingsSection.notifications);
+    }
   }
 
   void _select(AppTab tab) => setState(() => _tab = tab);

@@ -14,6 +14,7 @@ import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../theme/brand.dart';
 import '../widgets/app_header.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/color_picker_sheet.dart';
 import '../widgets/common.dart' show SheetTitle;
 import '../widgets/dialogs.dart';
@@ -235,7 +236,9 @@ class SettingsScreen extends StatelessWidget {
                   ),
               ]),
               _Note(NotificationService.isSupported
-                  ? 'Alerts sound even when the app is closed.'
+                  ? (p.timeUpAlert.sound
+                      ? 'The alarm rings even when your phone is on silent or the app is closed.'
+                      : 'Alerts come even when the app is closed.')
                   : 'Notifications work in the Android and iOS apps.'),
 
               const _Heading('Scanning'),
@@ -331,6 +334,17 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const _TapRow(label: 'Version', value: kAppVersion),
               ]),
+              const SizedBox(height: 28),
+              // The logo, in the colors picked above.
+              Center(
+                child: Column(
+                  children: [
+                    const AppLogo(size: 56),
+                    const SizedBox(height: 8),
+                    Text(kAppName, style: AppText.sectionTitle),
+                  ],
+                ),
+              ),
             ],
           );
         },
@@ -566,7 +580,9 @@ class SettingsScreen extends StatelessWidget {
       context,
       title: 'Delete All Data?',
       message: 'Every folder, note, flashcard set, task and statistic will be '
-          'deleted from this device. This cannot be undone.'
+          'deleted from this device, and your settings (name, study server, '
+          'reminder) go back to the start. Your tAsikaso+ plan and colors '
+          'stay. This cannot be undone.'
           '${DriveSync.instance.isSignedIn ? ' Your copy on Google Drive is '
               'kept; sign in again to bring it back.' : ''}',
       confirmLabel: 'Delete Everything',

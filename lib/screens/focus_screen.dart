@@ -56,7 +56,9 @@ class FocusScreen extends StatelessWidget {
                   child: ListenableBuilder(
                     listenable: Listenable.merge([timer, store]),
                     builder: (context, _) {
-                      final name = store.prefs.userName.trim();
+                      // The first name, as the Dashboard greets you.
+                      final full = store.prefs.userName.trim();
+                      final name = full.isEmpty ? '' : full.split(RegExp(r'\s+')).first;
                       final task = timer.taskTitle;
                       final line = timer.isFocus
                           ? _focusLines[(timer.session - 1) % _focusLines.length]

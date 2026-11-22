@@ -54,7 +54,10 @@ List<QuizQuestion> buildLocalQuiz(
 /// "Mitochondria" are one answer, not a right and a "wrong" choice.
 String _norm(String s) => normalizeAnswer(s);
 
-/// Other cards' answers, as wrong choices for [card].
+/// Other cards' answers, as wrong choices for [card]: the most alike first
+/// (a number for a number, a word for a word, about as long), so a wrong
+/// choice can't be ruled out at a glance. Equally alike ones come in a
+/// random order.
 List<String> _otherAnswers(Flashcard card, List<Flashcard> all, Random rng) {
   final seen = {_norm(card.back)};
   final out = <String>[];
@@ -62,7 +65,33 @@ List<String> _otherAnswers(Flashcard card, List<Flashcard> all, Random rng) {
     if (c.id == card.id) continue;
     if (seen.add(_norm(c.back))) out.add(c.back.trim());
   }
-  return out..shuffle(rng);
+  out.shuffle(rng);
+  final answer = card.back.trim();
+  final scores = {for (final o in out) o: _unlike(o, answer)};
+  // List.sort isn't stable; sorting on (score, shuffled position) is.
+  final position = {for (final (i, o) in out.indexed) o: i};
+  out.sort((a, b) {
+    final byScore = scores[a]!.compareTo(scores[b]!);
+    return byScore != 0 ? byScore : position[a]!.compareTo(position[b]!);
+  });
+  return out;
+}
+
+final _digit = RegExp(r'\d');
+
+/// How unlike [answer] a wrong choice looks (0 = alike): a number among
+/// words (or the other way round) stands out most, then a very different
+/// length or number of words.
+double _unlike(String choice, String answer) {
+  var score = 0.0;
+  if (_digit.hasMatch(choice) != _digit.hasMatch(answer)) score += 3;
+  final lengths = (choice.length + 1) / (answer.length + 1);
+  score += (log(lengths) / ln2).abs(); // 1 per doubling or halving
+  final words = (choice.split(RegExp(r'\s+')).length -
+          answer.split(RegExp(r'\s+')).length)
+      .abs();
+  score += min(words, 6) * 0.25;
+  return score;
 }
 
 QuizQuestion? _multipleChoice(Flashcard card, List<Flashcard> all, Random rng) {

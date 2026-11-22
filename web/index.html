@@ -29,7 +29,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="tAsikaso">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" href="icons/Icon-maskable-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
@@ -46,10 +46,16 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <!-- ONNX Runtime for the browser: runs auto-crop's page-corner model
-       (assets/models/docaligner_lcnet100.onnx) through flutter_onnxruntime.
-       Its WebAssembly is fetched from the same place on the first scan. -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.min.js"></script>
+  <!-- ONNX Runtime for the browser (onnxruntime-web 1.30.0, CPU build):
+       runs auto-crop's page-corner models through flutter_onnxruntime.
+       Served from this site with its WebAssembly (web/ort/), so scanning
+       works where CDNs are blocked. -->
+  <script src="ort/ort.wasm.min.js"></script>
+  <!-- pdf.js 6.2.108 for the note viewer (the printing package), also from
+       this site (web/pdfjs/) instead of unpkg.com. -->
+  <script>
+    window.dartPdfJsBaseUrl = new URL('pdfjs/', document.baseURI).href;
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

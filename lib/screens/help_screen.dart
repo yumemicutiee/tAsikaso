@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../theme/brand.dart';
 import '../widgets/app_header.dart';
+import '../widgets/app_logo.dart';
 import 'actions.dart';
 
 Future<void> openHelp(BuildContext context) => Navigator.of(context).push(
@@ -172,7 +174,12 @@ class HelpScreen extends StatelessWidget {
             child: TextButton(
               onPressed: () => showLicensePage(
                 context: context,
-                applicationName: 'tAsikaso',
+                applicationName: kAppName,
+                applicationVersion: kAppVersion,
+                applicationIcon: const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: AppLogo(size: 64),
+                ),
               ),
               child: const Text('Open-Source Licenses'),
             ),

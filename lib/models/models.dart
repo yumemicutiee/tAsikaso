@@ -925,6 +925,7 @@ class AppPrefs {
     this.crashReports = true,
     this.installId = '',
     this.alarmSound = true,
+    this.alarmNotice = false,
   });
 
   /// Shown in greetings ("Hello, Budi!").
@@ -1000,6 +1001,11 @@ class AppPrefs {
   /// see [timeUpAlert].
   final bool alarmSound;
 
+  /// Show once that time-up alerts now ring like an alarm (even on silent):
+  /// set for save files from before 0.5.1, whose alerts were a plain
+  /// notification sound, until the notice has been seen.
+  final bool alarmNotice;
+
   /// What happens when time is up: the four choices in Settings, made of
   /// [timerAlerts], [alarmSound] and [vibrateOnFinish].
   TimeUpAlert get timeUpAlert => !timerAlerts
@@ -1046,6 +1052,7 @@ class AppPrefs {
     bool? crashReports,
     String? installId,
     bool? alarmSound,
+    bool? alarmNotice,
   }) =>
       AppPrefs(
         userName: userName ?? this.userName,
@@ -1071,6 +1078,7 @@ class AppPrefs {
         crashReports: crashReports ?? this.crashReports,
         installId: installId ?? this.installId,
         alarmSound: alarmSound ?? this.alarmSound,
+        alarmNotice: alarmNotice ?? this.alarmNotice,
       );
 
   Json toJson() => {
@@ -1096,6 +1104,7 @@ class AppPrefs {
         'crash': crashReports,
         if (installId.isNotEmpty) 'install': installId,
         'alarm': alarmSound,
+        if (alarmNotice) 'alarmNotice': true,
       };
 
   factory AppPrefs.fromJson(Json j) => AppPrefs(
@@ -1131,5 +1140,9 @@ class AppPrefs {
         crashReports: j['crash'] != false,
         installId: j['install'] as String? ?? '',
         alarmSound: j['alarm'] != false,
+        // A save file from before "When Time Is Up" (no 'alarm' yet) with
+        // alerts on: its sound changes from a notification to an alarm.
+        alarmNotice: _bool(j['alarmNotice']) ||
+            (!j.containsKey('alarm') && j.containsKey('alerts') && j['alerts'] != false),
       );
 }

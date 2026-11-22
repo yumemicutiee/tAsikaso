@@ -9,6 +9,7 @@ import '../data/app_store.dart';
 import '../data/plans.dart';
 import '../data/pomodoro_controller.dart';
 import '../models/models.dart';
+import '../theme/app_colors.dart';
 import '../theme/brand.dart';
 import '../services/scan_service.dart';
 import '../services/study_ai.dart';
@@ -482,18 +483,17 @@ MenuActions setActions(BuildContext context, FlashcardSet deck, {VoidCallback? o
       },
     };
 
-/// Asks for a title and folder, creates an empty set and opens it.
+/// Asks for a title and folder, creates an empty set and opens it. With no
+/// folders yet, it goes in a new "My Notes" folder (as a saved scan does).
 Future<void> createSet(BuildContext context, {String? folderId}) async {
-  final folders = _store.folders;
-  if (folders.isEmpty) {
-    _toast(context, 'Create a folder first.');
-    return;
-  }
   final title = await showTextInputDialog(context,
       title: 'New Flashcard Set', hint: 'e.g. Cell Biology', confirmLabel: 'Next');
   if (title == null || !context.mounted) return;
 
   StudyFolder? folder = folderId == null ? null : _store.folder(folderId);
+  if (folder == null && _store.folders.isEmpty) {
+    folder = _store.addFolder('My Notes', AppColors.folderPalette.first);
+  }
   folder ??= await showFolderPicker(context, title: 'Save in Folder');
   if (folder == null || !context.mounted) return;
 

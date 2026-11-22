@@ -97,10 +97,12 @@ class _QuizScreenState extends State<QuizScreen> {
           : AnswerVerdict.wrong;
     } else {
       given = _typed.text.trim();
-      verdict = judgeAnswer(given, q.answer, acceptable: q.acceptable);
-      // The study server judges by meaning; the phone's check stands if it
-      // can't be reached.
-      if (verdict != AnswerVerdict.correct && StudyAi.isOn) {
+      final judged = judgeAnswerDetailed(given, q.answer, acceptable: q.acceptable);
+      verdict = judged.verdict;
+      // The study server judges by meaning anything that isn't word for word
+      // the answer (a forgiven typo or the answer inside a longer reply can
+      // still be wrong); the phone's check stands if it can't be reached.
+      if (!judged.exact && StudyAi.isOn) {
         setState(() => _checking = true);
         try {
           final check = await StudyAi.checkAnswer(

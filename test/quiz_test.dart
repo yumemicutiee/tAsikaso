@@ -102,6 +102,25 @@ void main() {
     });
   });
 
+  test('wrong choices look like the answer: years for a year', () {
+    final mixed = [
+      const Flashcard(id: 'y1', front: 'World War II began', back: '1939'),
+      const Flashcard(id: 'y2', front: 'World War I began', back: '1914'),
+      const Flashcard(id: 'y3', front: 'Philippine independence', back: '1898'),
+      const Flashcard(id: 'y4', front: 'EDSA People Power', back: '1986'),
+      const Flashcard(id: 'w1', front: 'What makes ATP?', back: 'The mitochondria'),
+      const Flashcard(id: 'w2', front: 'Osmosis', back: 'Movement of water across a membrane'),
+      const Flashcard(id: 'w3', front: 'Ribosome', back: 'Makes proteins in the cell'),
+    ];
+    for (var seed = 0; seed < 10; seed++) {
+      final quiz = buildLocalQuiz(mixed,
+          types: {QuestionType.multipleChoice}, random: Random(seed));
+      final years = quiz.firstWhere((q) => q.cardId == 'y1');
+      expect(years.options.every((o) => RegExp(r'^\d{4}$').hasMatch(o)), isTrue,
+          reason: 'seed $seed: ${years.options}');
+    }
+  });
+
   group('Judging a typed answer on the phone', () {
     test('the same words, give or take case, punctuation and an article', () {
       expect(judgeAnswer('the mitochondria', 'Mitochondria'), AnswerVerdict.correct);
@@ -135,6 +154,44 @@ void main() {
       expect(judgeAnswer('powerhouse', 'mitochondria', acceptable: ['the powerhouse']),
           AnswerVerdict.correct);
       expect(judgeAnswer('   ', 'mitochondria'), AnswerVerdict.wrong);
+    });
+
+    test('signs, numbers and symbols must be right', () {
+      expect(judgeAnswer('3', '-3'), AnswerVerdict.wrong);
+      expect(judgeAnswer('+1', '-1'), AnswerVerdict.wrong);
+      expect(judgeAnswer('-3', '\u22123'), AnswerVerdict.correct); // typographic minus
+      expect(judgeAnswer('1', '+1'), AnswerVerdict.correct);
+      expect(judgeAnswer('6.022 x 10^22', '6.022 x 10^23'), AnswerVerdict.wrong);
+      expect(judgeAnswer('6.022 \u00d7 10^23', '6.022 x 10^23'), AnswerVerdict.correct);
+      expect(judgeAnswer('6.022*10^23', '6.022 x 10^23'), AnswerVerdict.correct);
+      expect(judgeAnswer('C6H12O5', 'C6H12O6'), AnswerVerdict.wrong);
+      expect(judgeAnswer('2a', '2b'), AnswerVerdict.wrong);
+      expect(judgeAnswer('1000', '1,000'), AnswerVerdict.correct);
+    });
+
+    test('a slip that makes another word is not forgiven', () {
+      expect(judgeAnswer('Efferent', 'Afferent'), AnswerVerdict.wrong);
+      expect(judgeAnswer('absorption', 'adsorption'), AnswerVerdict.wrong);
+      expect(judgeAnswer('ileum', 'ilium'), AnswerVerdict.wrong);
+      expect(judgeAnswer('photosyntesis', 'Photosynthesis'), AnswerVerdict.correct);
+    });
+
+    test('a negated or hedged answer is not right', () {
+      expect(judgeAnswer('not proteins', 'Proteins'), AnswerVerdict.wrong);
+      expect(judgeAnswer("it isn't the stroma", 'stroma'), AnswerVerdict.wrong);
+      expect(judgeAnswer('stroma or thylakoid', 'Stroma'), AnswerVerdict.partly);
+      expect(judgeAnswer('mitochondrial DNA', 'The mitochondria'), AnswerVerdict.wrong);
+      expect(judgeAnswer('no', 'No'), AnswerVerdict.correct);
+    });
+
+    test('only a word-for-word answer is certain; the rest goes to the server',
+        () {
+      expect(judgeAnswerDetailed('The mitochondria.', 'mitochondria').exact, isTrue);
+      expect(judgeAnswerDetailed('light dependent', 'light-dependent').exact, isTrue);
+      final typo = judgeAnswerDetailed('mitochondira', 'mitochondria');
+      expect(typo.verdict, AnswerVerdict.correct);
+      expect(typo.exact, isFalse);
+      expect(judgeAnswerDetailed("it's the mitochondria", 'mitochondria').exact, isFalse);
     });
   });
 
