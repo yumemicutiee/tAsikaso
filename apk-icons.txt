@@ -1,0 +1,16 @@
+      548  1981-01-01 01:01   res/mipmap-anydpi-v26/ic_launcher.xml
+     4630  1981-01-01 01:01   res/mipmap-hdpi-v4/ic_launcher.png
+     7946  1981-01-01 01:01   res/mipmap-hdpi-v4/ic_launcher_foreground.png
+     4391  1981-01-01 01:01   res/mipmap-hdpi-v4/ic_launcher_monochrome.png
+     2812  1981-01-01 01:01   res/mipmap-mdpi-v4/ic_launcher.png
+     4936  1981-01-01 01:01   res/mipmap-mdpi-v4/ic_launcher_foreground.png
+     2785  1981-01-01 01:01   res/mipmap-mdpi-v4/ic_launcher_monochrome.png
+     6595  1981-01-01 01:01   res/mipmap-xhdpi-v4/ic_launcher.png
+    11041  1981-01-01 01:01   res/mipmap-xhdpi-v4/ic_launcher_foreground.png
+     6221  1981-01-01 01:01   res/mipmap-xhdpi-v4/ic_launcher_monochrome.png
+    10863  1981-01-01 01:01   res/mipmap-xxhdpi-v4/ic_launcher.png
+    17614  1981-01-01 01:01   res/mipmap-xxhdpi-v4/ic_launcher_foreground.png
+    10470  1981-01-01 01:01   res/mipmap-xxhdpi-v4/ic_launcher_monochrome.png
+    14820  1981-01-01 01:01   res/mipmap-xxxhdpi-v4/ic_launcher.png
+    23560  1981-01-01 01:01   res/mipmap-xxxhdpi-v4/ic_launcher_foreground.png
+    14251  1981-01-01 01:01   res/mipmap-xxxhdpi-v4/ic_launcher_monochrome.png

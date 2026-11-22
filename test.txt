@@ -1,0 +1,474 @@
+Running Gradle task 'assembleDebug'...                          
+WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): flutter_onnxruntime
+Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+
+Please check the changelogs of these plugins and upgrade to a version that supports Built-in Kotlin.
+If no such version exists, report the issue to the plugin. If necessary, here is a guide on filing
+an issue against a plugin: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers#report-incompatible-kotlin-gradle-plugin-usage-to-plugin-authors
+
+If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+Running Gradle task 'assembleDebug'...                             57.6s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+Installing build/app/outputs/flutter-apk/app-debug.apk...        2,227ms
+I/Gralloc4( 5773): mapper 4.x is not supported
+I/Choreographer( 5773): Skipped 54 frames!  The application may be doing too much work on its main thread.
+D/FlutterJNI( 5773): Sending viewport metrics to the engine.
+VMServiceFlutterDriver: Connecting to Flutter application at http://127.0.0.1:34601/I7UxHgy2zTQ=/
+VMServiceFlutterDriver: Isolate found with number: 7489078043555431
+VMServiceFlutterDriver: Isolate 7489078043555431 is runnable.
+VMServiceFlutterDriver: Isolate is paused at start.
+VMServiceFlutterDriver: Attempting to resume isolate
+I/flutter ( 5773): 00:00 +0: QA walkthrough
+VMServiceFlutterDriver: Connected to Flutter application.
+I/flutter ( 5773): QA_STEP alarm notice after updating
+D/ProfileInstaller( 5773): Installing profile for com.tasikaso.study_app
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/FlutterJNI( 5773): Sending viewport metrics to the engine.
+D/EGL_emulation( 5773): app_time_stats: avg=342.72ms min=26.94ms max=2744.51ms count=11
+D/CompatibilityChangeReporter( 5773): Compat change id reported: 236825255; UID 10192; state: ENABLED
+VMServiceFlutterDriver: request_data message is taking a long time to complete...
+D/EGL_emulation( 5773): app_time_stats: avg=162.36ms min=21.67ms max=685.55ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=116.07ms min=112.60ms max=119.54ms count=9
+I/flutter ( 5773): QA_STEP about logo
+D/EGL_emulation( 5773): app_time_stats: avg=110.48ms min=31.03ms max=257.47ms count=10
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=145.28ms min=114.61ms max=257.27ms count=8
+D/EGL_emulation( 5773): app_time_stats: avg=77.38ms min=19.46ms max=121.00ms count=14
+D/EGL_emulation( 5773): app_time_stats: avg=74.83ms min=16.55ms max=120.37ms count=14
+D/EGL_emulation( 5773): app_time_stats: avg=233.95ms min=72.65ms max=640.26ms count=5
+D/EGL_emulation( 5773): app_time_stats: avg=4374.13ms min=269.72ms max=8836.75ms count=3
+D/EGL_emulation( 5773): app_time_stats: avg=105.94ms min=19.00ms max=306.32ms count=10
+I/flutter ( 5773): QA_STEP a-free dashboard
+D/EGL_emulation( 5773): app_time_stats: avg=99.41ms min=20.72ms max=130.97ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=2137.23ms min=2137.23ms max=2137.23ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=104.95ms min=23.12ms max=307.10ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=126.06ms min=24.42ms max=447.17ms count=8
+D/EGL_emulation( 5773): app_time_stats: avg=895.71ms min=821.47ms max=969.95ms count=2
+I/flutter ( 5773): QA_STEP a-free library
+D/EGL_emulation( 5773): app_time_stats: avg=105.12ms min=17.67ms max=319.93ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=1341.47ms min=1341.47ms max=1341.47ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=102.71ms min=28.00ms max=250.43ms count=10
+I/flutter ( 5773): QA_STEP a-free note
+D/EGL_emulation( 5773): app_time_stats: avg=89.33ms min=24.71ms max=249.09ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=101.61ms min=27.18ms max=131.87ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=101.57ms min=21.53ms max=133.69ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=116.19ms min=110.54ms max=119.00ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=2705.22ms min=820.78ms max=4589.65ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=138.30ms min=35.65ms max=388.55ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=100.93ms min=28.26ms max=122.78ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1766.93ms min=1766.93ms max=1766.93ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=102.61ms min=31.55ms max=332.15ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=845.31ms min=796.28ms max=894.34ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=94.77ms min=16.68ms max=230.94ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=1000.49ms min=1000.49ms max=1000.49ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=101.25ms min=13.05ms max=320.17ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=122.63ms min=105.11ms max=140.97ms count=9
+I/flutter ( 5773): QA_STEP a-free set
+D/EGL_emulation( 5773): app_time_stats: avg=95.46ms min=24.57ms max=120.38ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=94.87ms min=14.85ms max=121.07ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=116.50ms min=106.85ms max=127.59ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=4704.26ms min=4704.26ms max=4704.26ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=99.02ms min=18.32ms max=236.93ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=804.33ms min=796.52ms max=812.13ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=102.56ms min=16.88ms max=310.21ms count=10
+I/flutter ( 5773): QA_STEP a-free study
+D/EGL_emulation( 5773): app_time_stats: avg=102.83ms min=22.33ms max=157.44ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=2214.40ms min=2214.40ms max=2214.40ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=140.42ms min=24.62ms max=399.85ms count=8
+I/flutter ( 5773): QA_STEP a-free profile
+D/EGL_emulation( 5773): app_time_stats: avg=81.65ms min=26.32ms max=261.00ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=1094.08ms min=916.97ms max=1271.18ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=114.29ms min=27.31ms max=236.05ms count=9
+I/flutter ( 5773): QA_STEP a-free settings
+D/EGL_emulation( 5773): app_time_stats: avg=83.57ms min=29.85ms max=287.36ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=100.24ms min=32.27ms max=125.69ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=1493.42ms min=834.49ms max=2152.35ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=91.02ms min=19.93ms max=226.56ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=93.16ms min=18.02ms max=193.11ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=779.98ms min=771.83ms max=788.14ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=124.96ms min=22.78ms max=529.64ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=966.50ms min=833.59ms max=1099.41ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=147.99ms min=35.16ms max=597.26ms count=8
+D/EGL_emulation( 5773): app_time_stats: avg=1196.97ms min=1196.97ms max=1196.97ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=87.44ms min=16.68ms max=258.71ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=87.58ms min=16.94ms max=232.24ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=817.96ms min=798.46ms max=837.46ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=126.32ms min=17.09ms max=290.35ms count=8
+I/flutter ( 5773): QA_STEP a-free plans
+D/EGL_emulation( 5773): app_time_stats: avg=94.95ms min=30.27ms max=125.96ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=2870.05ms min=2870.05ms max=2870.05ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=96.17ms min=26.64ms max=198.91ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=78.97ms min=15.43ms max=224.75ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=788.46ms min=776.11ms max=800.82ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=93.35ms min=17.90ms max=267.36ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=128.11ms min=15.92ms max=309.26ms count=8
+I/flutter ( 5773): QA_STEP a-free backup
+D/EGL_emulation( 5773): app_time_stats: avg=88.86ms min=25.05ms max=123.18ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=86.52ms min=15.03ms max=118.86ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=2032.85ms min=816.93ms max=3248.76ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=90.90ms min=15.24ms max=223.55ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=775.51ms min=767.86ms max=783.16ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=99.31ms min=16.56ms max=292.30ms count=11
+I/flutter ( 5773): QA_STEP a-free analysis
+D/EGL_emulation( 5773): app_time_stats: avg=96.42ms min=27.94ms max=126.03ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=96.22ms min=21.85ms max=121.40ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=116.40ms min=112.13ms max=118.19ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=3480.66ms min=3480.66ms max=3480.66ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=98.18ms min=20.06ms max=247.41ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=818.53ms min=793.10ms max=843.97ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=77.82ms min=16.40ms max=215.56ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=91.01ms min=18.51ms max=236.45ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=783.33ms min=762.63ms max=804.03ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=91.88ms min=16.91ms max=221.34ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=92.97ms min=11.47ms max=118.63ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1065.72ms min=782.69ms max=1348.74ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=99.12ms min=15.82ms max=305.62ms count=12
+I/flutter ( 5773): QA_STEP a-free help
+D/EGL_emulation( 5773): app_time_stats: avg=99.25ms min=24.39ms max=129.76ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=117.55ms min=110.98ms max=123.73ms count=9
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=76.63ms min=20.01ms max=118.06ms count=14
+D/EGL_emulation( 5773): app_time_stats: avg=2434.37ms min=755.36ms max=4113.38ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=106.24ms min=21.49ms max=248.18ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=85.93ms min=17.54ms max=237.00ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=815.63ms min=813.97ms max=817.28ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=132.12ms min=16.10ms max=322.64ms count=8
+I/flutter ( 5773): QA_STEP a-free gated
+D/EGL_emulation( 5773): app_time_stats: avg=95.28ms min=22.65ms max=124.19ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=96.01ms min=25.57ms max=122.87ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=96.07ms min=24.14ms max=120.11ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=4688.72ms min=4688.72ms max=4688.72ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=93.31ms min=20.99ms max=210.66ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=98.55ms min=27.47ms max=118.36ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1875.86ms min=1875.86ms max=1875.86ms count=1
+I/flutter ( 5773): QA_MISSING [a-free gated] "New Quiz"
+D/EGL_emulation( 5773): app_time_stats: avg=139.46ms min=17.51ms max=306.96ms count=8
+D/EGL_emulation( 5773): app_time_stats: avg=121.25ms min=115.72ms max=138.84ms count=9
+I/flutter ( 5773): QA_STEP a-free quiz
+D/EGL_emulation( 5773): app_time_stats: avg=88.93ms min=21.60ms max=120.18ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=100.45ms min=21.74ms max=181.36ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=83.44ms min=15.40ms max=125.28ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=116.31ms min=114.99ms max=117.54ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=3333.41ms min=198.79ms max=6468.04ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=92.46ms min=11.81ms max=202.06ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=97.00ms min=18.50ms max=118.62ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1845.29ms min=1845.29ms max=1845.29ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=93.10ms min=16.23ms max=198.75ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=87.48ms min=12.29ms max=119.39ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=2634.43ms min=2634.43ms max=2634.43ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=94.62ms min=15.25ms max=207.85ms count=11
+I/ImeTracker( 5773): com.tasikaso.study_app:378c1182: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+I/ImeTracker( 5773): com.tasikaso.study_app:378c1182: onFailed at PHASE_CLIENT_VIEW_SERVED
+W/InputMethodManager( 5773): Ignoring showSoftInput() as view=io.flutter.embedding.android.FlutterView{d954ae1 VFE...... .F....ID 0,0-1080,2337 #1} is not served.
+I/AssistStructure( 5773): Flattened final assist data: 388 bytes, containing 1 windows, 3 views
+I/ImeTracker( 5773): com.tasikaso.study_app:5078ae8: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+I/ImeTracker( 5773): com.tasikaso.study_app:5078ae8: onFailed at PHASE_CLIENT_VIEW_SERVED
+W/InputMethodManager( 5773): Ignoring showSoftInput() as view=io.flutter.embedding.android.FlutterView{d954ae1 VFE...... .F...... 0,0-1080,2337 #1 aid=1073741824} is not served.
+D/EGL_emulation( 5773): app_time_stats: avg=88.14ms min=16.11ms max=146.70ms count=12
+I/ImeTracker( 5773): com.tasikaso.study_app:fb036412: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+I/ImeTracker( 5773): com.tasikaso.study_app:fb036412: onFailed at PHASE_CLIENT_VIEW_SERVED
+D/EGL_emulation( 5773): app_time_stats: avg=98.31ms min=13.31ms max=129.69ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=117.07ms min=114.26ms max=120.40ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=1768.21ms min=242.49ms max=3293.94ms count=2
+I/ImeTracker( 5773): com.tasikaso.study_app:4a7af5f7: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+I/ImeTracker( 5773): com.tasikaso.study_app:4a7af5f7: onFailed at PHASE_CLIENT_VIEW_SERVED
+W/InputMethodManager( 5773): Ignoring showSoftInput() as view=io.flutter.embedding.android.FlutterView{d954ae1 VFE...... .F...... 0,0-1080,2337 #1 aid=1073741824} is not served.
+D/EGL_emulation( 5773): app_time_stats: avg=91.49ms min=9.81ms max=179.55ms count=12
+I/ImeTracker( 5773): com.tasikaso.study_app:758f9df0: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+I/ImeTracker( 5773): com.tasikaso.study_app:758f9df0: onFailed at PHASE_CLIENT_VIEW_SERVED
+D/EGL_emulation( 5773): app_time_stats: avg=90.09ms min=15.61ms max=134.22ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=116.66ms min=114.74ms max=118.50ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=116.71ms min=113.68ms max=120.95ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=116.56ms min=115.26ms max=117.55ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=5211.00ms min=5211.00ms max=5211.00ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=100.24ms min=13.14ms max=274.44ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=1587.37ms min=1587.37ms max=1587.37ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=95.85ms min=17.16ms max=235.49ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=121.57ms min=16.68ms max=289.24ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=897.82ms min=777.79ms max=1017.84ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=126.09ms min=16.27ms max=289.95ms count=8
+I/flutter ( 5773): QA_STEP a-free study cards
+D/EGL_emulation( 5773): app_time_stats: avg=94.29ms min=22.12ms max=157.09ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=86.71ms min=7.76ms max=124.76ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=101.75ms min=35.44ms max=121.60ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=100.22ms min=47.11ms max=120.13ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=5247.02ms min=5247.02ms max=5247.02ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=98.47ms min=35.74ms max=236.61ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1053.96ms min=1053.96ms max=1053.96ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=104.56ms min=31.36ms max=273.79ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=116.38ms min=96.22ms max=131.10ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=1846.76ms min=1846.76ms max=1846.76ms count=1
+I/flutter ( 5773): QA_STEP a-free timer
+D/EGL_emulation( 5773): app_time_stats: avg=130.42ms min=16.85ms max=289.42ms count=8
+D/CompatibilityChangeReporter( 5773): Compat change id reported: 160794467; UID 10192; state: ENABLED
+D/EGL_emulation( 5773): app_time_stats: avg=100.17ms min=22.74ms max=125.61ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/FlutterJNI( 5773): Sending viewport metrics to the engine.
+D/EGL_emulation( 5773): app_time_stats: avg=100.20ms min=35.19ms max=127.82ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=118.10ms min=107.53ms max=129.57ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=5145.14ms min=5145.14ms max=5145.14ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=130.39ms min=32.42ms max=350.76ms count=10
+D/FlutterJNI( 5773): Sending viewport metrics to the engine.
+D/EGL_emulation( 5773): app_time_stats: avg=1051.03ms min=1051.03ms max=1051.03ms count=1
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=93.51ms min=23.91ms max=209.66ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1024.53ms min=1024.53ms max=1024.53ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=93.54ms min=22.89ms max=207.54ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=91.84ms min=27.15ms max=118.99ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=2201.53ms min=2201.53ms max=2201.53ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=91.85ms min=23.91ms max=191.79ms count=11
+I/flutter ( 5773): QA_STEP a-free settings sheets
+D/EGL_emulation( 5773): app_time_stats: avg=92.47ms min=26.00ms max=120.73ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=97.51ms min=27.68ms max=123.33ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=89.28ms min=23.65ms max=122.30ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=77.56ms min=16.15ms max=125.94ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=5315.79ms min=5315.79ms max=5315.79ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=113.31ms min=29.63ms max=324.80ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=114.80ms min=106.83ms max=126.85ms count=9
+I/ImeTracker( 5773): com.tasikaso.study_app:5dbea192: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+I/ImeTracker( 5773): com.tasikaso.study_app:5dbea192: onFailed at PHASE_CLIENT_VIEW_SERVED
+W/InputMethodManager( 5773): Ignoring showSoftInput() as view=io.flutter.embedding.android.FlutterView{d954ae1 VFE...... .F...... 0,0-1080,2337 #1 aid=1073741824} is not served.
+I/ImeTracker( 5773): com.tasikaso.study_app:461a7631: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+I/ImeTracker( 5773): com.tasikaso.study_app:461a7631: onFailed at PHASE_CLIENT_VIEW_SERVED
+W/InputMethodManager( 5773): Ignoring showSoftInput() as view=io.flutter.embedding.android.FlutterView{d954ae1 VFE...... .F...... 0,0-1080,2337 #1 aid=1073741824} is not served.
+I/AssistStructure( 5773): Flattened final assist data: 476 bytes, containing 1 windows, 3 views
+D/EGL_emulation( 5773): app_time_stats: avg=2204.18ms min=2204.18ms max=2204.18ms count=1
+I/ImeTracker( 5773): com.tasikaso.study_app:69ef445: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+I/ImeTracker( 5773): com.tasikaso.study_app:69ef445: onFailed at PHASE_CLIENT_VIEW_SERVED
+D/EGL_emulation( 5773): app_time_stats: avg=88.01ms min=25.35ms max=210.02ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=93.08ms min=23.25ms max=118.06ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=2202.73ms min=2202.73ms max=2202.73ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=89.40ms min=21.36ms max=197.71ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=97.11ms min=20.58ms max=138.79ms count=11
+I/flutter ( 5773): QA_STEP b-plus
+D/FlutterJNI( 5773): Sending viewport metrics to the engine.
+D/EGL_emulation( 5773): app_time_stats: avg=128.04ms min=110.98ms max=177.68ms count=8
+D/EGL_emulation( 5773): app_time_stats: avg=116.59ms min=112.08ms max=121.29ms count=9
+I/flutter ( 5773): QA_STEP b-plus-dark dashboard
+D/EGL_emulation( 5773): app_time_stats: avg=95.37ms min=23.43ms max=124.74ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=4878.23ms min=4878.23ms max=4878.23ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=100.87ms min=23.65ms max=285.36ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=91.57ms min=22.18ms max=243.36ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=830.02ms min=805.45ms max=854.59ms count=2
+I/flutter ( 5773): QA_STEP b-plus-dark library
+D/EGL_emulation( 5773): app_time_stats: avg=94.04ms min=21.43ms max=249.82ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1268.36ms min=1268.36ms max=1268.36ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=92.66ms min=24.61ms max=227.79ms count=11
+I/flutter ( 5773): QA_STEP b-plus-dark note
+D/EGL_emulation( 5773): app_time_stats: avg=96.37ms min=25.44ms max=251.20ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=87.40ms min=15.31ms max=121.22ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=117.87ms min=100.97ms max=149.27ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=116.69ms min=113.02ms max=118.76ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=2695.22ms min=795.11ms max=4595.34ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=95.19ms min=10.93ms max=249.27ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=116.70ms min=114.55ms max=117.71ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=1601.33ms min=1601.33ms max=1601.33ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=95.31ms min=16.59ms max=251.06ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=790.39ms min=777.66ms max=803.13ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=77.27ms min=11.96ms max=207.69ms count=14
+D/EGL_emulation( 5773): app_time_stats: avg=1020.00ms min=1020.00ms max=1020.00ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=132.33ms min=15.86ms max=287.86ms count=8
+D/EGL_emulation( 5773): app_time_stats: avg=115.32ms min=106.48ms max=121.01ms count=9
+I/flutter ( 5773): QA_STEP b-plus-dark set
+D/EGL_emulation( 5773): app_time_stats: avg=87.22ms min=21.92ms max=117.57ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=86.93ms min=13.67ms max=120.40ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=4646.76ms min=4646.76ms max=4646.76ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=119.03ms min=17.41ms max=240.25ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=77.76ms min=16.59ms max=240.10ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=792.23ms min=783.77ms max=800.68ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=125.58ms min=16.59ms max=322.23ms count=8
+I/flutter ( 5773): QA_STEP b-plus-dark study
+D/EGL_emulation( 5773): app_time_stats: avg=91.89ms min=25.31ms max=122.97ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=2150.45ms min=2150.45ms max=2150.45ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=93.97ms min=26.72ms max=220.56ms count=11
+I/flutter ( 5773): QA_STEP b-plus-dark profile
+D/EGL_emulation( 5773): app_time_stats: avg=93.96ms min=25.18ms max=250.42ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1034.40ms min=793.98ms max=1274.81ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=96.22ms min=29.51ms max=229.54ms count=11
+I/flutter ( 5773): QA_STEP b-plus-dark settings
+D/EGL_emulation( 5773): app_time_stats: avg=93.19ms min=25.02ms max=237.54ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=94.67ms min=19.62ms max=122.26ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1444.18ms min=819.89ms max=2068.47ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=94.11ms min=17.67ms max=227.13ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=778.47ms min=777.31ms max=779.63ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=78.90ms min=11.65ms max=208.33ms count=14
+D/EGL_emulation( 5773): app_time_stats: avg=96.84ms min=18.08ms max=268.56ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=809.18ms min=783.68ms max=834.68ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=94.86ms min=17.60ms max=227.85ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=792.40ms min=785.15ms max=799.65ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=81.55ms min=17.20ms max=250.61ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=118.87ms min=16.93ms max=289.41ms count=9
+I/flutter ( 5773): QA_STEP b-plus-dark plans
+D/EGL_emulation( 5773): app_time_stats: avg=90.31ms min=25.17ms max=119.93ms count=12
+I/flutter ( 5773): QA_MISSING [b-plus-dark plans] "See Plans"
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=87.22ms min=19.21ms max=120.39ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=1861.27ms min=813.07ms max=2909.47ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=93.16ms min=13.82ms max=232.37ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=814.37ms min=772.75ms max=855.99ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=82.20ms min=43.61ms max=233.01ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=121.44ms min=16.21ms max=292.01ms count=9
+I/flutter ( 5773): QA_STEP b-plus-dark backup
+D/EGL_emulation( 5773): app_time_stats: avg=95.43ms min=30.93ms max=126.75ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=86.42ms min=9.93ms max=120.58ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=1998.53ms min=777.54ms max=3219.52ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=94.05ms min=16.53ms max=255.88ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=104.37ms min=26.79ms max=290.60ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=878.50ms min=815.38ms max=941.61ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=169.56ms min=36.31ms max=507.07ms count=6
+I/flutter ( 5773): QA_STEP b-plus-dark analysis
+D/EGL_emulation( 5773): app_time_stats: avg=87.70ms min=26.39ms max=122.02ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=96.71ms min=20.56ms max=120.36ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=3691.48ms min=3691.48ms max=3691.48ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=93.15ms min=20.98ms max=183.43ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=102.00ms min=20.58ms max=293.46ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=784.20ms min=769.08ms max=799.32ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=97.69ms min=19.68ms max=252.27ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=805.18ms min=790.02ms max=820.34ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=81.95ms min=19.85ms max=253.37ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=91.81ms min=8.84ms max=216.49ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=1103.17ms min=823.96ms max=1382.38ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=91.64ms min=15.70ms max=163.67ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=126.61ms min=16.70ms max=290.33ms count=8
+I/flutter ( 5773): QA_STEP b-plus-dark help
+D/EGL_emulation( 5773): app_time_stats: avg=89.03ms min=24.42ms max=124.07ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=86.83ms min=17.64ms max=119.50ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=87.74ms min=18.13ms max=122.14ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=2402.18ms min=761.98ms max=4042.39ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=103.01ms min=16.47ms max=255.98ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=839.14ms min=829.71ms max=848.56ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=101.20ms min=19.84ms max=302.80ms count=10
+I/flutter ( 5773): QA_STEP b-plus-dark set review
+D/EGL_emulation( 5773): app_time_stats: avg=87.54ms min=20.30ms max=122.82ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=111.49ms min=65.11ms max=120.98ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=99.01ms min=18.90ms max=118.43ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=3829.32ms min=3829.32ms max=3829.32ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=98.72ms min=16.58ms max=234.53ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1688.46ms min=1688.46ms max=1688.46ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=128.52ms min=37.32ms max=303.35ms count=9
+D/EGL_emulation( 5773): app_time_stats: avg=114.40ms min=93.25ms max=125.21ms count=9
+I/flutter ( 5773): QA_STEP c-small
+D/FlutterJNI( 5773): Sending viewport metrics to the engine.
+I/flutter ( 5773): QA_STEP c-small-big-text dashboard
+D/EGL_emulation( 5773): app_time_stats: avg=4758.83ms min=4758.83ms max=4758.83ms count=1
+I/flutter ( 5773): Screenshot 113-c-small-big-text-dashboard-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 114-c-small-big-text-dashboard-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text library
+I/flutter ( 5773): Screenshot 115-c-small-big-text-library failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 116-c-small-big-text-library-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text note
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 117-c-small-big-text-note-viewer failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 118-c-small-big-text-note-text failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 119-c-small-big-text-note-text-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 120-c-small-big-text-note-text-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_MISSING [c-small-big-text note] "Show the text as read"
+I/flutter ( 5773): Screenshot 121-c-small-big-text-note-text-raw failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text set
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 122-c-small-big-text-set failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 123-c-small-big-text-set-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 124-c-small-big-text-set-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text study
+I/flutter ( 5773): Screenshot 125-c-small-big-text-study failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 126-c-small-big-text-study-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text profile
+I/flutter ( 5773): Screenshot 127-c-small-big-text-profile failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 128-c-small-big-text-profile-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text settings
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 129-c-small-big-text-settings failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 130-c-small-big-text-settings-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 131-c-small-big-text-settings-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 132-c-small-big-text-settings-4 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 133-c-small-big-text-settings-5 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 134-c-small-big-text-settings-6 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 135-c-small-big-text-settings-7 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 136-c-small-big-text-settings-8 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text plans
+I/flutter ( 5773): QA_MISSING [c-small-big-text plans] "See Plans"
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 137-c-small-big-text-plans failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 138-c-small-big-text-plans-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 139-c-small-big-text-plans-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 140-c-small-big-text-plans-4 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text backup
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 141-c-small-big-text-backup failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 142-c-small-big-text-backup-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 143-c-small-big-text-backup-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text analysis
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 144-c-small-big-text-analysis failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 145-c-small-big-text-analysis-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 146-c-small-big-text-analysis-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 147-c-small-big-text-analysis-4 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 148-c-small-big-text-analysis-5 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 149-c-small-big-text-analysis-6 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 150-c-small-big-text-timeline failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 151-c-small-big-text-timeline-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text help
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 152-c-small-big-text-help failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 153-c-small-big-text-help-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 154-c-small-big-text-help-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small quiz
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 155-c-quiz failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 156-c-quiz-checked failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small focus
+I/flutter ( 5773): QA_MISSING [c-small focus] "START"
+I/flutter ( 5773): Screenshot 157-c-focus failed: TimeoutException after 0:00:20.000000: Future not completed
+D/AutofillManager( 5773): onActivityFinishing(): calling cancelLocked()
+W/WindowOnBackDispatcher( 5773): sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda17@b87182a
+I/Choreographer( 5773): Skipped 52 frames!  The application may be doing too much work on its main thread.

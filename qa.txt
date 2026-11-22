@@ -1,0 +1,216 @@
+I/flutter ( 5773): QA_STEP alarm notice after updating
+D/ProfileInstaller( 5773): Installing profile for com.tasikaso.study_app
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP about logo
+D/EGL_emulation( 5773): app_time_stats: avg=110.48ms min=31.03ms max=257.47ms count=10
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free dashboard
+D/EGL_emulation( 5773): app_time_stats: avg=99.41ms min=20.72ms max=130.97ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=2137.23ms min=2137.23ms max=2137.23ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=104.95ms min=23.12ms max=307.10ms count=10
+--
+I/flutter ( 5773): QA_STEP a-free library
+D/EGL_emulation( 5773): app_time_stats: avg=105.12ms min=17.67ms max=319.93ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=1341.47ms min=1341.47ms max=1341.47ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=102.71ms min=28.00ms max=250.43ms count=10
+I/flutter ( 5773): QA_STEP a-free note
+D/EGL_emulation( 5773): app_time_stats: avg=89.33ms min=24.71ms max=249.09ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free set
+D/EGL_emulation( 5773): app_time_stats: avg=95.46ms min=24.57ms max=120.38ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free study
+D/EGL_emulation( 5773): app_time_stats: avg=102.83ms min=22.33ms max=157.44ms count=10
+D/EGL_emulation( 5773): app_time_stats: avg=2214.40ms min=2214.40ms max=2214.40ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=140.42ms min=24.62ms max=399.85ms count=8
+I/flutter ( 5773): QA_STEP a-free profile
+D/EGL_emulation( 5773): app_time_stats: avg=81.65ms min=26.32ms max=261.00ms count=13
+D/EGL_emulation( 5773): app_time_stats: avg=1094.08ms min=916.97ms max=1271.18ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=114.29ms min=27.31ms max=236.05ms count=9
+I/flutter ( 5773): QA_STEP a-free settings
+D/EGL_emulation( 5773): app_time_stats: avg=83.57ms min=29.85ms max=287.36ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free plans
+D/EGL_emulation( 5773): app_time_stats: avg=94.95ms min=30.27ms max=125.96ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free backup
+D/EGL_emulation( 5773): app_time_stats: avg=88.86ms min=25.05ms max=123.18ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free analysis
+D/EGL_emulation( 5773): app_time_stats: avg=96.42ms min=27.94ms max=126.03ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free help
+D/EGL_emulation( 5773): app_time_stats: avg=99.25ms min=24.39ms max=129.76ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=117.55ms min=110.98ms max=123.73ms count=9
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+--
+I/flutter ( 5773): QA_STEP a-free gated
+D/EGL_emulation( 5773): app_time_stats: avg=95.28ms min=22.65ms max=124.19ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_MISSING [a-free gated] "New Quiz"
+D/EGL_emulation( 5773): app_time_stats: avg=139.46ms min=17.51ms max=306.96ms count=8
+D/EGL_emulation( 5773): app_time_stats: avg=121.25ms min=115.72ms max=138.84ms count=9
+I/flutter ( 5773): QA_STEP a-free quiz
+D/EGL_emulation( 5773): app_time_stats: avg=88.93ms min=21.60ms max=120.18ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free study cards
+D/EGL_emulation( 5773): app_time_stats: avg=94.29ms min=22.12ms max=157.09ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP a-free timer
+D/EGL_emulation( 5773): app_time_stats: avg=130.42ms min=16.85ms max=289.42ms count=8
+D/CompatibilityChangeReporter( 5773): Compat change id reported: 160794467; UID 10192; state: ENABLED
+D/EGL_emulation( 5773): app_time_stats: avg=100.17ms min=22.74ms max=125.61ms count=11
+--
+I/flutter ( 5773): QA_STEP a-free settings sheets
+D/EGL_emulation( 5773): app_time_stats: avg=92.47ms min=26.00ms max=120.73ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP b-plus
+D/FlutterJNI( 5773): Sending viewport metrics to the engine.
+D/EGL_emulation( 5773): app_time_stats: avg=128.04ms min=110.98ms max=177.68ms count=8
+D/EGL_emulation( 5773): app_time_stats: avg=116.59ms min=112.08ms max=121.29ms count=9
+I/flutter ( 5773): QA_STEP b-plus-dark dashboard
+D/EGL_emulation( 5773): app_time_stats: avg=95.37ms min=23.43ms max=124.74ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=4878.23ms min=4878.23ms max=4878.23ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=100.87ms min=23.65ms max=285.36ms count=10
+--
+I/flutter ( 5773): QA_STEP b-plus-dark library
+D/EGL_emulation( 5773): app_time_stats: avg=94.04ms min=21.43ms max=249.82ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1268.36ms min=1268.36ms max=1268.36ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=92.66ms min=24.61ms max=227.79ms count=11
+I/flutter ( 5773): QA_STEP b-plus-dark note
+D/EGL_emulation( 5773): app_time_stats: avg=96.37ms min=25.44ms max=251.20ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP b-plus-dark set
+D/EGL_emulation( 5773): app_time_stats: avg=87.22ms min=21.92ms max=117.57ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP b-plus-dark study
+D/EGL_emulation( 5773): app_time_stats: avg=91.89ms min=25.31ms max=122.97ms count=12
+D/EGL_emulation( 5773): app_time_stats: avg=2150.45ms min=2150.45ms max=2150.45ms count=1
+D/EGL_emulation( 5773): app_time_stats: avg=93.97ms min=26.72ms max=220.56ms count=11
+I/flutter ( 5773): QA_STEP b-plus-dark profile
+D/EGL_emulation( 5773): app_time_stats: avg=93.96ms min=25.18ms max=250.42ms count=11
+D/EGL_emulation( 5773): app_time_stats: avg=1034.40ms min=793.98ms max=1274.81ms count=2
+D/EGL_emulation( 5773): app_time_stats: avg=96.22ms min=29.51ms max=229.54ms count=11
+I/flutter ( 5773): QA_STEP b-plus-dark settings
+D/EGL_emulation( 5773): app_time_stats: avg=93.19ms min=25.02ms max=237.54ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP b-plus-dark plans
+D/EGL_emulation( 5773): app_time_stats: avg=90.31ms min=25.17ms max=119.93ms count=12
+I/flutter ( 5773): QA_MISSING [b-plus-dark plans] "See Plans"
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 5773): app_time_stats: avg=87.22ms min=19.21ms max=120.39ms count=12
+--
+I/flutter ( 5773): QA_STEP b-plus-dark backup
+D/EGL_emulation( 5773): app_time_stats: avg=95.43ms min=30.93ms max=126.75ms count=11
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP b-plus-dark analysis
+D/EGL_emulation( 5773): app_time_stats: avg=87.70ms min=26.39ms max=122.02ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP b-plus-dark help
+D/EGL_emulation( 5773): app_time_stats: avg=89.03ms min=24.42ms max=124.07ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP b-plus-dark set review
+D/EGL_emulation( 5773): app_time_stats: avg=87.54ms min=20.30ms max=122.82ms count=12
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+--
+I/flutter ( 5773): QA_STEP c-small
+D/FlutterJNI( 5773): Sending viewport metrics to the engine.
+I/flutter ( 5773): QA_STEP c-small-big-text dashboard
+D/EGL_emulation( 5773): app_time_stats: avg=4758.83ms min=4758.83ms max=4758.83ms count=1
+I/flutter ( 5773): Screenshot 113-c-small-big-text-dashboard-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 114-c-small-big-text-dashboard-3 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text library
+I/flutter ( 5773): Screenshot 115-c-small-big-text-library failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 116-c-small-big-text-library-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text note
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 117-c-small-big-text-note-viewer failed: TimeoutException after 0:00:20.000000: Future not completed
+--
+I/flutter ( 5773): QA_MISSING [c-small-big-text note] "Show the text as read"
+I/flutter ( 5773): Screenshot 121-c-small-big-text-note-text-raw failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text set
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 122-c-small-big-text-set failed: TimeoutException after 0:00:20.000000: Future not completed
+--
+I/flutter ( 5773): QA_STEP c-small-big-text study
+I/flutter ( 5773): Screenshot 125-c-small-big-text-study failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 126-c-small-big-text-study-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text profile
+I/flutter ( 5773): Screenshot 127-c-small-big-text-profile failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): Screenshot 128-c-small-big-text-profile-2 failed: TimeoutException after 0:00:20.000000: Future not completed
+I/flutter ( 5773): QA_STEP c-small-big-text settings
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 129-c-small-big-text-settings failed: TimeoutException after 0:00:20.000000: Future not completed
+--
+I/flutter ( 5773): QA_STEP c-small-big-text plans
+I/flutter ( 5773): QA_MISSING [c-small-big-text plans] "See Plans"
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 137-c-small-big-text-plans failed: TimeoutException after 0:00:20.000000: Future not completed
+--
+I/flutter ( 5773): QA_STEP c-small-big-text backup
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 141-c-small-big-text-backup failed: TimeoutException after 0:00:20.000000: Future not completed
+--
+I/flutter ( 5773): QA_STEP c-small-big-text analysis
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 144-c-small-big-text-analysis failed: TimeoutException after 0:00:20.000000: Future not completed
+--
+I/flutter ( 5773): QA_STEP c-small-big-text help
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 152-c-small-big-text-help failed: TimeoutException after 0:00:20.000000: Future not completed
+--
+I/flutter ( 5773): QA_STEP c-small quiz
+W/WindowOnBackDispatcher( 5773): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5773): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5773): Screenshot 155-c-quiz failed: TimeoutException after 0:00:20.000000: Future not completed
+--
+I/flutter ( 5773): QA_STEP c-small focus
+I/flutter ( 5773): QA_MISSING [c-small focus] "START"
+I/flutter ( 5773): Screenshot 157-c-focus failed: TimeoutException after 0:00:20.000000: Future not completed
+D/AutofillManager( 5773): onActivityFinishing(): calling cancelLocked()
+W/WindowOnBackDispatcher( 5773): sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda17@b87182a
