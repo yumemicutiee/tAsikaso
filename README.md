@@ -45,9 +45,12 @@ lecture-note capture → PDF or flashcards.
   96 test photos (white desks, shadows, glare, clutter, a hand in the shot,
   pages with printed borders, tables and ruled blocks) this found 90 pages
   right and 5 wrong; the older detector alone found 60.
-- **Text recognition (OCR):** when you save, the text on the pages is read
-  on the phone (no internet). It goes into the Scan PDF as a hidden text
-  layer, so the text can be selected, searched and copied in any PDF viewer;
+- **Text recognition (OCR):** after **Next** on the crop screen, the
+  **reading screen** reads the pages on the phone (no internet), page by page:
+  a line sweeps down each page and the lines found light up. The save sheet
+  then shows how many words were read and the first lines. The text also
+  goes into the note's PDF of the photos as a hidden text layer, so it can be
+  selected, searched and copied in any PDF viewer;
   it makes notes searchable in the app and adds a **View Text** screen with
   Copy and **Make Flashcards**. Without the study server, flashcards are
   suggested from lines like `Term – definition`, `Term: definition`,
@@ -69,8 +72,8 @@ lecture-note capture → PDF or flashcards.
 - **Save Notes As:** choose **Text Notes** (first: the text read from the
   pages, typed up with key concepts when Smart Study is on; it opens on the
   text, with **Edit** to fix misread words, a big **Make Flashcards** button,
-  and the photos one tap away; needs text recognition), **Scan PDF** (the
-  pages as photos, text selectable) or **Flashcards**, a title and a folder,
+  and the photos one tap away; needs text that was read) or **Flashcards**
+  (a set with the photos, to write cards from), a title and a folder,
   or tap **New** to create a folder right there.
 - **Library & folders:** create folders with a colour; each folder has a
   **Notebook** (its notes) and its flashcard sets. Edit or delete folders
@@ -238,7 +241,7 @@ flutter test                               # widget smoke tests
 
 **On a phone or emulator.** `integration_test/phone_test.dart` checks what
 the widget tests can't: saving on the device, backup and restore, text
-recognition and the Scan PDF's hidden text, timer alerts, the camera, a big
+recognition and the note PDF's hidden text, timer alerts, the camera, a big
 gallery photo cropped to its page, and a real Pomodoro in Focus Mode.
 GitHub runs it on an Android 14 emulator after every push (`.github/workflows/android-emulator.yml`)
 and saves the results, screenshots and log to the `emulator-results` branch.
@@ -327,7 +330,7 @@ the microphone permission it also asks for, since nothing is recorded).
 | Profile | `lib/screens/profile_screen.dart` | Name (tap to edit), stats, Plus card, Analysis and Settings |
 | Scan flow | `lib/screens/capture/scan_flow.dart` | Smart Scanner first, the app's camera as fallback |
 | Capture | `lib/screens/capture/capture_screen.dart` | App camera: Single / Multiple, flash, gallery import |
-| Review & crop | `lib/screens/capture/review_screen.dart` | Rotate, drag the 4 corners (pre-set on the page edges when found), then save as **Text Notes**, **Scan PDF** or **Flashcards** |
+| Review & crop | `lib/screens/capture/review_screen.dart` | Rotate, drag the 4 corners (pre-set on the page edges when found), then **Next**: the reading screen reads the text (`reading_screen.dart`), and they're saved as **Text Notes** or **Flashcards** |
 | Note viewer | `lib/screens/note_viewer_screen.dart` | View, share or print a saved PDF; rename, move, delete; View Text (typed-up notes, summary, key concepts, Make Flashcards) |
 | Folder | `lib/screens/folder_screen.dart` | A folder's notes and flashcard sets |
 | Flashcard set | `lib/screens/flashcards/set_screen.dart` | Photos, key concepts, cards, add/edit cards, Study and Take a Quiz buttons |
@@ -354,7 +357,8 @@ lib/
   widgets/                     header, bottom bar, folder card, list rows, dialogs
   screens/                     Dashboard, Library, Folder, Study, Profile,
                                Settings, capture/, flashcards/, actions.dart
-  screens/capture/notes_pdf.dart  Scan PDF (hidden text layer) and text PDF (Share as PDF) builders
+  screens/capture/notes_pdf.dart  PDF of the photos (hidden text layer) and text PDF (Share as PDF) builders
+  screens/capture/reading_screen.dart  After Next: crops and reads the pages, page by page
 assets/fonts/                  Plus Jakarta Sans (headings, numbers), Inter (text), Phosphor icons
 server/                        the study server: Node.js + Claude (its own README)
 ```

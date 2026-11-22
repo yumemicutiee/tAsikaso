@@ -41,8 +41,12 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 ## Scanning notes (needs a real phone)
 - [ ] Camera button → Smart Scanner opens (Google's scanner UI). It finds page edges.
 - [ ] Scan 3 pages; after closing the scanner a "Preparing your pages…" box shows until the review screen appears. How long? ________ s
-- [ ] Save as **Scan PDF** into a folder → the note opens; share and print work. A wide (whiteboard) photo gets a
-      landscape page.
+- [ ] Next → the **reading screen**: the page with a line sweeping down it, "Reading your notes…", "Page 2 of 3",
+      then the lines found light up. Cancel goes back to the pages. How long for 3 pages? ________ s
+- [ ] The save sheet says "N words read" with the first lines. No **Scan PDF** choice. A photo with no text: "No text
+      was found", Text Notes off, Flashcards picked.
+- [ ] Save as **Text Notes** into a folder → the note opens on its text; View Pages shows the photos (a wide whiteboard
+      photo gets a landscape page); share and print the original pages work.
 - [ ] Share that PDF to Google Drive or a PDF viewer: the text on the pages can be **selected, searched and
       copied** (the hidden text layer). Does the selection sit over the right words? ________
 - [ ] Android app info → Permissions: no Microphone permission is listed.
@@ -65,7 +69,6 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
       a summary and Key Concepts. How long did it take? ________ s. Are the cards good? ________
 - [ ] Save as **Text Notes**: "Typing up your notes…", then the note opens on the typed-up notes with headings,
       bullets, a summary and Key Concepts, and "Show the text as read".
-- [ ] Save as **Scan PDF** with Smart Study on: the note still gets a summary and Key Concepts on View Text.
 - [ ] Set screen → Take a Quiz: questions of all four types; a wrong multiple-choice shows the right one;
       a typed answer in other words is still marked right (by meaning); the score at the end;
       Try Again shuffles; New Quiz writes a new one.

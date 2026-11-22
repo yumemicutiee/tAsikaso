@@ -63,7 +63,7 @@ class GoogleDriveStore implements DriveStore {
   static const _fields = 'id,name,modifiedTime,size';
 
   /// Google documents one-request (multipart) uploads for files of up to
-  /// 5 MB. Bigger ones, such as a long Scan PDF, go up in 1 MB pieces, and
+  /// 5 MB. Bigger ones, such as the photos of a long note, go up in 1 MB pieces, and
   /// a piece the connection drops is sent again on its own.
   static const resumableFrom = 5 * 1024 * 1024;
 

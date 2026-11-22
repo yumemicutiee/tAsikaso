@@ -23,6 +23,8 @@ import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/app_colors.dart';
 
+import 'support/read_pages.dart';
+
 List<Flashcard> cards(int n, [String prefix = 'c']) => [
       for (var i = 0; i < n; i++)
         Flashcard(id: '$prefix$i', front: 'Front $prefix$i', back: 'Back $i'),
@@ -182,8 +184,7 @@ void main() {
       final page = CapturedPage(
           id: 1, bytes: img.encodePng(image), width: 40, height: 30);
       await tester.pumpWidget(MaterialApp(home: ReviewScreen(pages: [page])));
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await tapNextAndRead(tester);
       await tester.tap(find.text('Flashcards'));
       await tester.pump();
       await tester.tap(find.text('Make Flashcards'));

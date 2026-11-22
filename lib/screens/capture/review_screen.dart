@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -22,6 +21,7 @@ import '../flashcards/set_screen.dart';
 import '../note_viewer_screen.dart';
 import 'captured_page.dart';
 import 'notes_pdf.dart';
+import 'reading_screen.dart';
 
 /// Text Notes need text, and none could be read from the pages.
 class _NoTextException implements Exception {
@@ -29,7 +29,8 @@ class _NoTextException implements Exception {
 }
 
 /// Review captured pages: rotate and crop each one by dragging its four
-/// corners, then save them as a PDF in a folder.
+/// corners. Next reads their text ([ReadingScreen]), then they're saved as
+/// Text Notes or Flashcards in a folder.
 ///
 /// Pops with the remaining pages when the user goes back to take more.
 ///
@@ -117,24 +118,35 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
   }
 
+  /// The pages as last read; read again if they were changed since.
+  ReadPages? _read;
+
+  /// Next: the pages are cropped and their text read (on the reading
+  /// screen), then the save sheet shows what was read.
   Future<void> _openSaveSheet() async {
+    var read = _read;
+    if (read == null || read.key != readKey(_pages)) {
+      read = await ReadingScreen.read(context, _pages);
+      if (read == null || !mounted) return;
+      _read = read;
+    }
     final request = await showModalBottomSheet<SaveRequest>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => SaveSheet(pageCount: _pages.length),
+      builder: (_) => SaveSheet(pageCount: _pages.length, read: read),
     );
     if (request == null || !mounted) return;
-    await _save(request);
+    await _save(request, read);
   }
 
-  Future<void> _save(SaveRequest request) async {
+  Future<void> _save(SaveRequest request, ReadPages read) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final store = AppStore.instance;
     final format = request.format;
     final asCards = format == SaveFormat.flashcards;
     final progress = ValueNotifier<String>(
-        asCards ? 'Preparing your photos…' : 'Creating your PDF…');
+        asCards ? 'Saving your photos…' : 'Saving your notes…');
     // Cancel is offered while the study server works (the one long wait).
     // It skips the AI step; the pages are still saved.
     final onCancel = ValueNotifier<VoidCallback?>(null);
@@ -160,20 +172,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     StudyFolder? created; // "My Notes", made for this save alone
     try {
-      // Let the progress dialog appear before the image work starts
-      // (on web the work runs on the UI thread).
+      // Let the progress dialog appear before the work starts.
       await WidgetsBinding.instance.endOfFrame;
-      final jpegs = <Uint8List>[];
-      for (final page in _pages) {
-        jpegs.add(await page.render());
-        await WidgetsBinding.instance.endOfFrame;
-      }
-
-      // Read the text on the pages (on the phone, no internet). Used for
-      // search, "View Text", the PDF's hidden text layer, and flashcards.
-      if (ScanService.canReadText) progress.value = 'Reading the text…';
-      final pages = await ScanService.readPages(jpegs);
-      final text = RecognizedPage.join(pages);
+      // Cropped and read on the reading screen (on the phone, no
+      // internet). The text is the note, and what cards are made from.
+      final jpegs = read.jpegs;
+      final pages = read.pages;
+      final text = read.text;
 
       // The study server (Claude) types the notes up and picks out key
       // concepts; for flashcards it writes the cards and a quiz too. The
@@ -258,8 +263,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
       // Text Notes keep the photos too (with the text selectable), so the
       // original pages are one tap away from the text.
-      final textNotes = format == SaveFormat.textNotes;
-      progress.value = textNotes ? 'Saving your notes…' : 'Creating your PDF…';
+      progress.value = 'Saving your notes…';
       final pdf = await buildNotesPdf(jpegs, title: request.title, text: pages);
       final pageCount = jpegs.length;
       final thumb = await CapturedPage.thumbnail(jpegs.first);
@@ -273,34 +277,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
         cleanText: kit?.notes ?? '',
         summary: kit?.summary ?? '',
         concepts: kit?.concepts ?? const [],
-        textNote: textNotes,
+        textNote: true,
       );
 
+      // Straight to the text, to check it and make flashcards from it.
       navigator.popUntil((route) => route.isFirst);
-      if (textNotes) {
-        // Straight to the text, to check it and make flashcards from it.
-        navigator.push(
-            MaterialPageRoute(builder: (_) => NoteTextScreen(noteId: note.id)));
-        toast(aiProblem == null
-            ? 'Saved to ${folder.name}'
-            : 'Saved to ${folder.name}. $aiProblem');
-        return;
-      }
-      toast(
-        aiProblem == null
-            ? 'Saved to ${folder.name}'
-            : 'Saved to ${folder.name}. $aiProblem',
-        action: SnackBarAction(
-          label: 'Open',
-          onPressed: () => navigator.push(
-            MaterialPageRoute(builder: (_) => NoteViewerScreen(noteId: note.id)),
-          ),
-        ),
-      );
+      navigator.push(
+          MaterialPageRoute(builder: (_) => NoteTextScreen(noteId: note.id)));
+      toast(aiProblem == null
+          ? 'Saved to ${folder.name}'
+          : 'Saved to ${folder.name}. $aiProblem');
     } on _NoTextException {
       closeDialog(navigator, dialog); // progress dialog
       toast("No text could be read from these pages, so they can't be "
-          'saved as Text Notes. Save them as a Scan PDF instead.');
+          'saved as Text Notes. Save them as Flashcards instead.');
     } catch (e, st) {
       debugPrint('Saving the notes failed: $e\n$st');
       // Don't leave an empty folder behind for a save that didn't happen.
@@ -312,7 +302,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       closeDialog(navigator, dialog); // progress dialog
       toast(asCards
           ? "Couldn't save the photos. Please try again."
-          : "Couldn't create the PDF. Please try again.");
+          : "Couldn't save your notes. Please try again.");
     }
   }
 
@@ -646,10 +636,9 @@ class _ToolButton extends StatelessWidget {
 }
 
 /// Text Notes: the text read from the pages (typed up with Smart Study),
-/// to edit and make flashcards from, with the pages kept. Scan PDF: the
-/// pages as photos with a hidden text layer (for an imported PDF: the PDF
-/// as it is). Flashcards: a set with the photos (or the PDF's pages) to
-/// write cards from.
+/// to edit and make flashcards from, with the pages kept. Flashcards: a set
+/// with the photos (or the PDF's pages) to write cards from. For an
+/// imported PDF only, [scanPdf] keeps the PDF as it is.
 enum SaveFormat { textNotes, scanPdf, flashcards }
 
 class SaveRequest {
@@ -666,12 +655,14 @@ class SaveRequest {
   final SaveFormat format;
 }
 
-/// Bottom sheet: PDF or Flashcards, a title, and a folder. For scanned pages,
-/// or (with [pdfName]) for an imported PDF.
+/// Bottom sheet: Text Notes or Flashcards (or, for an imported PDF, the PDF
+/// as it is), a title, and a folder. For scanned pages, after their text
+/// was [read], or (with [pdfName]) for an imported PDF.
 class SaveSheet extends StatefulWidget {
   const SaveSheet({
     super.key,
     required this.pageCount,
+    this.read,
     this.pdfName,
     this.pdfHasText = false,
     this.defaultTitle,
@@ -679,6 +670,9 @@ class SaveSheet extends StatefulWidget {
   });
 
   final int pageCount;
+
+  /// Scanned pages: what was read from them, shown at the top.
+  final ReadPages? read;
 
   /// The imported PDF's file name; null for scanned pages.
   final String? pdfName;
@@ -709,14 +703,21 @@ class _SaveSheetState extends State<SaveSheet> {
       _folder = folder;
     });
   }
-  // Text Notes first when the text can be read.
-  late SaveFormat _format =
-      _canReadText ? SaveFormat.textNotes : SaveFormat.scanPdf;
+  // Text Notes first when there is text; otherwise flashcards to write
+  // from the photos (or, for a PDF, the PDF as it is).
+  late SaveFormat _format = _canReadText
+      ? SaveFormat.textNotes
+      : widget.pdfName != null
+          ? SaveFormat.scanPdf
+          : SaveFormat.flashcards;
   final _title = TextEditingController();
 
-  /// Scanned pages: whether this device reads text. A PDF: whether it had any.
-  bool get _canReadText =>
-      widget.pdfName != null ? widget.pdfHasText : ScanService.canReadText;
+  /// Whether there is text: read from the scanned pages, or in the PDF.
+  bool get _canReadText => widget.pdfName != null
+      ? widget.pdfHasText
+      : widget.read != null
+          ? widget.read!.text.trim().isNotEmpty
+          : ScanService.canReadText;
 
   @override
   void dispose() {
@@ -766,6 +767,10 @@ class _SaveSheetState extends State<SaveSheet> {
               const SizedBox(height: 6),
               Text(notice, style: AppText.itemMeta),
             ],
+            if (widget.read case final read?) ...[
+              const SizedBox(height: 12),
+              _WhatWasRead(read: read),
+            ],
             const SizedBox(height: 14),
             FormatOption(
               icon: AppIcons.text,
@@ -773,7 +778,9 @@ class _SaveSheetState extends State<SaveSheet> {
               subtitle: !canReadText
                   ? (fromPdf
                       ? 'No text was found in this PDF'
-                      : 'Needs text recognition (Android or iOS)')
+                      : ScanService.canReadText
+                          ? 'No text was found on these pages'
+                          : 'Needs text recognition (Android or iOS)')
                   : ai
                       ? 'Typed up cleanly with key concepts, to edit and '
                           'turn into flashcards'
@@ -786,20 +793,18 @@ class _SaveSheetState extends State<SaveSheet> {
               enabled: canReadText,
               onTap: () => setState(() => _format = SaveFormat.textNotes),
             ),
-            const SizedBox(height: 8),
-            FormatOption(
-              icon: fromPdf ? AppIcons.pdf : AppIcons.scan,
-              title: fromPdf ? 'PDF' : 'Scan PDF',
-              subtitle: fromPdf
-                  ? (canReadText
-                      ? 'Your PDF as it is; its text can be searched'
-                      : 'Your PDF as it is')
-                  : canReadText
-                      ? 'Your pages as photos; the text can be selected and searched'
-                      : 'Your pages as photos, all in one file',
-              selected: _format == SaveFormat.scanPdf,
-              onTap: () => setState(() => _format = SaveFormat.scanPdf),
-            ),
+            if (fromPdf) ...[
+              const SizedBox(height: 8),
+              FormatOption(
+                icon: AppIcons.pdf,
+                title: 'PDF',
+                subtitle: canReadText
+                    ? 'Your PDF as it is; its text can be searched'
+                    : 'Your PDF as it is',
+                selected: _format == SaveFormat.scanPdf,
+                onTap: () => setState(() => _format = SaveFormat.scanPdf),
+              ),
+            ],
             const SizedBox(height: 8),
             FormatOption(
               icon: AppIcons.flashcards,
@@ -851,13 +856,74 @@ class _SaveSheetState extends State<SaveSheet> {
             AccentButton(
               label: switch (_format) {
                 SaveFormat.textNotes => 'Save as Notes',
-                SaveFormat.scanPdf => fromPdf ? 'Save PDF' : 'Save as PDF',
+                SaveFormat.scanPdf => 'Save PDF',
                 SaveFormat.flashcards => 'Make Flashcards',
               },
               onPressed: _submit,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// What was read from the scanned pages: how many words and the first
+/// lines, or that none was found and what to do.
+class _WhatWasRead extends StatelessWidget {
+  const _WhatWasRead({required this.read});
+
+  final ReadPages read;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = read.text.trim();
+    final found = text.isNotEmpty;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: found ? AppColors.primarySoft : AppColors.accentSoft,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(found ? AppIcons.check : AppIcons.warning,
+                  size: 15,
+                  color: found ? AppColors.primaryDeep : AppColors.accentDeep),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  found
+                      ? '${plural(read.wordCount, 'word')} read'
+                      : ScanService.canReadText
+                          ? 'No text was found'
+                          : 'Text is read in the phone app',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            found
+                ? text
+                : ScanService.canReadText
+                    ? 'Retake the photo flat, close up and in good light, or '
+                        'save it as Flashcards and write the cards yourself.'
+                    : 'Here, save the photos as Flashcards and write the '
+                        'cards yourself. On Android and iOS their text is read.',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.itemMeta.copyWith(height: 1.35),
+          ),
+        ],
       ),
     );
   }

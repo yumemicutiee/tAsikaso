@@ -20,7 +20,10 @@ import 'package:study_app/screens/flashcards/set_screen.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/app_colors.dart';
+
 import 'package:study_app/widgets/dialogs.dart';
+
+import 'support/read_pages.dart';
 
 /// Device storage whose saves of the data file wait while [gate] is set,
 /// like a slow phone in the middle of a big restore.
@@ -37,9 +40,14 @@ class _SlowStorage extends MemoryStorage {
 
 /// Device storage that is full: no PDF or photo can be written.
 class _FullStorage extends MemoryStorage {
+  /// Called as a write is tried (before it fails).
+  void Function()? onWrite;
+
   @override
-  Future<void> writeBytes(String key, Uint8List bytes) async =>
-      throw StateError('No space left on device');
+  Future<void> writeBytes(String key, Uint8List bytes) async {
+    onWrite?.call();
+    throw StateError('No space left on device');
+  }
 }
 
 void main() {
@@ -344,27 +352,31 @@ void main() {
 
     testWidgets('saving a scan that fails', (tester) async {
       usePhoneSize(tester);
-      await store.init(_FullStorage());
+      final storage = _FullStorage();
+      await store.init(storage);
       final image = img.Image(width: 40, height: 30);
       img.fill(image, color: img.ColorRgb8(230, 230, 230));
       final page =
           CapturedPage(id: 1, bytes: img.encodePng(image), width: 40, height: 30);
       await tester.pumpWidget(MaterialApp(home: ReviewScreen(pages: [page])));
-      // While the text is read, the app shell reports a failed save.
-      ScanService.debugRead = (jpegs) async {
-        unawaited(showInfoDialog(tester.element(find.byType(ReviewScreen)),
-            title: "Couldn't Save", message: 'The device is full.'));
-        return [for (final _ in jpegs) const RecognizedPage()];
-      };
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Scan PDF'));
-      await tester.pump();
-      await tester.tap(find.text('Save as PDF'));
+      ScanService.debugRead = (jpegs) async => [
+            for (final _ in jpegs)
+              const RecognizedPage(lines: [
+                RecognizedLine(
+                    text: 'Osmosis: water', left: 0, top: 0, right: 10, bottom: 10),
+              ]),
+          ];
+      await tapNextAndRead(tester);
+      // While the note is saved, the app shell reports a failed save.
+      storage.onWrite = () => unawaited(showInfoDialog(
+          tester.element(find.byType(ReviewScreen)),
+          title: "Couldn't Save",
+          message: 'The device is full.'));
+      await tester.tap(find.text('Save as Notes'));
       await tester.pump();
       await tester.runAsync(() async {
         for (var i = 0; i < 150; i++) {
-          if (find.textContaining("Couldn't create the PDF").evaluate().isNotEmpty) {
+          if (find.textContaining("Couldn't save your notes").evaluate().isNotEmpty) {
             break;
           }
           await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -373,8 +385,8 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(find.textContaining("Couldn't create the PDF"), findsOneWidget);
-      expect(find.text('Creating your PDF…'), findsNothing);
+      expect(find.textContaining("Couldn't save your notes"), findsOneWidget);
+      expect(find.text('Saving your notes…'), findsNothing);
       expect(find.text("Couldn't Save"), findsOneWidget);
       expect(find.byType(ReviewScreen), findsOneWidget);
       expect(store.notes, isEmpty);

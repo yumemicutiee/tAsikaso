@@ -397,3 +397,23 @@ saved as Text Notes there.
   Set** (any set; the note's folder's sets first), which adds the cards to
   it (`makeCardsForSet(fromText:)`). Closing the sheet makes nothing.
 - The Library's own Notes list (every note) stays.
+
+## 17. The reading screen, and no Scan PDF (0.7.1, 23 Nov)
+
+- **Next** on the crop screen opens `ReadingScreen`
+  (`lib/screens/capture/reading_screen.dart`): each page is cropped, then its
+  text read on the phone, one page at a time. The page shows with a line
+  sweeping down it, then the lines found light up (ML Kit's line boxes);
+  "Reading your notes…", "Page 2 of 3", a progress bar and "Read on your
+  phone. Nothing is uploaded." Cancel goes back to the pages. On the web
+  (no text recognition) it only prepares the pages.
+- The save sheet then shows what was read: "N words read" and the first
+  lines, or "No text was found" with what to do. The pages aren't read
+  again unless they're cropped, turned, added or deleted (`readKey`).
+- **Scan PDF is gone** for photos: they're saved as Text Notes (which keep
+  the photos as their pages) or Flashcards. With no text, Text Notes are
+  off and Flashcards are picked. An imported PDF can still be kept as it is
+  ("PDF").
+- The Smart Study step (typing up, or writing cards) still runs after Save,
+  as it depends on the choice.
+- Notes saved as Scan PDFs before 0.7.1 still open as they did.

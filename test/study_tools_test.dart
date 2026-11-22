@@ -26,6 +26,8 @@ import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/app_colors.dart';
 
+import 'support/read_pages.dart';
+
 const ocrText = 'Osmosis: movement of water across a membrane\n'
     'Diffusion - particles spread out';
 
@@ -647,8 +649,7 @@ void main() {
     Future<void> openSaveSheet(WidgetTester tester) async {
       usePhoneSize(tester);
       await tester.pumpWidget(MaterialApp(home: ReviewScreen(pages: [page()])));
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await tapNextAndRead(tester);
     }
 
     /// Saving renders pages in another isolate, so wait in real time.
@@ -661,23 +662,19 @@ void main() {
       });
     }
 
-    testWidgets('Text Notes are refused when no text was read, and the pages '
-        'stay', (tester) async {
+    testWidgets('when no text was read, Text Notes are off and Flashcards '
+        'are picked', (tester) async {
       ScanService.debugRead =
           (jpegs) async => [for (final _ in jpegs) const RecognizedPage()];
       await openSaveSheet(tester);
+      expect(find.text('No text was found'), findsOneWidget);
+      expect(find.textContaining('Retake the photo flat'), findsOneWidget);
+      expect(find.text('No text was found on these pages'), findsOneWidget);
       await tester.tap(find.text('Text Notes'));
       await tester.pump();
-      await tester.tap(find.text('Save as Notes'));
-      await tester.pump();
-      await waitUntil(tester,
-          () => find.textContaining('No text could be read').evaluate().isNotEmpty);
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining("can't be saved as Text Notes"), findsOneWidget);
+      expect(find.text('Save as Notes'), findsNothing);
+      expect(find.text('Make Flashcards'), findsOneWidget);
       expect(store.notes, isEmpty);
-      expect(store.folders.any((f) => f.name == 'My Notes'), isFalse);
-      expect(find.byType(ReviewScreen), findsOneWidget); // nothing is lost
     });
 
     testWidgets('Cancel during the AI step still saves the photos, with cards '

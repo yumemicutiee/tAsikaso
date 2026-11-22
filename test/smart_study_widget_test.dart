@@ -10,6 +10,7 @@ import 'package:study_app/app.dart';
 import 'package:study_app/data/app_store.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/screens/capture/captured_page.dart';
+import 'package:study_app/screens/capture/reading_screen.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/flashcards/quiz_screen.dart';
 import 'package:study_app/screens/flashcards/set_screen.dart';
@@ -18,6 +19,8 @@ import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/app_colors.dart';
 import 'package:study_app/widgets/bottom_nav.dart';
+
+import 'support/read_pages.dart';
 
 const ocrText = 'Osmosis: movement of water across a membrane\n'
     'Diffusion - particles spread out';
@@ -74,8 +77,7 @@ void main() {
   Future<void> openSaveSheet(WidgetTester tester) async {
     usePhoneSize(tester);
     await tester.pumpWidget(MaterialApp(home: ReviewScreen(pages: [page()])));
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+    await tapNextAndRead(tester);
   }
 
   /// Saving renders pages in another isolate, so wait in real time; then
@@ -91,17 +93,73 @@ void main() {
   }
 
   group('Save Notes As', () {
-    testWidgets('offers Text Notes, Scan PDF and Flashcards', (tester) async {
+    testWidgets('offers Text Notes and Flashcards (no Scan PDF)', (tester) async {
       await openSaveSheet(tester);
       expect(find.text('Text Notes'), findsOneWidget);
-      expect(find.text('Scan PDF'), findsOneWidget);
       expect(find.text('Flashcards'), findsOneWidget);
+      expect(find.text('Scan PDF'), findsNothing);
       // Text Notes come first.
       expect(tester.getTopLeft(find.text('Text Notes')).dy,
-          lessThan(tester.getTopLeft(find.text('Scan PDF')).dy));
-      // No text recognition here, so Text Notes can't be chosen.
+          lessThan(tester.getTopLeft(find.text('Flashcards')).dy));
+      // No text recognition here (as on the web), so Text Notes can't be
+      // chosen: Flashcards are picked.
       expect(find.text('Needs text recognition (Android or iOS)'), findsOneWidget);
-      expect(find.text('Save as PDF'), findsOneWidget);
+      expect(find.text('Text is read in the phone app'), findsOneWidget);
+      expect(find.text('Make Flashcards'), findsOneWidget);
+    });
+
+    testWidgets('Next shows the pages being read, then what was read',
+        (tester) async {
+      readsText();
+      usePhoneSize(tester);
+      ReadingScreen.pause = Duration.zero;
+      await tester.pumpWidget(MaterialApp(home: ReviewScreen(pages: [page()])));
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(ReadingScreen), findsOneWidget);
+      expect(find.text('Reading your notes…'), findsOneWidget);
+      expect(find.text('Read on your phone. Nothing is uploaded.'), findsOneWidget);
+      await tester.runAsync(() async {
+        for (var i = 0; i < 300 && find.byType(SaveSheet).evaluate().isEmpty; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await tester.pump();
+        }
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReadingScreen), findsNothing);
+      expect(find.text('11 words read'), findsOneWidget);
+      expect(find.textContaining('Osmosis: movement of water'), findsOneWidget);
+      expect(find.text('Save as Notes'), findsOneWidget);
+
+      // Closing the sheet and tapping Next again doesn't read them again.
+      var reads = 0;
+      ScanService.debugRead = (jpegs) async {
+        reads++;
+        return [for (final _ in jpegs) const RecognizedPage()];
+      };
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(reads, 0);
+      expect(find.text('11 words read'), findsOneWidget);
+    });
+
+    testWidgets('Cancel on the reading screen goes back to the pages',
+        (tester) async {
+      readsText();
+      usePhoneSize(tester);
+      await tester.pumpWidget(MaterialApp(home: ReviewScreen(pages: [page()])));
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.byTooltip('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReadingScreen), findsNothing);
+      expect(find.byType(SaveSheet), findsNothing);
+      expect(find.byType(ReviewScreen), findsOneWidget);
     });
 
     testWidgets('Text Notes are picked when the text can be read, and open on '
@@ -126,25 +184,6 @@ void main() {
       expect(find.byTooltip('View Pages'), findsOneWidget);
       expect(find.byTooltip('Edit'), findsOneWidget);
       expect(find.text('Make Flashcards'), findsOneWidget);
-    });
-
-    testWidgets('a scan PDF keeps the text that was read, and no server is '
-        'needed', (tester) async {
-      readsText();
-      await openSaveSheet(tester);
-      await tester.tap(find.text('Scan PDF'));
-      await tester.pump();
-      await tester.tap(find.text('Save as PDF'));
-      await tester.pump();
-      await waitFor(tester, () => store.notes.isNotEmpty);
-
-      final note = store.notes.single;
-      expect(note.textNote, isFalse);
-      expect(note.text, ocrText);
-      expect(note.cleanText, '');
-      expect(note.pageCount, 1);
-      expect(find.textContaining('Saved to'), findsOneWidget);
-      expect((await store.readPdf(note))!.length, greaterThan(1000));
     });
 
     testWidgets('Text Notes are typed up by the study server, with concepts',

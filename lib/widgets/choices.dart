@@ -115,7 +115,7 @@ class FolderField extends StatelessWidget {
   }
 }
 
-/// One choice on a sheet (Text Notes, Scan PDF, New Set…): an icon, a title
+/// One choice on a sheet (Text Notes, Flashcards, New Set…): an icon, a title
 /// and a line about it, outlined when picked.
 class FormatOption extends StatelessWidget {
   const FormatOption({

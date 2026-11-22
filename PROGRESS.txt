@@ -120,7 +120,10 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
-0.7.1  23 Nov  Logo: sky-blue letters with a navy outline on transparent (white
+0.7.1  23 Nov  Next on the crop screen opens the reading screen (text read page by
+               page, lines lit up); the save sheet shows what was read. No more
+               Scan PDF for photos (Text Notes keep the photos).
+               Logo: sky-blue letters with a navy outline on transparent (white
                behind it where Android needs a background; tool/make_icons.py).
                Each folder has a Notebook (its notes); Make Flashcards asks
                where the cards go: a new set in any folder, or an existing set

@@ -30,6 +30,7 @@ import 'package:study_app/screens/capture/captured_page.dart';
 import 'package:study_app/services/page_model_service.dart';
 import 'package:study_app/utils/page_model.dart';
 import 'package:study_app/screens/capture/notes_pdf.dart';
+import 'package:study_app/screens/capture/reading_screen.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/screens/flashcards/set_screen.dart';
@@ -84,7 +85,7 @@ void main() {
     }
   });
 
-  testWidgets('reads the text on a photo and hides it in the Scan PDF',
+  testWidgets("reads the text on a photo and hides it in the note's PDF",
       (tester) async {
     expect(ScanService.canReadText, isTrue);
     final photo = notesPhoto(['PHOTOSYNTHESIS', 'Plants make sugar from light']);
@@ -203,9 +204,9 @@ void main() {
         pdf);
   });
 
-  testWidgets('the camera takes a photo that is saved as a Scan PDF',
+  testWidgets('the camera takes a photo that is read and saved with a set',
       (tester) async {
-    final known = {for (final n in store.notes) n.id};
+    final known = {for (final s in store.sets) s.id};
     await tester.pumpWidget(const StudyApp());
     await tester.pumpAndSettle();
     await tester.tap(find.byType(CameraButton));
@@ -223,24 +224,25 @@ void main() {
     await tester.pumpAndSettle();
     await shot(tester, '6-review');
 
-    await tester.tap(find.text('Next'));
+    await nextAndRead(tester, shotName: '6b-reading');
+    await shot(tester, '7-save-sheet');
+    // The camera's test pattern has no text: kept with a set, to write
+    // cards while looking at it.
+    await tester.tap(find.text('Flashcards'));
     await tester.pumpAndSettle();
-    // Text Notes come first where text is read; these keep the photos.
-    await tester.tap(find.text('Scan PDF'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Save as PDF'));
+    await tester.tap(find.text('Make Flashcards'));
     final waited = Stopwatch()..start();
-    bool isNew(Note n) => !known.contains(n.id);
+    bool isNew(FlashcardSet s) => !known.contains(s.id);
     while (waited.elapsed < const Duration(seconds: 90) &&
-        !store.notes.any(isNew)) {
+        !store.sets.any(isNew)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       await tester.pump();
     }
-    final saved = store.notes.singleWhere(isNew);
-    expect(saved.pageCount, 1);
-    expect((await store.readPdf(saved))!.length, greaterThan(1000));
+    final saved = store.sets.singleWhere(isNew);
+    expect(saved.photoCount, 1);
+    expect((await store.readSetPhoto(saved, 0))!.length, greaterThan(1000));
     await tester.pumpAndSettle();
-    await shot(tester, '7-saved');
+    await shot(tester, '7b-saved');
   });
 
   testWidgets('a big gallery photo is cropped to its page and saved',
@@ -265,22 +267,20 @@ void main() {
     await tester.pumpAndSettle();
     await shot(tester, '8-gallery-crop');
 
-    await tester.tap(find.text('Next'));
+    await nextAndRead(tester);
+    await tester.tap(find.text('Flashcards'));
     await tester.pumpAndSettle();
-    // Text Notes come first where text is read; these keep the photos.
-    await tester.tap(find.text('Scan PDF'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Save as PDF'));
-    bool isNew(Note n) => !known.contains(n.id);
+    await tester.tap(find.text('Make Flashcards'));
+    bool isNew(FlashcardSet s) => !known.contains(s.id);
     final waited = Stopwatch()..start();
     while (waited.elapsed < const Duration(seconds: 90) &&
-        !store.notes.any(isNew)) {
+        !store.sets.any(isNew)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       await tester.pump();
     }
-    final saved = store.notes.singleWhere(isNew);
-    expect(saved.pageCount, 1);
-    expect((await store.readPdf(saved))!.length, greaterThan(10000));
+    final saved = store.sets.singleWhere(isNew);
+    expect(saved.photoCount, 1);
+    expect((await store.readSetPhoto(saved, 0))!.length, greaterThan(10000));
     await tester.pumpAndSettle();
   });
 
@@ -315,10 +315,11 @@ void main() {
     await waitFor(tester, find.byType(ReviewScreen),
         timeout: const Duration(seconds: 90));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+    await nextAndRead(tester, shotName: '10b-reading');
 
-    // Text Notes are the first choice; the folder is picked here.
+    // What was read shows; Text Notes are the first choice; the folder is
+    // picked here.
+    expect(find.textContaining('words read'), findsOneWidget);
     expect(find.text('Save as Notes'), findsOneWidget);
     await tester.tap(find.byType(DropdownButtonFormField<StudyFolder>));
     await tester.pumpAndSettle();
@@ -514,8 +515,7 @@ void main() {
     await waitFor(tester, find.byType(ReviewScreen),
         timeout: const Duration(seconds: 90));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+    await nextAndRead(tester);
     await tester.tap(find.text('Flashcards').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Make Flashcards'));
@@ -536,7 +536,7 @@ void main() {
     await shot(tester, '10-smart-study-set');
   });
 
-  testWidgets('a 12-page scan from the gallery becomes one searchable Scan PDF',
+  testWidgets('a 12-page scan from the gallery becomes one set of Text Notes',
       (tester) async {
     // Each page is a large photo (1500 × 2000), so the phone crops, reads
     // (OCR) and lays out twelve of them one after another, as with a long
@@ -570,19 +570,18 @@ void main() {
         timeout: const Duration(minutes: 3));
     await tester.pumpAndSettle();
     final imported = took.elapsedMilliseconds;
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    // Text Notes come first where text is read; these keep the photos.
-    await tester.tap(find.text('Scan PDF'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Save as PDF'));
+    await nextAndRead(tester, timeout: const Duration(minutes: 4));
+    final read = took.elapsedMilliseconds - imported;
+    // Text Notes: the text of all 12 pages, with the photos kept.
+    await tester.tap(find.text('Save as Notes'));
     bool isNew(Note n) => !known.contains(n.id);
     while (took.elapsed < const Duration(minutes: 6) && !store.notes.any(isNew)) {
       await Future<void>.delayed(const Duration(milliseconds: 250));
       await tester.pump();
     }
     final saved = store.notes.singleWhere(isNew);
-    debugPrint('12-page scan: imported in $imported ms, saved in '
+    expect(saved.textNote, isTrue);
+    debugPrint('12-page scan: imported in $imported ms, read in $read ms, saved in '
         '${took.elapsedMilliseconds} ms; memory ${rssBefore >> 20} MB → '
         '${ProcessInfo.currentRss >> 20} MB, peak ${ProcessInfo.maxRss >> 20} MB');
     expect(saved.pageCount, 12);
@@ -676,6 +675,21 @@ Uint8List notesPhoto(List<String> lines) {
         font: img.arial48, x: 80, y: 120 + i * 120, color: img.ColorRgb8(0, 0, 0));
   }
   return Uint8List.fromList(img.encodeJpg(page, quality: 90));
+}
+
+/// Taps Next on the crop screen: the reading screen crops and reads the
+/// pages (a screenshot of it as [shotName]), then the save sheet opens.
+Future<void> nextAndRead(WidgetTester tester,
+    {String? shotName, Duration timeout = const Duration(seconds: 90)}) async {
+  await tester.tap(find.text('Next'));
+  if (shotName != null) {
+    await waitFor(tester, find.byType(ReadingScreen));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await shot(tester, shotName);
+  }
+  await waitFor(tester, find.byType(SaveSheet),
+      timeout: timeout, failsOn: find.text("Couldn't read the pages"));
+  await tester.pumpAndSettle();
 }
 
 /// Pumps in real time until [finder] finds something. Stops early, saying

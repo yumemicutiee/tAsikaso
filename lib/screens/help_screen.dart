@@ -28,9 +28,10 @@ class HelpScreen extends StatelessWidget {
           "Smart Scanner finds the page edges for you; the app's own camera "
           'finds them too (see below), and you can drag the four corners if '
           "they're off. "
-          'Scan several pages, then save them as Text Notes (the text of '
-          'your pages, to edit and turn into flashcards), a Scan PDF (your '
-          'photos, with the text selectable) or Flashcards.',
+          'Scan several pages and tap Next: their text is read on your '
+          'phone while you watch. Then save them as Text Notes (the text, to '
+          'edit and turn into flashcards) or as Flashcards to write while '
+          'looking at your photos.',
     ),
     (
       'How does the app find the page edges?',
