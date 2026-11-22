@@ -119,6 +119,7 @@ class FolderField extends StatelessWidget {
 /// and a line about it, outlined when picked.
 class FormatOption extends StatelessWidget {
   const FormatOption({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
