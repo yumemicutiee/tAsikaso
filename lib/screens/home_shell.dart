@@ -10,6 +10,7 @@ import '../widgets/bottom_nav.dart';
 import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
 import 'actions.dart';
+import 'capture/pdf_import.dart' show importPdf;
 import 'capture/scan_flow.dart';
 import 'dashboard_screen.dart';
 import 'library_screen.dart';
@@ -108,6 +109,7 @@ class _HomeShellState extends State<HomeShell> {
     }
     final options = <(IconData, String, VoidCallback)>[
       (AppIcons.capture, 'Scan Notes', _openCapture),
+      (AppIcons.pdf, 'Import PDF', () => importPdf(context)),
       (AppIcons.newCards, 'New Flashcard Set', () => createSet(context)),
       (AppIcons.newFolder, 'New Folder', () => createFolder(context)),
       (AppIcons.newTask, 'New Task', () => showTaskEditor(context)),

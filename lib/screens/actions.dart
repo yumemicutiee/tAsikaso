@@ -19,6 +19,7 @@ import '../utils/quiz_builder.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/list_items.dart';
 import 'capture/notes_pdf.dart';
+import 'capture/pdf_import.dart' show kPdfPagesLeftOut, pickAndReadPdf;
 import 'flashcards/quiz_options.dart';
 import 'flashcards/quiz_screen.dart';
 import 'flashcards/set_screen.dart';
@@ -249,14 +250,19 @@ QuizQuestion _about(QuizQuestion q, String cardId) => QuizQuestion(
 /// writes them (with key concepts and a quiz) when it's on; otherwise
 /// they're suggested from the text for the user to add or skip. The free
 /// plan gets [kFreeSuggestedCardsPerMonth] a month.
-Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
+///
+/// With [fromText] (an imported PDF's text), the cards come from that text
+/// instead and are added to what the set already has; [note] is said after.
+Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck,
+    {String? fromText, String? note}) async {
   final left = _store.suggestedCardsLeft;
   if (left == 0) {
     await showPlusPrompt(context, PlusFeature.unlimitedSuggestions);
     return;
   }
   final ai = StudyAi.isOn;
-  String text = deck.sourceText;
+  final adding = fromText != null;
+  String text = fromText ?? deck.sourceText;
   StudyKit? kit;
   String? problem;
   try {
@@ -264,7 +270,7 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
       context,
       ai ? 'Making your flashcards…' : 'Reading your photos…',
       (cancel) async {
-        if (text.trim().isEmpty && deck.photoCount > 0) {
+        if (!adding && text.trim().isEmpty && deck.photoCount > 0) {
           final photos = <Uint8List>[];
           for (var i = 0; i < deck.photoCount; i++) {
             final bytes = await _store.readSetPhoto(deck, i);
@@ -290,11 +296,18 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
   }
   if (!context.mounted) return;
   if (text.trim().isEmpty) {
-    _toast(context, 'No text could be read from the photos.');
+    _toast(context, adding
+        ? 'No text was found in this PDF.'
+        : 'No text could be read from the photos.');
     return;
   }
   final current = _store.setById(deck.id);
   if (current == null) return;
+  // The set's text grows with each PDF, so cards can be made from all of it.
+  final sourceText = adding
+      ? [current.sourceText.trim(), text.trim()].where((t) => t.isNotEmpty).join('\n\n')
+      : text;
+  String said(String message) => note == null ? message : '$message $note';
   final fronts = {
     for (final c in current.cards) c.front.trim().toLowerCase(),
     for (final c in current.suggestions) c.front.trim().toLowerCase(),
@@ -314,20 +327,25 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
       for (final c in kit.cards)
         if (fronts.add(c.front.trim().toLowerCase())) c,
     ]);
+    final questions = [
+      for (final q in kit.quiz)
+        if (sameAs[q.cardId] case final id?) _about(q, id) else q,
+    ];
     _store.updateSet(current.copyWith(
       cards: [...current.cards, ...kept],
-      sourceText: text,
-      summary: kit.summary,
-      concepts: kit.concepts,
-      quiz: _quizFor([
-        for (final q in kit.quiz)
-          if (sameAs[q.cardId] case final id?) _about(q, id) else q,
-      ], [...current.cards, ...kept]),
+      sourceText: sourceText,
+      // A PDF added to a set keeps the set's own summary and concepts and
+      // adds its questions to the quiz.
+      summary: adding && current.summary.trim().isNotEmpty ? current.summary : kit.summary,
+      concepts: adding && current.concepts.isNotEmpty ? current.concepts : kit.concepts,
+      quiz: _quizFor(
+          adding ? [...current.quiz, ...questions] : questions,
+          [...current.cards, ...kept]),
     ));
     final made = kept.isEmpty
         ? 'No new cards to add.'
         : '${plural(kept.length, 'card')} added.';
-    _toast(context, dropped > 0 ? '$made $suggestionLimitNote' : made);
+    _toast(context, said(dropped > 0 ? '$made $suggestionLimitNote' : made));
     return;
   }
 
@@ -337,13 +355,36 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck) async {
   ]);
   _store.updateSet(current.copyWith(
     suggestions: [...current.suggestions, ...kept],
-    sourceText: text,
+    sourceText: sourceText,
   ));
   var made = kept.isEmpty
       ? 'No cards were found in the text.'
       : '${plural(kept.length, 'card')} suggested from the text.';
   if (dropped > 0) made = '$made $suggestionLimitNote';
-  _toast(context, problem == null ? made : '$problem $made');
+  _toast(context, said(problem == null ? made : '$problem $made'));
+}
+
+/// "Make Cards from a PDF" in a set's menu: cards from an imported PDF's
+/// text, added to the set (written by the study server when it's on,
+/// otherwise suggested from the text).
+Future<void> makeCardsFromPdf(BuildContext context, FlashcardSet deck) async {
+  if (_store.suggestedCardsLeft == 0) {
+    await showPlusPrompt(context, PlusFeature.unlimitedSuggestions);
+    return;
+  }
+  final pdf = await pickAndReadPdf(context);
+  if (pdf == null || !context.mounted) return;
+  if (pdf.text.trim().isEmpty) {
+    _toast(
+        context,
+        ScanService.canReadText
+            ? 'No text could be read from this PDF.'
+            : 'No text was found in this PDF. If it is scanned, import it in '
+                'the Android or iOS app, which can read scanned pages.');
+    return;
+  }
+  await makeCardsForSet(context, deck,
+      fromText: pdf.text, note: pdf.more ? kPdfPagesLeftOut : null);
 }
 
 /// A new flashcard set from a note's text, in the note's folder. The free

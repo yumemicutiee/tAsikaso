@@ -120,6 +120,8 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
+0.6.0  22 Nov  Import PDF: a PDF (slides, handouts, scanned) saved as a note,
+               a Text PDF or flashcards; Make Cards from a PDF in a set
 0.5.2  22 Nov  QA fixes (typed quiz answers judged strictly, alarm notice after
                updating, web works without CDNs, and more), the tAsikaso logo
 0.5.1  18 Nov  When Time Is Up (alarm/vibration/both/off), privacy policy,

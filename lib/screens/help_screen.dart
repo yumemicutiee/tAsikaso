@@ -6,6 +6,7 @@ import '../theme/brand.dart';
 import '../widgets/app_header.dart';
 import '../widgets/app_logo.dart';
 import 'actions.dart';
+import 'capture/pdf_import.dart' show kPdfImportPageLimit;
 
 Future<void> openHelp(BuildContext context) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const HelpScreen()),
@@ -46,6 +47,15 @@ class HelpScreen extends StatelessWidget {
           'internet needed). Notes become searchable, and "View Text" lets '
           'you copy it or make flashcards. Without Smart Study, cards are '
           'suggested from lines like "Term: definition" for you to add or skip.',
+    ),
+    (
+      'Can I turn a PDF into notes or flashcards?',
+      'Yes. Tap + and choose Import PDF (or the PDF button on the camera '
+          'screen), then save it as a PDF, a Text PDF or flashcards. Lecture '
+          'slides and handouts work everywhere; scanned PDFs are read on '
+          'Android and iOS. The first $kPdfImportPageLimit pages are read. '
+          'To add cards to a set you already have, open the set and choose '
+          'Make Cards from a PDF.',
     ),
     (
       'What is Smart Study?',

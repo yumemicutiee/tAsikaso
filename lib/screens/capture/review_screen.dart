@@ -117,21 +117,21 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 
   Future<void> _openSaveSheet() async {
-    final request = await showModalBottomSheet<_SaveRequest>(
+    final request = await showModalBottomSheet<SaveRequest>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _SaveSheet(pageCount: _pages.length),
+      builder: (_) => SaveSheet(pageCount: _pages.length),
     );
     if (request == null || !mounted) return;
     await _save(request);
   }
 
-  Future<void> _save(_SaveRequest request) async {
+  Future<void> _save(SaveRequest request) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final store = AppStore.instance;
     final format = request.format;
-    final asCards = format == _SaveFormat.flashcards;
+    final asCards = format == SaveFormat.flashcards;
     final progress = ValueNotifier<String>(
         asCards ? 'Preparing your photos…' : 'Creating your PDF…');
     // Cancel is offered while the study server works (the one long wait).
@@ -202,7 +202,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           onCancel.value = null;
         }
       }
-      if (format == _SaveFormat.textPdf &&
+      if (format == SaveFormat.textPdf &&
           text.trim().isEmpty &&
           (kit == null || kit.notes.trim().isEmpty)) {
         throw const _NoTextException();
@@ -258,7 +258,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       progress.value = 'Creating your PDF…';
       final Uint8List pdf;
       final int pageCount;
-      if (format == _SaveFormat.textPdf) {
+      if (format == SaveFormat.textPdf) {
         final body = (kit?.notes.trim().isNotEmpty ?? false) ? kit!.notes : text;
         pdf = await buildTextPdf(
           title: request.title,
@@ -644,12 +644,13 @@ class _ToolButton extends StatelessWidget {
   }
 }
 
-/// Scan PDF: the pages as photos with a hidden text layer. Text PDF: the
-/// notes typed up. Flashcards: a set with the photos to write cards from.
-enum _SaveFormat { scanPdf, textPdf, flashcards }
+/// Scan PDF: the pages as photos with a hidden text layer (for an imported
+/// PDF: the PDF as it is). Text PDF: the notes typed up. Flashcards: a set
+/// with the photos (or the PDF's pages) to write cards from.
+enum SaveFormat { scanPdf, textPdf, flashcards }
 
-class _SaveRequest {
-  const _SaveRequest({
+class SaveRequest {
+  const SaveRequest({
     required this.title,
     required this.folder,
     required this.format,
@@ -659,20 +660,40 @@ class _SaveRequest {
 
   /// Null when the user has no folders yet ("My Notes" is created).
   final StudyFolder? folder;
-  final _SaveFormat format;
+  final SaveFormat format;
 }
 
-/// Bottom sheet: PDF or Flashcards, a title, and a folder.
-class _SaveSheet extends StatefulWidget {
-  const _SaveSheet({required this.pageCount});
+/// Bottom sheet: PDF or Flashcards, a title, and a folder. For scanned pages,
+/// or (with [pdfName]) for an imported PDF.
+class SaveSheet extends StatefulWidget {
+  const SaveSheet({
+    super.key,
+    required this.pageCount,
+    this.pdfName,
+    this.pdfHasText = false,
+    this.defaultTitle,
+    this.notice,
+  });
 
   final int pageCount;
 
+  /// The imported PDF's file name; null for scanned pages.
+  final String? pdfName;
+
+  /// Text was found in the imported PDF.
+  final bool pdfHasText;
+
+  /// The title used when none is typed; null: "{Folder} Notes {date}".
+  final String? defaultTitle;
+
+  /// Something to know, shown under the title (e.g. not every page was read).
+  final String? notice;
+
   @override
-  State<_SaveSheet> createState() => _SaveSheetState();
+  State<SaveSheet> createState() => _SaveSheetState();
 }
 
-class _SaveSheetState extends State<_SaveSheet> {
+class _SaveSheetState extends State<SaveSheet> {
   final List<StudyFolder> _folders = [...AppStore.instance.recentFolders(1000)];
   late StudyFolder? _folder = _folders.isEmpty ? null : _folders.first;
 
@@ -686,7 +707,7 @@ class _SaveSheetState extends State<_SaveSheet> {
       _folder = folder;
     });
   }
-  _SaveFormat _format = _SaveFormat.scanPdf;
+  SaveFormat _format = SaveFormat.scanPdf;
   final _title = TextEditingController();
 
   @override
@@ -696,14 +717,15 @@ class _SaveSheetState extends State<_SaveSheet> {
   }
 
   String _defaultTitle() {
+    if (widget.defaultTitle case final title?) return title;
     final name = _folder?.name ?? 'My';
-    final kind = _format == _SaveFormat.flashcards ? 'Cards' : 'Notes';
+    final kind = _format == SaveFormat.flashcards ? 'Cards' : 'Notes';
     return '$name $kind ${formatNoteDate(DateTime.now())}';
   }
 
   void _submit() {
     final typed = _title.text.trim();
-    Navigator.of(context).pop(_SaveRequest(
+    Navigator.of(context).pop(SaveRequest(
       title: typed.isEmpty ? _defaultTitle() : typed,
       folder: _folder,
       format: _format,
@@ -713,8 +735,10 @@ class _SaveSheetState extends State<_SaveSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final pdf = _format != _SaveFormat.flashcards;
-    final canReadText = ScanService.canReadText;
+    final pdf = _format != SaveFormat.flashcards;
+    final fromPdf = widget.pdfName != null;
+    // Scanned pages: whether this device reads text. A PDF: whether it had any.
+    final canReadText = fromPdf ? widget.pdfHasText : ScanService.canReadText;
     final ai = StudyAi.isOn;
 
     return Padding(
@@ -725,37 +749,63 @@ class _SaveSheetState extends State<_SaveSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SheetTitle('Save Notes As', subtitle: plural(widget.pageCount, 'page')),
+            SheetTitle(
+              fromPdf ? 'Import PDF' : 'Save Notes As',
+              subtitle: [
+                plural(widget.pageCount, 'page'),
+                if (fromPdf && !canReadText) 'no text found',
+              ].join(' · '),
+            ),
+            if (widget.notice case final notice?) ...[
+              const SizedBox(height: 6),
+              Text(notice, style: AppText.itemMeta),
+            ],
             const SizedBox(height: 14),
             _FormatOption(
-              icon: AppIcons.scan,
-              title: 'Scan PDF',
-              subtitle: canReadText
-                  ? 'Your pages as photos; the text can be selected and searched'
-                  : 'Your pages as photos, all in one file',
-              selected: _format == _SaveFormat.scanPdf,
-              onTap: () => setState(() => _format = _SaveFormat.scanPdf),
+              icon: fromPdf ? AppIcons.pdf : AppIcons.scan,
+              title: fromPdf ? 'PDF' : 'Scan PDF',
+              subtitle: fromPdf
+                  ? (canReadText
+                      ? 'Your PDF as it is; its text can be searched'
+                      : 'Your PDF as it is')
+                  : canReadText
+                      ? 'Your pages as photos; the text can be selected and searched'
+                      : 'Your pages as photos, all in one file',
+              selected: _format == SaveFormat.scanPdf,
+              onTap: () => setState(() => _format = SaveFormat.scanPdf),
             ),
             const SizedBox(height: 8),
             _FormatOption(
               icon: AppIcons.text,
               title: 'Text PDF',
               subtitle: !canReadText
-                  ? 'Needs text recognition (Android or iOS)'
+                  ? (fromPdf
+                      ? 'No text was found in this PDF'
+                      : 'Needs text recognition (Android or iOS)')
                   : ai
-                      ? 'Your notes typed up cleanly, with key concepts'
-                      : 'The text read from your pages, as a document',
-              selected: _format == _SaveFormat.textPdf,
+                      ? (fromPdf
+                          ? 'Typed up cleanly, with key concepts'
+                          : 'Your notes typed up cleanly, with key concepts')
+                      : (fromPdf
+                          ? 'The text of your PDF, as a document'
+                          : 'The text read from your pages, as a document'),
+              selected: _format == SaveFormat.textPdf,
               enabled: canReadText,
-              onTap: () => setState(() => _format = _SaveFormat.textPdf),
+              onTap: () => setState(() => _format = SaveFormat.textPdf),
             ),
             const SizedBox(height: 8),
             _FormatOption(
               icon: AppIcons.flashcards,
               title: 'Flashcards',
               subtitle: (ai && canReadText
-                      ? 'Cards and a quiz made from your notes'
-                      : 'Write cards while looking at your photos') +
+                      ? (fromPdf
+                          ? 'Cards and a quiz made from your PDF'
+                          : 'Cards and a quiz made from your notes')
+                      : fromPdf
+                          ? (canReadText
+                              ? 'Cards suggested from its text'
+                              : 'Write cards while looking at its pages')
+                          : 'Write cards while looking at your photos') +
                   // Where no text is read (the web), no cards are
                   // suggested, so the monthly allowance doesn't apply.
                   switch (canReadText ? AppStore.instance.suggestedCardsLeft : null) {
@@ -765,7 +815,7 @@ class _SaveSheetState extends State<_SaveSheet> {
                       ' · $left of $kFreeSuggestedCardsPerMonth suggested cards left this month',
                   },
               selected: !pdf,
-              onTap: () => setState(() => _format = _SaveFormat.flashcards),
+              onTap: () => setState(() => _format = SaveFormat.flashcards),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -856,7 +906,11 @@ class _SaveSheetState extends State<_SaveSheet> {
             ),
             const SizedBox(height: 20),
             AccentButton(
-              label: pdf ? 'Save as PDF' : 'Make Flashcards',
+              label: !pdf
+                  ? 'Make Flashcards'
+                  : fromPdf && _format == SaveFormat.scanPdf
+                      ? 'Save PDF'
+                      : 'Save as PDF',
               onPressed: _submit,
             ),
           ],

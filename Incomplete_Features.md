@@ -338,3 +338,25 @@ Android 13 themed) in the default Navy & Sky colors from
 `tool/android_icon/`, copied by `tool/setup_android.dart`; web icons,
 favicon and manifest; in the app (`widgets/app_logo.dart`, Settings → About
 and the licenses page) it follows the chosen App Color.
+
+## 14. Import PDF (0.6.0, 22 Nov)
+
+Pick a PDF from + → Import PDF, the PDF button on the camera screen, or a
+set's ⋮ → Make Cards from a PDF (`lib/screens/capture/pdf_import.dart`).
+
+- The first 30 pages are read (`kPdfImportPageLimit`); files over 60 MB are
+  refused. Pages are rendered with the printing package (150 dpi JPEGs on
+  white) for the thumbnail and a set's photos.
+- Text: on Android and iOS every page is read with ML Kit, so slides,
+  handouts and scanned PDFs all work offline. On the web the PDF's own text
+  layer is read with pdf.js (`window.tasikasoPdfText` in `web/index.html`);
+  a scanned PDF has none there, and the sheet says so.
+- Saved as: the PDF as it is (whole file, text kept for search), a Text PDF
+  (typed up by Smart Study) or a flashcard set (cards and a quiz from Smart
+  Study, or cards suggested from the text). Free plan: the 20 suggested
+  cards a month apply, as for scans.
+- Into an existing set, the PDF's text is added to the set's text; its
+  cards and quiz questions are added, the set's summary and concepts kept.
+
+Still to check on a real phone: reading speed on a 30-page PDF, and very
+large pages (posters, A3) at 150 dpi.

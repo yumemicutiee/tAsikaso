@@ -51,6 +51,7 @@ class SetScreen extends StatelessWidget {
           if (canMakeCards)
             (StudyAi.isOn ? 'Make Cards with AI' : 'Suggest Cards from Photos'):
                 () => makeCardsForSet(context, deck),
+          'Make Cards from a PDF': () => makeCardsFromPdf(context, deck),
           ...setActions(context, deck, onDeleted: () {
             if (context.mounted) Navigator.of(context).pop();
           })

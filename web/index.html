@@ -55,6 +55,38 @@
        this site (web/pdfjs/) instead of unpkg.com. -->
   <script>
     window.dartPdfJsBaseUrl = new URL('pdfjs/', document.baseURI).href;
+
+    // Import PDF on the web: the text of the first pages of a PDF (its text
+    // layer; a scanned PDF has none), pages separated by a blank line.
+    // Called from lib/screens/capture/pdf_text_web.dart.
+    window.tasikasoPdfText = async function (data, maxPages) {
+      const base = window.dartPdfJsBaseUrl;
+      const pdfjs = await import(base + 'pdf.min.mjs');
+      if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+        pdfjs.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.mjs';
+      }
+      // A copy: pdf.js hands its buffer to the worker.
+      const doc = await pdfjs.getDocument({ data: data.slice() }).promise;
+      try {
+        const pages = [];
+        const n = Math.min(doc.numPages, maxPages);
+        for (let i = 1; i <= n; i++) {
+          const page = await doc.getPage(i);
+          const content = await page.getTextContent();
+          let text = '';
+          for (const item of content.items) {
+            if (typeof item.str !== 'string') continue;
+            text += item.str;
+            if (item.hasEOL) text += '\n';
+          }
+          text = text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+          if (text) pages.push(text);
+        }
+        return pages.join('\n\n');
+      } finally {
+        await doc.destroy();
+      }
+    };
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

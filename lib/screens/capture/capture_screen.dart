@@ -8,6 +8,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_icons.dart';
 import '../../utils/format.dart';
 import 'captured_page.dart';
+import 'pdf_import.dart' show importPdf;
 import 'review_screen.dart';
 
 enum CaptureMode { single, multiple }
@@ -334,15 +335,30 @@ class _CaptureScreenState extends State<CaptureScreen>
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(AppIcons.close, color: Colors.white),
                     ),
-                    const Spacer(),
-                    _ModeToggle(
-                      mode: _mode,
-                      onChanged: (m) => setState(() {
-                        _mode = m;
-                        if (m == CaptureMode.single) _pages.clear();
-                      }),
+                    // Balances the two buttons on the right, so the toggle
+                    // stays centred.
+                    const SizedBox(width: 48),
+                    Expanded(
+                      child: Center(
+                        // Shrinks rather than overflow on a narrow phone
+                        // or with large text.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: _ModeToggle(
+                            mode: _mode,
+                            onChanged: (m) => setState(() {
+                              _mode = m;
+                              if (m == CaptureMode.single) _pages.clear();
+                            }),
+                          ),
+                        ),
+                      ),
                     ),
-                    const Spacer(),
+                    IconButton(
+                      tooltip: 'Import PDF',
+                      onPressed: _busy ? null : () => importPdf(context),
+                      icon: const Icon(AppIcons.pdf, color: Colors.white),
+                    ),
                     IconButton(
                       tooltip: _flashOn ? 'Flash On' : 'Flash Off',
                       onPressed: _toggleFlash,
