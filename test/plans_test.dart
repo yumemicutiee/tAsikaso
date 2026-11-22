@@ -6,24 +6,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:image/image.dart' as img;
 
 import 'package:study_app/data/app_store.dart';
 import 'package:study_app/data/plans.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/screens/analysis_screen.dart';
 import 'package:study_app/screens/backup_screen.dart';
-import 'package:study_app/screens/capture/captured_page.dart';
-import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/flashcards/set_screen.dart';
+import 'package:study_app/screens/note_viewer_screen.dart';
 import 'package:study_app/screens/plans_screen.dart';
 import 'package:study_app/services/drive_store.dart';
 import 'package:study_app/services/drive_sync.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/app_colors.dart';
-
-import 'support/read_pages.dart';
 
 List<Flashcard> cards(int n, [String prefix = 'c']) => [
       for (var i = 0; i < n; i++)
@@ -167,34 +163,21 @@ void main() {
       expect(store.suggestedCardsLeft, 0);
     });
 
-    Future<void> saveScanAsFlashcards(WidgetTester tester) async {
+    /// Make Flashcards on a note's text, as a new set where the note is.
+    Future<void> makeCardsFromNote(WidgetTester tester) async {
       usePhoneSize(tester);
-      ScanService.debugRead = (jpegs) async => [
-            for (final _ in jpegs)
-              const RecognizedPage(lines: [
-                RecognizedLine(
-                    text: 'Osmosis: water across a membrane',
-                    left: 0, top: 0, right: 10, bottom: 10),
-                RecognizedLine(
-                    text: 'Diffusion - particles spread out',
-                    left: 0, top: 20, right: 10, bottom: 30),
-              ]),
-          ];
-      final image = img.Image(width: 40, height: 30);
-      final page = CapturedPage(
-          id: 1, bytes: img.encodePng(image), width: 40, height: 30);
-      await tester.pumpWidget(MaterialApp(home: ReviewScreen(pages: [page])));
-      await tapNextAndRead(tester);
-      await tester.tap(find.text('Flashcards'));
-      await tester.pump();
+      final note = await store.addNote(
+        title: 'Transport',
+        folderId: store.folders.first.id,
+        pdf: Uint8List(0),
+        thumbnail: Uint8List(0),
+        pageCount: 1,
+        text: 'Osmosis: water across a membrane\n'
+            'Diffusion - particles spread out',
+        textNote: true,
+      );
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
       await tester.tap(find.text('Make Flashcards'));
-      await tester.pump();
-      await tester.runAsync(() async {
-        for (var i = 0; i < 150 && store.sets.isEmpty; i++) {
-          await Future<void>.delayed(const Duration(milliseconds: 100));
-          await tester.pump();
-        }
-      });
       await tester.pumpAndSettle();
     }
 
@@ -208,12 +191,10 @@ void main() {
           });
       store.takeSuggestedCards(cards(20));
 
-      await saveScanAsFlashcards(tester);
+      await makeCardsFromNote(tester);
       expect(requests, isEmpty);
-      final deck = store.sets.single;
-      expect(deck.cards, isEmpty);
-      expect(deck.suggestions, isEmpty);
-      expect(find.textContaining('suggested cards are used up'), findsOneWidget);
+      expect(store.sets, isEmpty);
+      expect(find.text('Unlimited Suggested Cards'), findsOneWidget);
     });
 
     testWidgets('some left: only that many are asked for and kept',
@@ -241,7 +222,9 @@ void main() {
           });
       store.takeSuggestedCards(cards(17));
 
-      await saveScanAsFlashcards(tester);
+      await makeCardsFromNote(tester);
+      await tester.tap(find.text('Make Flashcards').last); // on the sheet
+      await tester.pumpAndSettle();
       expect(asked, [3]);
       expect(store.sets.single.cards.length, 3); // the server sent 5
       expect(store.suggestedCardsLeft, 0);

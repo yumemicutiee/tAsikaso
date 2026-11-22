@@ -204,9 +204,9 @@ void main() {
         pdf);
   });
 
-  testWidgets('the camera takes a photo that is read and saved with a set',
+  testWidgets('the camera takes a photo that is read and saved as notes',
       (tester) async {
-    final known = {for (final s in store.sets) s.id};
+    final known = {for (final n in store.notes) n.id};
     await tester.pumpWidget(const StudyApp());
     await tester.pumpAndSettle();
     await tester.tap(find.byType(CameraButton));
@@ -226,21 +226,14 @@ void main() {
 
     await nextAndRead(tester, shotName: '6b-reading');
     await shot(tester, '7-save-sheet');
-    // The camera's test pattern has no text: kept with a set, to write
-    // cards while looking at it.
-    await tester.tap(find.text('Flashcards'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Make Flashcards'));
-    final waited = Stopwatch()..start();
-    bool isNew(FlashcardSet s) => !known.contains(s.id);
-    while (waited.elapsed < const Duration(seconds: 90) &&
-        !store.sets.any(isNew)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      await tester.pump();
-    }
-    final saved = store.sets.singleWhere(isNew);
-    expect(saved.photoCount, 1);
-    expect((await store.readSetPhoto(saved, 0))!.length, greaterThan(1000));
+    // The camera's test pattern has no text: the photo is still kept, for
+    // the notes to be typed in with Edit.
+    await tester.tap(find.text('Save Notes').last);
+    await waitFor(tester, find.byType(NoteTextScreen),
+        timeout: const Duration(seconds: 90));
+    final saved = store.notes.singleWhere((n) => !known.contains(n.id));
+    expect(saved.pageCount, 1);
+    expect((await store.readPdf(saved))!.length, greaterThan(1000));
     await tester.pumpAndSettle();
     await shot(tester, '7b-saved');
   });
@@ -268,19 +261,12 @@ void main() {
     await shot(tester, '8-gallery-crop');
 
     await nextAndRead(tester);
-    await tester.tap(find.text('Flashcards'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Make Flashcards'));
-    bool isNew(FlashcardSet s) => !known.contains(s.id);
-    final waited = Stopwatch()..start();
-    while (waited.elapsed < const Duration(seconds: 90) &&
-        !store.sets.any(isNew)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      await tester.pump();
-    }
-    final saved = store.sets.singleWhere(isNew);
-    expect(saved.photoCount, 1);
-    expect((await store.readSetPhoto(saved, 0))!.length, greaterThan(10000));
+    await tester.tap(find.text('Save Notes').last);
+    await waitFor(tester, find.byType(NoteTextScreen),
+        timeout: const Duration(seconds: 90));
+    final saved = store.notes.singleWhere((n) => !known.contains(n.id));
+    expect(saved.pageCount, 1);
+    expect((await store.readPdf(saved))!.length, greaterThan(10000));
     await tester.pumpAndSettle();
   });
 
@@ -317,19 +303,17 @@ void main() {
     await tester.pumpAndSettle();
     await nextAndRead(tester, shotName: '10b-reading');
 
-    // What was read shows; Text Notes are the first choice; the folder is
-    // picked here.
-    expect(find.textContaining('words read'), findsOneWidget);
-    expect(find.text('Save as Notes'), findsOneWidget);
+    // After reading, only the folder is asked.
+    expect(find.text('Text Notes'), findsNothing);
+    expect(find.text('Flashcards'), findsNothing);
     await tester.tap(find.byType(DropdownButtonFormField<StudyFolder>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Chemistry Check').last);
     await tester.pumpAndSettle();
-    await shot(tester, '11-save-as-notes');
-    await tester.tap(find.text('Save as Notes'));
+    await shot(tester, '11-save-notes');
+    await tester.tap(find.text('Save Notes').last);
     await waitFor(tester, find.byType(NoteTextScreen),
-        timeout: const Duration(seconds: 90),
-        failsOn: find.textContaining("can't be saved as Text Notes"));
+        timeout: const Duration(seconds: 90));
     await tester.pumpAndSettle();
     await shot(tester, '12-text-notes');
 
@@ -493,7 +477,8 @@ void main() {
         throwsA(isA<StudyAiException>().having((e) => e.code, 'code', 'offline')));
 
     // The whole way through the screens: a photo of notes from the gallery
-    // → read on the phone (ML Kit) → sent to the server → a flashcard set.
+    // → read on the phone (ML Kit) → typed up by the server → saved as
+    // notes → Make Flashcards → cards from the server.
     useServer(url, 'emulator-token');
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/notes_for_ai.jpg');
@@ -516,10 +501,20 @@ void main() {
         timeout: const Duration(seconds: 90));
     await tester.pumpAndSettle();
     await nextAndRead(tester);
-    await tester.tap(find.text('Flashcards').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Make Flashcards'));
+    final knownNotes = {for (final n in store.notes) n.id};
     final waited = Stopwatch()..start();
+    await tester.tap(find.text('Save Notes').last);
+    await waitFor(tester, find.byType(NoteTextScreen),
+        timeout: const Duration(seconds: 120));
+    await tester.pumpAndSettle();
+    final note = store.notes.singleWhere((n) => !knownNotes.contains(n.id));
+    expect(note.cleanText, contains('Mitochondria'),
+        reason: 'typed up by Claude via the server');
+    expect(note.summary, contains('E2E summary'));
+    await tester.tap(find.text('Make Flashcards'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Make Flashcards').last); // a new set
+
     bool isNew(FlashcardSet s) => !knownSets.contains(s.id);
     while (waited.elapsed < const Duration(seconds: 120) && !store.sets.any(isNew)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -532,6 +527,7 @@ void main() {
     expect(made.summary, contains('E2E summary'));
     expect(made.sourceText, contains('Mitochondria'),
         reason: 'the photo was read on the phone first');
+    expect(made.folderId, note.folderId);
     await tester.pumpAndSettle();
     await shot(tester, '10-smart-study-set');
   });
@@ -573,7 +569,7 @@ void main() {
     await nextAndRead(tester, timeout: const Duration(minutes: 4));
     final read = took.elapsedMilliseconds - imported;
     // Text Notes: the text of all 12 pages, with the photos kept.
-    await tester.tap(find.text('Save as Notes'));
+    await tester.tap(find.text('Save Notes').last);
     bool isNew(Note n) => !known.contains(n.id);
     while (took.elapsed < const Duration(minutes: 6) && !store.notes.any(isNew)) {
       await Future<void>.delayed(const Duration(milliseconds: 250));

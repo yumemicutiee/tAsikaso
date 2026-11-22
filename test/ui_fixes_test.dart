@@ -372,7 +372,7 @@ void main() {
           tester.element(find.byType(ReviewScreen)),
           title: "Couldn't Save",
           message: 'The device is full.'));
-      await tester.tap(find.text('Save as Notes'));
+      await tester.tap(find.text('Save Notes').last);
       await tester.pump();
       await tester.runAsync(() async {
         for (var i = 0; i < 150; i++) {

@@ -93,19 +93,23 @@ void main() {
   }
 
   group('Save Notes As', () {
-    testWidgets('offers Text Notes and Flashcards (no Scan PDF)', (tester) async {
+    testWidgets('after Next, the sheet only asks for the folder', (tester) async {
+      readsText();
       await openSaveSheet(tester);
-      expect(find.text('Text Notes'), findsOneWidget);
-      expect(find.text('Flashcards'), findsOneWidget);
-      expect(find.text('Scan PDF'), findsNothing);
-      // Text Notes come first.
-      expect(tester.getTopLeft(find.text('Text Notes')).dy,
-          lessThan(tester.getTopLeft(find.text('Flashcards')).dy));
-      // No text recognition here (as on the web), so Text Notes can't be
-      // chosen: Flashcards are picked.
-      expect(find.text('Needs text recognition (Android or iOS)'), findsOneWidget);
-      expect(find.text('Text is read in the phone app'), findsOneWidget);
-      expect(find.text('Make Flashcards'), findsOneWidget);
+      expect(find.text('Save Notes'), findsNWidgets(2)); // the title and button
+      expect(find.text('1 page'), findsOneWidget);
+      expect(find.text("Saved in the folder's Notebook"), findsOneWidget);
+      expect(find.byType(DropdownButtonFormField<StudyFolder>), findsOneWidget);
+      for (final gone in ['Text Notes', 'Flashcards', 'Scan PDF', 'Title']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      expect(find.textContaining('words read'), findsNothing);
+    });
+
+    testWidgets('where text is not read (the web), the sheet says so',
+        (tester) async {
+      await openSaveSheet(tester);
+      expect(find.text('1 page · text is read in the phone app'), findsOneWidget);
     });
 
     testWidgets('Next shows the pages being read, then what was read',
@@ -129,9 +133,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ReadingScreen), findsNothing);
-      expect(find.text('11 words read'), findsOneWidget);
-      expect(find.textContaining('Osmosis: movement of water'), findsOneWidget);
-      expect(find.text('Save as Notes'), findsOneWidget);
+      expect(find.byType(SaveSheet), findsOneWidget);
 
       // Closing the sheet and tapping Next again doesn't read them again.
       var reads = 0;
@@ -144,7 +146,7 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(reads, 0);
-      expect(find.text('11 words read'), findsOneWidget);
+      expect(find.byType(SaveSheet), findsOneWidget);
     });
 
     testWidgets('Cancel on the reading screen goes back to the pages',
@@ -162,18 +164,17 @@ void main() {
       expect(find.byType(ReviewScreen), findsOneWidget);
     });
 
-    testWidgets('Text Notes are picked when the text can be read, and open on '
+    testWidgets('saved as Text Notes titled from their first line, opened on '
         'the text with the pages kept', (tester) async {
       readsText();
       await openSaveSheet(tester);
-      expect(find.text('Save as Notes'), findsOneWidget);
-      expect(find.text("Saved in the folder's Notebook"), findsOneWidget);
-      await tester.tap(find.text('Save as Notes'));
+      await tester.tap(find.text('Save Notes').last);
       await tester.pump();
       await waitFor(tester, () => store.notes.isNotEmpty);
 
       final note = store.notes.single;
       expect(note.textNote, isTrue);
+      expect(note.title, 'Osmosis: movement of water across a membrane');
       expect(note.text, ocrText);
       expect(note.pageCount, 1);
       // The photos are kept as the note's PDF.
@@ -202,86 +203,19 @@ void main() {
         },
       });
       await openSaveSheet(tester);
-      await tester.tap(find.text('Text Notes'));
-      await tester.pump();
-      await tester.tap(find.text('Save as Notes'));
+      await tester.tap(find.text('Save Notes').last);
       await tester.pump();
       await waitFor(tester, () => store.notes.isNotEmpty);
 
       final note = store.notes.single;
       expect(note.textNote, isTrue);
+      expect(note.title, 'Transport'); // the study server's title
       expect(note.cleanText, startsWith('# Transport'));
       expect(note.summary, 'How things move.');
       expect(note.concepts.single.term, 'Osmosis');
       expect(note.displayText, note.cleanText);
       expect(note.pageCount, 1);
       expect(find.text('Key Concepts'), findsOneWidget);
-    });
-
-    testWidgets('flashcards come from the study server when it is on',
-        (tester) async {
-      readsText();
-      serverAnswers(200, {
-        'kit': {
-          'title': 'Transport',
-          'summary': 'How things move.',
-          'notes': '# Transport',
-          'concepts': [
-            {'term': 'Osmosis', 'explanation': 'Water through a membrane.'},
-          ],
-          'cards': [
-            {'front': 'What is osmosis?', 'back': 'Water moving across a membrane'},
-            {'front': 'What is diffusion?', 'back': 'Particles spreading out'},
-          ],
-          'quiz': [
-            {
-              'type': 'typed',
-              'prompt': 'What is osmosis?',
-              'options': <String>[],
-              'answerIndex': -1,
-              'answer': 'Water moving across a membrane',
-              'acceptable': <String>[],
-              'explanation': '',
-              'cardIndex': 0,
-            },
-          ],
-        },
-      });
-      await openSaveSheet(tester);
-      await tester.tap(find.text('Flashcards'));
-      await tester.pump();
-      await tester.tap(find.text('Make Flashcards'));
-      await tester.pump();
-      await waitFor(tester, () => store.sets.isNotEmpty);
-
-      final deck = store.sets.single;
-      expect(deck.cards.length, 2);
-      expect(deck.suggestions, isEmpty);
-      expect(deck.concepts.single.term, 'Osmosis');
-      expect(deck.quiz.single.cardId, deck.cards.first.id);
-      expect(deck.sourceText, ocrText);
-      expect(find.byType(SetScreen), findsOneWidget);
-      expect(find.textContaining('2 flashcards made for you'), findsOneWidget);
-    });
-
-    testWidgets('when the study server fails, cards are suggested from the '
-        'text instead', (tester) async {
-      readsText();
-      serverAnswers(500, {
-        'error': {'code': 'upstream', 'message': 'Claude returned an error.'},
-      });
-      await openSaveSheet(tester);
-      await tester.tap(find.text('Flashcards'));
-      await tester.pump();
-      await tester.tap(find.text('Make Flashcards'));
-      await tester.pump();
-      await waitFor(tester, () => store.sets.isNotEmpty);
-
-      final deck = store.sets.single;
-      expect(deck.cards, isEmpty);
-      expect(deck.suggestions.map((c) => c.front), ['Osmosis', 'Diffusion']);
-      expect(find.textContaining('Claude returned an error.'), findsOneWidget);
-      expect(find.textContaining('suggested from the text instead'), findsOneWidget);
     });
   });
 

@@ -11,26 +11,18 @@ import '../../services/study_ai.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_icons.dart';
 import '../../theme/app_theme.dart';
-import '../../utils/card_suggestions.dart';
 import '../../utils/format.dart';
 import '../../widgets/common.dart';
 import '../../widgets/choices.dart';
 import '../../widgets/dialogs.dart';
-import '../actions.dart' show cardsToAskFor, suggestionLimitNote;
-import '../flashcards/set_screen.dart';
 import '../note_viewer_screen.dart';
 import 'captured_page.dart';
 import 'notes_pdf.dart';
 import 'reading_screen.dart';
 
-/// Text Notes need text, and none could be read from the pages.
-class _NoTextException implements Exception {
-  const _NoTextException();
-}
-
 /// Review captured pages: rotate and crop each one by dragging its four
 /// corners. Next reads their text ([ReadingScreen]), then they're saved as
-/// Text Notes or Flashcards in a folder.
+/// Text Notes in the folder picked.
 ///
 /// Pops with the remaining pages when the user goes back to take more.
 ///
@@ -139,16 +131,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
     await _save(request, read);
   }
 
+  /// Saves the pages as Text Notes in the folder picked, then opens them
+  /// on their text. With Smart Study on, the text is typed up first.
   Future<void> _save(SaveRequest request, ReadPages read) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final store = AppStore.instance;
-    final format = request.format;
-    final asCards = format == SaveFormat.flashcards;
-    final progress = ValueNotifier<String>(
-        asCards ? 'Saving your photos…' : 'Saving your notes…');
+    final progress = ValueNotifier<String>('Saving your notes…');
     // Cancel is offered while the study server works (the one long wait).
-    // It skips the AI step; the pages are still saved.
+    // It skips the AI step; the notes are still saved.
     final onCancel = ValueNotifier<VoidCallback?>(null);
 
     Route<Object?>? dialog; // to close this one, not one opened on top
@@ -161,12 +152,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
       },
     );
 
-    void toast(String text, {SnackBarAction? action}) => messenger
+    void toast(String text) => messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         content: Text(text),
         showCloseIcon: true,
-        action: action,
         duration: Duration(seconds: text.length > 60 ? 8 : 4),
       ));
 
@@ -175,30 +165,25 @@ class _ReviewScreenState extends State<ReviewScreen> {
       // Let the progress dialog appear before the work starts.
       await WidgetsBinding.instance.endOfFrame;
       // Cropped and read on the reading screen (on the phone, no
-      // internet). The text is the note, and what cards are made from.
+      // internet).
       final jpegs = read.jpegs;
       final pages = read.pages;
       final text = read.text;
 
       // The study server (Claude) types the notes up and picks out key
-      // concepts; for flashcards it writes the cards and a quiz too. The
-      // free plan's suggested cards for the month cap how many it writes;
-      // once they're used up, it isn't asked for cards at all.
-      final left = store.suggestedCardsLeft;
-      final cardsUsedUp = asCards && left == 0;
+      // concepts. Cards are made later, from the note.
       StudyKit? kit;
       String? aiProblem;
-      if (StudyAi.isOn && text.trim().length >= 20 && !cardsUsedUp) {
-        progress.value =
-            asCards ? 'Making your flashcards…' : 'Typing up your notes…';
+      if (StudyAi.isOn && text.trim().length >= 20) {
+        progress.value = 'Typing up your notes…';
         final cancel = CancelToken();
         onCancel.value = cancel.cancel;
         try {
           kit = await StudyAi.makeStudyKit(
             text: text,
             title: request.title,
-            maxCards: asCards ? cardsToAskFor(left) : 0,
-            quizCount: asCards ? 12 : 0,
+            maxCards: 0,
+            quizCount: 0,
             cancel: cancel,
           );
         } on StudyAiException catch (e) {
@@ -208,71 +193,25 @@ class _ReviewScreenState extends State<ReviewScreen> {
           onCancel.value = null;
         }
       }
-      if (format == SaveFormat.textNotes &&
-          text.trim().isEmpty &&
-          (kit == null || kit.notes.trim().isEmpty)) {
-        throw const _NoTextException();
-      }
 
       final folder = request.folder ??
           (created = store.addFolder('My Notes', AppColors.folderPalette.first));
+      final title = switch (kit?.title.trim()) {
+        final t? when t.isNotEmpty && t.length <= 60 => t,
+        _ => titleFromText(text) ?? request.title,
+      };
 
-      if (asCards) {
-        final (kept: cards, dropped: droppedCards) =
-            store.takeSuggestedCards(kit?.cards ?? const <Flashcard>[]);
-        final (kept: suggestions, dropped: droppedSuggestions) =
-            kit == null && !cardsUsedUp
-                ? store.takeSuggestedCards(suggestCards(text))
-                : (kept: const <Flashcard>[], dropped: 0);
-        final ids = {for (final c in cards) c.id};
-        final deck = await store.addSet(
-          title: request.title,
-          folderId: folder.id,
-          photos: jpegs,
-          cards: cards,
-          suggestions: suggestions,
-          sourceText: text,
-          summary: kit?.summary ?? '',
-          concepts: kit?.concepts ?? const [],
-          quiz: [
-            for (final q in kit?.quiz ?? const <QuizQuestion>[])
-              if (q.cardId == null || ids.contains(q.cardId)) q,
-          ],
-        );
-        // Close the progress dialog, review and camera, then open the set so
-        // cards can be written while looking at the photos.
-        navigator.popUntil((route) => route.isFirst);
-        navigator.push(MaterialPageRoute(builder: (_) => SetScreen(setId: deck.id)));
-        var message = cardsUsedUp
-            ? 'Photos saved. Write cards for them yourself.'
-            : kit != null
-                ? 'Photos saved with ${plural(cards.length, 'flashcard')} made '
-                    'for you.'
-                : aiProblem != null
-                    ? '$aiProblem Cards were suggested from the text instead.'
-                    : suggestions.isEmpty
-                        ? 'Photos saved. Now add cards for them.'
-                        : 'Photos saved. We found '
-                            '${plural(suggestions.length, 'card')} to suggest.';
-        if (cardsUsedUp || droppedCards + droppedSuggestions > 0) {
-          message = '$message $suggestionLimitNote';
-        }
-        toast(message);
-        return;
-      }
-
-      // Text Notes keep the photos too (with the text selectable), so the
-      // original pages are one tap away from the text.
+      // The photos are kept with the text (selectable in them), so the
+      // original pages are one tap away.
       progress.value = 'Saving your notes…';
-      final pdf = await buildNotesPdf(jpegs, title: request.title, text: pages);
-      final pageCount = jpegs.length;
+      final pdf = await buildNotesPdf(jpegs, title: title, text: pages);
       final thumb = await CapturedPage.thumbnail(jpegs.first);
       final note = await store.addNote(
-        title: request.title,
+        title: title,
         folderId: folder.id,
         pdf: pdf,
         thumbnail: thumb,
-        pageCount: pageCount,
+        pageCount: jpegs.length,
         text: text,
         cleanText: kit?.notes ?? '',
         summary: kit?.summary ?? '',
@@ -287,10 +226,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
       toast(aiProblem == null
           ? 'Saved to ${folder.name}'
           : 'Saved to ${folder.name}. $aiProblem');
-    } on _NoTextException {
-      closeDialog(navigator, dialog); // progress dialog
-      toast("No text could be read from these pages, so they can't be "
-          'saved as Text Notes. Save them as Flashcards instead.');
     } catch (e, st) {
       debugPrint('Saving the notes failed: $e\n$st');
       // Don't leave an empty folder behind for a save that didn't happen.
@@ -300,9 +235,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         store.deleteFolder(created.id).ignore();
       }
       closeDialog(navigator, dialog); // progress dialog
-      toast(asCards
-          ? "Couldn't save the photos. Please try again."
-          : "Couldn't save your notes. Please try again.");
+      toast("Couldn't save your notes. Please try again.");
     }
   }
 
@@ -655,9 +588,9 @@ class SaveRequest {
   final SaveFormat format;
 }
 
-/// Bottom sheet: Text Notes or Flashcards (or, for an imported PDF, the PDF
-/// as it is), a title, and a folder. For scanned pages, after their text
-/// was [read], or (with [pdfName]) for an imported PDF.
+/// Bottom sheet. For scanned pages, after their text was [read]: only the
+/// folder (they're saved as Text Notes). For an imported PDF ([pdfName]):
+/// Text Notes, the PDF as it is or Flashcards, a title and a folder.
 class SaveSheet extends StatefulWidget {
   const SaveSheet({
     super.key,
@@ -671,7 +604,7 @@ class SaveSheet extends StatefulWidget {
 
   final int pageCount;
 
-  /// Scanned pages: what was read from them, shown at the top.
+  /// Scanned pages: what was read from them.
   final ReadPages? read;
 
   /// The imported PDF's file name; null for scanned pages.
@@ -703,9 +636,9 @@ class _SaveSheetState extends State<SaveSheet> {
       _folder = folder;
     });
   }
-  // Text Notes first when there is text; otherwise flashcards to write
-  // from the photos (or, for a PDF, the PDF as it is).
-  late SaveFormat _format = _canReadText
+  // Scanned pages are always Text Notes. A PDF: Text Notes first when it
+  // has text, otherwise the PDF as it is.
+  late SaveFormat _format = _canReadText || widget.read != null
       ? SaveFormat.textNotes
       : widget.pdfName != null
           ? SaveFormat.scanPdf
@@ -741,8 +674,47 @@ class _SaveSheetState extends State<SaveSheet> {
     ));
   }
 
+  /// Scanned pages: only where they go. They're saved as Text Notes,
+  /// titled from their text (renamed from the note's menu).
+  Widget _buildForPages(BuildContext context, ReadPages read) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomInset),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SheetTitle(
+              'Save Notes',
+              subtitle: [
+                plural(widget.pageCount, 'page'),
+                if (read.text.trim().isEmpty)
+                  ScanService.canReadText
+                      ? 'no text found'
+                      : 'text is read in the phone app',
+              ].join(' · '),
+            ),
+            const SizedBox(height: 18),
+            FolderField(
+              folders: _folders,
+              folder: _folder,
+              onChanged: (f) => setState(() => _folder = f),
+              onNewFolder: _newFolder,
+              helper: "Saved in the folder's Notebook",
+            ),
+            const SizedBox(height: 20),
+            AccentButton(label: 'Save Notes', onPressed: _submit),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.read case final read?) return _buildForPages(context, read);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final fromPdf = widget.pdfName != null;
     final canReadText = _canReadText;
@@ -766,10 +738,6 @@ class _SaveSheetState extends State<SaveSheet> {
             if (widget.notice case final notice?) ...[
               const SizedBox(height: 6),
               Text(notice, style: AppText.itemMeta),
-            ],
-            if (widget.read case final read?) ...[
-              const SizedBox(height: 12),
-              _WhatWasRead(read: read),
             ],
             const SizedBox(height: 14),
             FormatOption(
@@ -868,63 +836,17 @@ class _SaveSheetState extends State<SaveSheet> {
   }
 }
 
-/// What was read from the scanned pages: how many words and the first
-/// lines, or that none was found and what to do.
-class _WhatWasRead extends StatelessWidget {
-  const _WhatWasRead({required this.read});
-
-  final ReadPages read;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = read.text.trim();
-    final found = text.isNotEmpty;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: found ? AppColors.primarySoft : AppColors.accentSoft,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(found ? AppIcons.check : AppIcons.warning,
-                  size: 15,
-                  color: found ? AppColors.primaryDeep : AppColors.accentDeep),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  found
-                      ? '${plural(read.wordCount, 'word')} read'
-                      : ScanService.canReadText
-                          ? 'No text was found'
-                          : 'Text is read in the phone app',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.ink),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            found
-                ? text
-                : ScanService.canReadText
-                    ? 'Retake the photo flat, close up and in good light, or '
-                        'save it as Flashcards and write the cards yourself.'
-                    : 'Here, save the photos as Flashcards and write the '
-                        'cards yourself. On Android and iOS their text is read.',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.itemMeta.copyWith(height: 1.35),
-          ),
-        ],
-      ),
-    );
+/// A title from the first line of [text] when it reads like one (a heading
+/// such as "Photosynthesis - Lecture 7"), else null.
+String? titleFromText(String text) {
+  for (final raw in text.split('\n')) {
+    final line = raw
+        .replaceFirst(RegExp(r'^[#\-•*\s]+'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (line.isEmpty) continue;
+    final letters = RegExp(r'\p{L}', unicode: true).allMatches(line).length;
+    return line.length <= 60 && letters >= 3 ? line : null;
   }
+  return null;
 }

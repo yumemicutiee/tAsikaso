@@ -48,7 +48,7 @@ lecture-note capture → PDF or flashcards.
 - **Text recognition (OCR):** after **Next** on the crop screen, the
   **reading screen** reads the pages on the phone (no internet), page by page:
   a line sweeps down each page and the lines found light up. The save sheet
-  then shows how many words were read and the first lines. The text also
+  then asks only for the folder. The text also
   goes into the note's PDF of the photos as a hidden text layer, so it can be
   selected, searched and copied in any PDF viewer;
   it makes notes searchable in the app and adds a **View Text** screen with
@@ -69,12 +69,12 @@ lecture-note capture → PDF or flashcards.
   falls back to the offline behaviour and says so, and server errors end
   with a short "Ref" code that finds the request in the server's log. Only
   text leaves the phone — never the photos.
-- **Save Notes As:** choose **Text Notes** (first: the text read from the
-  pages, typed up with key concepts when Smart Study is on; it opens on the
-  text, with **Edit** to fix misread words, a big **Make Flashcards** button,
-  and the photos one tap away; needs text that was read) or **Flashcards**
-  (a set with the photos, to write cards from), a title and a folder,
-  or tap **New** to create a folder right there.
+- **Save Notes:** after reading, pick a folder (or tap **New** to create
+  one right there). The pages are saved as **Text Notes** in its Notebook,
+  titled from their first line (or by the study server): the text read
+  (typed up with key concepts when Smart Study is on), with **Edit** to fix
+  misread words, a big **Make Flashcards** button, and the photos one tap
+  away.
 - **Library & folders:** create folders with a colour; each folder has a
   **Notebook** (its notes) and its flashcard sets. Edit or delete folders
   (long-press a folder too).
@@ -330,7 +330,7 @@ the microphone permission it also asks for, since nothing is recorded).
 | Profile | `lib/screens/profile_screen.dart` | Name (tap to edit), stats, Plus card, Analysis and Settings |
 | Scan flow | `lib/screens/capture/scan_flow.dart` | Smart Scanner first, the app's camera as fallback |
 | Capture | `lib/screens/capture/capture_screen.dart` | App camera: Single / Multiple, flash, gallery import |
-| Review & crop | `lib/screens/capture/review_screen.dart` | Rotate, drag the 4 corners (pre-set on the page edges when found), then **Next**: the reading screen reads the text (`reading_screen.dart`), and they're saved as **Text Notes** or **Flashcards** |
+| Review & crop | `lib/screens/capture/review_screen.dart` | Rotate, drag the 4 corners (pre-set on the page edges when found), then **Next**: the reading screen reads the text (`reading_screen.dart`), and they're saved as **Text Notes** in the folder picked |
 | Note viewer | `lib/screens/note_viewer_screen.dart` | View, share or print a saved PDF; rename, move, delete; View Text (typed-up notes, summary, key concepts, Make Flashcards) |
 | Folder | `lib/screens/folder_screen.dart` | A folder's notes and flashcard sets |
 | Flashcard set | `lib/screens/flashcards/set_screen.dart` | Photos, key concepts, cards, add/edit cards, Study and Take a Quiz buttons |

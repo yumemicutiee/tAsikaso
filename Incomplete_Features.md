@@ -407,13 +407,15 @@ saved as Text Notes there.
   "Reading your notes…", "Page 2 of 3", a progress bar and "Read on your
   phone. Nothing is uploaded." Cancel goes back to the pages. On the web
   (no text recognition) it only prepares the pages.
-- The save sheet then shows what was read: "N words read" and the first
-  lines, or "No text was found" with what to do. The pages aren't read
-  again unless they're cropped, turned, added or deleted (`readKey`).
-- **Scan PDF is gone** for photos: they're saved as Text Notes (which keep
-  the photos as their pages) or Flashcards. With no text, Text Notes are
-  off and Flashcards are picked. An imported PDF can still be kept as it is
-  ("PDF").
-- The Smart Study step (typing up, or writing cards) still runs after Save,
-  as it depends on the choice.
+- After reading, the save sheet asks **only for the folder** (and New
+  folder): the pages are saved as Text Notes in its Notebook, titled from
+  their first line when it reads like a title (or the study server's
+  title), else "{Folder} Notes {date}"; rename from the note's menu. With no
+  text found the sheet says so and the photos are still saved, for the notes
+  to be typed in with Edit. The pages aren't read again unless they're
+  cropped, turned, added or deleted (`readKey`).
+- **Scan PDF and Flashcards are gone** from the photo flow: flashcards are
+  made from the note (Make Flashcards, which asks where they go). An
+  imported PDF still offers Text Notes, the PDF as it is, or Flashcards.
+- The Smart Study step (typing up) runs after Save Notes.
 - Notes saved as Scan PDFs before 0.7.1 still open as they did.

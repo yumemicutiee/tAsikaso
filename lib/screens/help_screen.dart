@@ -29,9 +29,9 @@ class HelpScreen extends StatelessWidget {
           'finds them too (see below), and you can drag the four corners if '
           "they're off. "
           'Scan several pages and tap Next: their text is read on your '
-          'phone while you watch. Then save them as Text Notes (the text, to '
-          'edit and turn into flashcards) or as Flashcards to write while '
-          'looking at your photos.',
+          'phone while you watch. Pick a folder and they are saved as notes '
+          "in its Notebook, titled from their first line. From a note, tap "
+          'Edit to fix a word or Make Flashcards to turn it into cards.',
     ),
     (
       'How does the app find the page edges?',

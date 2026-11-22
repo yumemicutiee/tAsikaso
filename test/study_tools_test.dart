@@ -25,6 +25,7 @@ import 'package:study_app/services/drive_sync.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/app_colors.dart';
+import 'package:study_app/utils/format.dart';
 
 import 'support/read_pages.dart';
 
@@ -662,50 +663,48 @@ void main() {
       });
     }
 
-    testWidgets('when no text was read, Text Notes are off and Flashcards '
-        'are picked', (tester) async {
+    testWidgets('with no text read, the pages are still saved, for the notes '
+        'to be typed in', (tester) async {
       ScanService.debugRead =
           (jpegs) async => [for (final _ in jpegs) const RecognizedPage()];
       await openSaveSheet(tester);
-      expect(find.text('No text was found'), findsOneWidget);
-      expect(find.textContaining('Retake the photo flat'), findsOneWidget);
-      expect(find.text('No text was found on these pages'), findsOneWidget);
-      await tester.tap(find.text('Text Notes'));
+      expect(find.text('1 page · no text found'), findsOneWidget);
+      await tester.tap(find.text('Save Notes').last);
       await tester.pump();
-      expect(find.text('Save as Notes'), findsNothing);
-      expect(find.text('Make Flashcards'), findsOneWidget);
-      expect(store.notes, isEmpty);
+      await waitUntil(tester, () => store.notes.isNotEmpty);
+      await tester.pumpAndSettle();
+
+      final note = store.notes.single;
+      expect(note.text, isEmpty);
+      expect(note.title, endsWith(formatNoteDate(DateTime.now())));
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+      expect(find.text("No text was read from this note's pages."), findsOneWidget);
+      expect(find.byTooltip('Edit'), findsOneWidget);
     });
 
-    testWidgets('Cancel during the AI step still saves the photos, with cards '
-        'suggested from the text', (tester) async {
+    testWidgets('Cancel while typing up still saves the notes, as read',
+        (tester) async {
       readsText();
       final server = silentServer();
       await openSaveSheet(tester);
-      await tester.tap(find.text('Flashcards'));
-      await tester.pump();
-      await tester.tap(find.text('Make Flashcards'));
+      await tester.tap(find.text('Save Notes').last);
       await tester.pump();
       await waitUntil(tester, () => server.requests > 0);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300)); // Cancel shows
-      expect(find.text('Making your flashcards…'), findsOneWidget);
+      expect(find.text('Typing up your notes…'), findsOneWidget);
 
       await tester.tap(find.text('Cancel'));
       await tester.pump();
-      await waitUntil(tester, () => store.sets.isNotEmpty);
+      await waitUntil(tester, () => store.notes.isNotEmpty);
       await tester.pumpAndSettle();
 
       expect(server.closed, isTrue);
-      final deck = store.sets.single;
-      expect(deck.photoCount, 1);
-      expect(deck.cards, isEmpty);
-      expect(deck.suggestions.map((c) => c.front), ['Osmosis', 'Diffusion']);
-      expect(find.byType(SetScreen), findsOneWidget);
-      expect(
-          find.text('The AI step was skipped. Cards were suggested from the '
-              'text instead.'),
-          findsOneWidget);
+      final note = store.notes.single;
+      expect(note.cleanText, isEmpty);
+      expect(note.text, contains('Osmosis'));
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+      expect(find.textContaining('The AI step was skipped.'), findsOneWidget);
     });
   });
 

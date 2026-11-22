@@ -43,15 +43,15 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 - [ ] Scan 3 pages; after closing the scanner a "Preparing your pages…" box shows until the review screen appears. How long? ________ s
 - [ ] Next → the **reading screen**: the page with a line sweeping down it, "Reading your notes…", "Page 2 of 3",
       then the lines found light up. Cancel goes back to the pages. How long for 3 pages? ________ s
-- [ ] The save sheet says "N words read" with the first lines. No **Scan PDF** choice. A photo with no text: "No text
-      was found", Text Notes off, Flashcards picked.
-- [ ] Save as **Text Notes** into a folder → the note opens on its text; View Pages shows the photos (a wide whiteboard
-      photo gets a landscape page); share and print the original pages work.
+- [ ] The save sheet asks only for the folder ("Save Notes", "1 page", Folder, New, Save Notes). A photo with no
+      text says "1 page · no text found" and still saves (type the notes in with Edit).
+- [ ] Save Notes → the note opens on its text, titled from its first line; View Pages shows the photos (a wide
+      whiteboard photo gets a landscape page); share and print the original pages work.
 - [ ] Share that PDF to Google Drive or a PDF viewer: the text on the pages can be **selected, searched and
       copied** (the hidden text layer). Does the selection sit over the right words? ________
 - [ ] Android app info → Permissions: no Microphone permission is listed.
 - [ ] Open the note → "View Text" shows the recognised text; Copy works.
-- [ ] Save as **Text Notes** (with Smart Study off; it's the first choice): the note opens on the recognised
+- [ ] Save Notes (with Smart Study off): the note opens on the recognised
       text. "View the original page" shows the photo. Edit → fix a word → Save → "Edited by you.".
       Make Flashcards (the big button) makes a set from the fixed text. ⋮ → Share as PDF: a document of the text.
 - [ ] Settings → turn Smart Scanner OFF → camera button opens the app's own camera.
@@ -60,21 +60,21 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
       "Page edges found" shows; Reset puts them back to the full frame. Try a page on a white desk: full frame.
       How often are the found corners right? ____ of ____ photos.
 - [ ] Import 3 photos from the gallery at once (edges are looked for in each).
-- [ ] Save as Flashcards (Smart Study off) → suggested cards appear; Add / Skip / Add All.
+- [ ] On a saved note, Make Flashcards (Smart Study off) → suggested cards appear; Add / Skip / Add All.
 
 ## Smart Study (needs the study server running, see server/README.md)
 - [ ] Settings → Smart Study → Study Server: enter the address → "Connected to the study server."
       Enter the App Token too. Enter a wrong address → "no study server answered there".
-- [ ] Scan 2–3 pages → Save as **Flashcards**: "Making your flashcards…" shows, then the set opens with cards,
-      a summary and Key Concepts. How long did it take? ________ s. Are the cards good? ________
-- [ ] Save as **Text Notes**: "Typing up your notes…", then the note opens on the typed-up notes with headings,
-      bullets, a summary and Key Concepts, and "Show the text as read".
+- [ ] Scan 2–3 pages → Save Notes: "Typing up your notes…", then the note opens on the typed-up notes with
+      headings, bullets, a summary and Key Concepts, and "Show the text as read".
+- [ ] On that note, Make Flashcards: "Making your flashcards…" shows, then the set opens with cards, a summary and
+      Key Concepts. How long did it take? ________ s. Are the cards good? ________
 - [ ] Set screen → Take a Quiz: questions of all four types; a wrong multiple-choice shows the right one;
       a typed answer in other words is still marked right (by meaning); the score at the end;
       Try Again shuffles; New Quiz writes a new one.
 - [ ] Set ⋮ menu → Make Cards with AI on a set written by hand with photos → new cards added, no duplicates.
-- [ ] Switch the phone's internet off, save as Flashcards: a message says the server couldn't be reached and
-      cards are suggested from the text instead. Take a Quiz still works (from the cards).
+- [ ] Switch the phone's internet off, Make Flashcards on a note: a message says the server couldn't be reached
+      and cards are suggested from the text instead. Take a Quiz still works (from the cards).
 - [ ] Settings → Flashcards & Quizzes with AI OFF: saving never contacts the server.
 - [ ] Watch the server's console: one line per request with the token counts; look at the usage page on
       platform.claude.com after a few scans and note the cost per scan: ________
