@@ -15,6 +15,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/card_suggestions.dart';
 import '../../utils/format.dart';
 import '../../widgets/common.dart';
+import '../../widgets/choices.dart';
 import '../../widgets/dialogs.dart';
 import '../actions.dart' show cardsToAskFor, suggestionLimitNote;
 import '../flashcards/set_screen.dart';
@@ -701,9 +702,8 @@ class _SaveSheetState extends State<SaveSheet> {
 
   /// Creates a folder right here and selects it.
   Future<void> _newFolder() async {
-    final draft = await showFolderEditor(context);
-    if (draft == null || !mounted) return;
-    final folder = AppStore.instance.addFolder(draft.name, draft.colorValue);
+    final folder = await createFolderHere(context);
+    if (folder == null || !mounted) return;
     setState(() {
       _folders.insert(0, folder);
       _folder = folder;
@@ -767,7 +767,7 @@ class _SaveSheetState extends State<SaveSheet> {
               Text(notice, style: AppText.itemMeta),
             ],
             const SizedBox(height: 14),
-            _FormatOption(
+            FormatOption(
               icon: AppIcons.text,
               title: 'Text Notes',
               subtitle: !canReadText
@@ -787,7 +787,7 @@ class _SaveSheetState extends State<SaveSheet> {
               onTap: () => setState(() => _format = SaveFormat.textNotes),
             ),
             const SizedBox(height: 8),
-            _FormatOption(
+            FormatOption(
               icon: fromPdf ? AppIcons.pdf : AppIcons.scan,
               title: fromPdf ? 'PDF' : 'Scan PDF',
               subtitle: fromPdf
@@ -801,7 +801,7 @@ class _SaveSheetState extends State<SaveSheet> {
               onTap: () => setState(() => _format = SaveFormat.scanPdf),
             ),
             const SizedBox(height: 8),
-            _FormatOption(
+            FormatOption(
               icon: AppIcons.flashcards,
               title: 'Flashcards',
               subtitle: (ai && canReadText
@@ -838,78 +838,14 @@ class _SaveSheetState extends State<SaveSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: _folders.isEmpty
-                      ? Text('A folder called "My Notes" will be created.',
-                          style: AppText.statLabel)
-                      : DropdownButtonFormField<StudyFolder>(
-                          // Rebuilt when a new folder is picked for us.
-                          key: ValueKey(_folder?.id),
-                          initialValue: _folder,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Folder',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          items: [
-                            for (final f in _folders)
-                              DropdownMenuItem(
-                                value: f,
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        color: f.color,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(f.name,
-                                          overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                          onChanged: (f) => setState(() => _folder = f ?? _folder),
-                        ),
-                ),
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: 'New Folder',
-                  child: OutlinedButton(
-                    onPressed: _newFolder,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.ink,
-                      side: BorderSide(color: AppColors.border),
-                      minimumSize: const Size(48, 46),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
-                    ),
-                    // The tooltip is the label; "New" would be read too.
-                    child: const ExcludeSemantics(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(AppIcons.newFolder, size: 18),
-                          SizedBox(width: 6),
-                          Text('New',
-                              style: TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            FolderField(
+              folders: _folders,
+              folder: _folder,
+              onChanged: (f) => setState(() => _folder = f),
+              onNewFolder: _newFolder,
+              helper: _format == SaveFormat.flashcards
+                  ? null
+                  : "Saved in the folder's Notebook",
             ),
             const SizedBox(height: 20),
             AccentButton(
@@ -921,72 +857,6 @@ class _SaveSheetState extends State<SaveSheet> {
               onPressed: _submit,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FormatOption extends StatelessWidget {
-  const _FormatOption({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.selected,
-    required this.onTap,
-    this.enabled = true,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ink = enabled ? AppColors.ink : AppColors.textMuted;
-    return Semantics(
-      button: true,
-      selected: selected,
-      enabled: enabled,
-      child: GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: EdgeInsets.symmetric(
-              horizontal: selected ? 13 : 14, vertical: selected ? 11 : 12),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primarySoft : AppColors.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: selected ? AppColors.primaryDeep : ink, size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700, color: ink)),
-                    const SizedBox(height: 2),
-                    Text(subtitle, style: AppText.itemMeta),
-                  ],
-                ),
-              ),
-              if (selected) ...[
-                const SizedBox(width: 8),
-                Icon(AppIcons.check, size: 18, color: AppColors.primaryDeep),
-              ],
-            ],
-          ),
         ),
       ),
     );

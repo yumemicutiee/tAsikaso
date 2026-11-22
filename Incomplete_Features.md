@@ -384,3 +384,16 @@ first; it's picked when the text can be read.
 
 On the web photos aren't read, so only an imported PDF with text can be
 saved as Text Notes there.
+
+## 16. Notebooks and where flashcards go (0.7.1, 23 Nov)
+
+- Each folder has one **Notebook**: its notes. The folder page shows a
+  Notebook card (how many notes, the latest) above its flashcard sets;
+  tapping it opens `NotebookScreen` ("{Folder} Notebook"). The save sheet
+  says "Saved in the folder's Notebook". Notes still have one folder
+  (`Note.folderId`); the Notebook is how they are shown, not a new record.
+- **Make Flashcards** on a note asks first (`CardsDestinationSheet`): a new
+  set in any folder (the note's own first, or a new one), or **Add to a
+  Set** (any set; the note's folder's sets first), which adds the cards to
+  it (`makeCardsForSet(fromText:)`). Closing the sheet makes nothing.
+- The Library's own Notes list (every note) stays.

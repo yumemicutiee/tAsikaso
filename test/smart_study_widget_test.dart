@@ -109,6 +109,7 @@ void main() {
       readsText();
       await openSaveSheet(tester);
       expect(find.text('Save as Notes'), findsOneWidget);
+      expect(find.text("Saved in the folder's Notebook"), findsOneWidget);
       await tester.tap(find.text('Save as Notes'));
       await tester.pump();
       await waitFor(tester, () => store.notes.isNotEmpty);

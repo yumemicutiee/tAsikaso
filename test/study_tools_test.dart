@@ -13,6 +13,8 @@ import 'package:study_app/data/backup.dart';
 import 'package:study_app/data/plans.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/screens/actions.dart';
+import 'package:study_app/screens/folder_screen.dart';
+import 'package:study_app/screens/notebook_screen.dart';
 import 'package:study_app/screens/capture/captured_page.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/flashcards/quiz_screen.dart';
@@ -135,6 +137,7 @@ void main() {
       jsonDecode(requests.last.body) as Map<String, Object?>;
 
   Future<Note> addNote({
+    String title = 'Bio Notes',
     String text = ocrText,
     String cleanText = '',
     String summary = '',
@@ -142,7 +145,7 @@ void main() {
     bool textNote = false,
   }) =>
       store.addNote(
-        title: 'Bio Notes',
+        title: title,
         folderId: store.folders.first.id,
         pdf: Uint8List(0),
         thumbnail: Uint8List(0),
@@ -153,6 +156,16 @@ void main() {
         concepts: concepts,
         textNote: textNote,
       );
+
+  /// Make Flashcards on a note, then Make Flashcards on the sheet that asks
+  /// where they go (a new set, in the note's folder).
+  Future<void> makeCardsHere(WidgetTester tester) async {
+    await tester.tap(find.text('Make Flashcards'));
+    await tester.pumpAndSettle();
+    expect(find.text('New Set'), findsOneWidget);
+    await tester.tap(find.text('Make Flashcards').last);
+    await tester.pumpAndSettle();
+  }
 
   List<Flashcard> cards(int n) => [
         for (var i = 0; i < n; i++)
@@ -231,8 +244,7 @@ void main() {
       serverAnswers((_) => kitReply(cards: twoCards));
       final note = await addNote();
       await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
-      await tester.tap(find.text('Make Flashcards'));
-      await tester.pumpAndSettle();
+      await makeCardsHere(tester);
 
       final deck = store.sets.single;
       expect(deck.title, 'Bio Notes');
@@ -249,13 +261,120 @@ void main() {
       usePhoneSize(tester);
       final note = await addNote();
       await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
-      await tester.tap(find.text('Make Flashcards'));
-      await tester.pumpAndSettle();
+      await makeCardsHere(tester);
 
       final deck = store.sets.single;
       expect(deck.cards, isEmpty);
       expect(deck.suggestions.map((c) => c.front), ['Osmosis', 'Diffusion']);
       expect(find.text('2 cards suggested from the text.'), findsOneWidget);
+    });
+  });
+
+  group('Where flashcards from a note go', () {
+    testWidgets('a new set can go in another folder', (tester) async {
+      usePhoneSize(tester);
+      final note = await addNote(textNote: true);
+      final other = store.addFolder('Chemistry', 0xFFF5C2A9);
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
+      await tester.tap(find.text('Make Flashcards'));
+      await tester.pumpAndSettle();
+      // The note's own folder is picked first.
+      expect(find.text(store.folder(note.folderId)!.name), findsWidgets);
+      await tester.tap(find.byType(DropdownButtonFormField<StudyFolder>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chemistry').last);
+      await tester.pumpAndSettle();
+      expect(find.text('The note stays in its own Notebook.'), findsOneWidget);
+      await tester.tap(find.text('Make Flashcards').last);
+      await tester.pumpAndSettle();
+
+      final deck = store.sets.single;
+      expect(deck.folderId, other.id);
+      expect(store.note(note.id)!.folderId, isNot(other.id));
+      expect(deck.suggestions.map((c) => c.front), ['Osmosis', 'Diffusion']);
+      expect(find.byType(SetScreen), findsOneWidget);
+    });
+
+    testWidgets('cards can be added to a set you already have', (tester) async {
+      usePhoneSize(tester);
+      final note = await addNote(textNote: true);
+      final deck = await store.addSet(
+          title: 'Cell Biology',
+          folderId: note.folderId,
+          cards: cards(2),
+          sourceText: 'Old: text');
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
+      await tester.tap(find.text('Make Flashcards'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add to a Set'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Cell Biology'), findsOneWidget);
+      await tester.tap(find.text('Add Cards'));
+      await tester.pumpAndSettle();
+
+      expect(store.sets, hasLength(1), reason: 'no new set');
+      final saved = store.setById(deck.id)!;
+      expect(saved.cards, hasLength(2));
+      expect(saved.suggestions.map((c) => c.front), ['Osmosis', 'Diffusion']);
+      expect(saved.sourceText, 'Old: text\n\n$ocrText');
+      expect(find.byType(SetScreen), findsOneWidget);
+      expect(find.text('2 cards suggested from the text.'), findsOneWidget);
+    });
+
+    testWidgets('with no sets yet, only a new set can be made', (tester) async {
+      usePhoneSize(tester);
+      final note = await addNote(textNote: true);
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
+      await tester.tap(find.text('Make Flashcards'));
+      await tester.pumpAndSettle();
+      expect(find.text('You have no flashcard sets yet'), findsOneWidget);
+      await tester.tap(find.text('Add to a Set'));
+      await tester.pumpAndSettle();
+      expect(find.text('Make Flashcards'), findsNWidgets(3)); // still New Set
+    });
+
+    testWidgets('closing the sheet makes nothing', (tester) async {
+      usePhoneSize(tester);
+      final note = await addNote(textNote: true);
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
+      await tester.tap(find.text('Make Flashcards'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(10, 10)); // outside the sheet
+      await tester.pumpAndSettle();
+      expect(store.sets, isEmpty);
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+    });
+  });
+
+  group('Notebook', () {
+    testWidgets("a folder's notes are in its Notebook", (tester) async {
+      usePhoneSize(tester);
+      final note = await addNote(title: 'Cells Lecture', textNote: true);
+      final folder = store.folder(note.folderId)!;
+      await tester.pumpWidget(MaterialApp(home: FolderScreen(folderId: folder.id)));
+      expect(find.text('Notebook'), findsOneWidget);
+      expect(find.textContaining('latest: Cells Lecture'), findsOneWidget);
+      expect(find.text('Cells Lecture'), findsNothing, reason: 'inside the Notebook');
+
+      await tester.tap(find.text('Notebook'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NotebookScreen), findsOneWidget);
+      expect(find.text('${folder.name} Notebook'), findsOneWidget);
+      await tester.tap(find.text('Cells Lecture'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+    });
+
+    testWidgets('an empty Notebook says how to fill it', (tester) async {
+      usePhoneSize(tester);
+      final folder = store.addFolder('History', 0xFFA9CFF5);
+      await tester.pumpWidget(MaterialApp(home: FolderScreen(folderId: folder.id)));
+      expect(find.text('No notes yet'), findsOneWidget);
+      await tester.tap(find.text('Notebook'));
+      await tester.pumpAndSettle();
+      expect(find.text('History Notebook'), findsOneWidget);
+      expect(find.textContaining('This notebook is empty'), findsOneWidget);
+      expect(find.text('Scan Notes'), findsOneWidget);
     });
   });
 
@@ -330,8 +449,7 @@ void main() {
       expect(find.text('Edited by you.'), findsOneWidget);
       expect(find.text('Notes saved'), findsOneWidget);
 
-      await tester.tap(find.text('Make Flashcards'));
-      await tester.pumpAndSettle();
+      await makeCardsHere(tester);
       final deck = store.sets.single;
       expect(deck.suggestions.single.front, 'Osmosis');
       expect(deck.sourceText, 'Osmosis: movement of water across a membrane');

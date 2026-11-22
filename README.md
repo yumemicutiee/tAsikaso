@@ -72,8 +72,11 @@ lecture-note capture → PDF or flashcards.
   and the photos one tap away; needs text recognition), **Scan PDF** (the
   pages as photos, text selectable) or **Flashcards**, a title and a folder,
   or tap **New** to create a folder right there.
-- **Library & folders:** create folders with a colour, open a folder to see
-  its notes and sets, edit or delete folders (long-press a folder too).
+- **Library & folders:** create folders with a colour; each folder has a
+  **Notebook** (its notes) and its flashcard sets. Edit or delete folders
+  (long-press a folder too).
+- **Make Flashcards from a note:** a sheet asks where the cards go, a new set
+  in any folder (the note's own first) or a set you already have.
   Notes can be opened, shared, renamed, moved or deleted.
 - **Search:** Dashboard and Library search folders, notes (title, text as
   read or typed up, summary, key concepts), set titles, card text, and

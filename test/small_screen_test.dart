@@ -16,6 +16,7 @@ import 'package:study_app/screens/flashcards/set_screen.dart';
 import 'package:study_app/screens/flashcards/study_cards_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/screens/folder_screen.dart';
+import 'package:study_app/screens/notebook_screen.dart';
 import 'package:study_app/screens/help_screen.dart';
 import 'package:study_app/screens/note_viewer_screen.dart';
 import 'package:study_app/screens/plans_screen.dart';
@@ -170,6 +171,7 @@ Future<void> _walk(WidgetTester tester, List<String> problems, String folderId,
   final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
   final screens = <String, Widget>{
     'Folder': FolderScreen(folderId: folderId),
+    'Notebook': NotebookScreen(folderId: folderId),
     'Set': SetScreen(setId: setId),
     'Study Cards': StudyCardsScreen(setId: setId),
     'Quiz': QuizScreen(setId: setId, questions: quiz),

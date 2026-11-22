@@ -1,0 +1,46 @@
+# Checks a feature branch before it goes to main: analyze + tests, and a web
+# build for browser testing (saved to the qa-web-build branch).
+name: Feature check
+
+on:
+  push:
+    branches: [v0.7.0-text-notes]
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test --reporter failures-only
+        shell: bash
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build web --release --no-web-resources-cdn --base-href /
+      - name: Save the build to the qa-web-build branch
+        run: |
+          cd build/web
+          git init -q -b qa-web-build
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Web build for QA of ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" qa-web-build

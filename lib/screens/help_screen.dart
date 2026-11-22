@@ -51,6 +51,13 @@ class HelpScreen extends StatelessWidget {
           'add or skip.',
     ),
     (
+      'Where are my notes, and where do my flashcards go?',
+      'When you save notes you pick a folder (or make one), and they go in '
+          "that folder's Notebook: open the folder, then Notebook. When you "
+          'tap Make Flashcards on a note you pick where the cards go: a new '
+          'set in any folder, or a set you already have.',
+    ),
+    (
       'Can I turn a PDF into notes or flashcards?',
       'Yes. Tap + and choose Import PDF (or the PDF button on the camera '
           'screen), then save it as Text Notes, a PDF or flashcards. Lecture '

@@ -120,6 +120,8 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
+0.7.1  23 Nov  Each folder has a Notebook (its notes); Make Flashcards asks
+               where the cards go: a new set in any folder, or an existing set
 0.7.0  22 Nov  Text Notes: scans and PDFs saved as text first (in place of Text
                PDF), opened on the text, editable, with a big Make Flashcards
 0.6.0  22 Nov  Import PDF: a PDF (slides, handouts, scanned) saved as a note,

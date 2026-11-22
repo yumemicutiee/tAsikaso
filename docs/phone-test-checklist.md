@@ -77,6 +77,10 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
       platform.claude.com after a few scans and note the cost per scan: ________
 
 ## Library, folders, search
+- [ ] Open a folder → **Notebook** shows the number of notes and the latest; tap it → "{Folder} Notebook" lists the notes.
+      An empty folder's Notebook says "This notebook is empty" with Scan Notes.
+- [ ] On a note, Make Flashcards → the sheet offers **New Set** (folder picker, the note's folder first, New folder) and
+      **Add to a Set** (picker of your sets). Each puts the cards where picked and opens the set; closing the sheet makes nothing.
 - [ ] New folder with a colour; open it; edit it (long-press); delete it from its ⋮ menu or from the long-press sheet's
       "Delete Folder" (deletes its notes too, with a warning).
 - [ ] Rename, move and delete a note.

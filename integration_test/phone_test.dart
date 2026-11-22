@@ -284,7 +284,8 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('a photo of notes → text notes in a chosen folder → flashcards',
+  testWidgets("a photo of notes → text notes in a folder's Notebook → flashcards "
+      'where the user picks',
       (tester) async {
     // The whole study flow on the phone: a photo of notes is read (ML Kit),
     // saved as Text Notes in the folder picked on the save sheet, found in
@@ -293,7 +294,7 @@ void main() {
     store.updatePrefs(before.copyWith(useAi: false));
     addTearDown(() => store.updatePrefs(before));
     final chemistry = store.addFolder('Chemistry Check', 0xFFF5C2A9);
-    store.addFolder('Biology Check', 0xFFA9CFF5); // the newest: picked first
+    final biology = store.addFolder('Biology Check', 0xFFA9CFF5); // newest: picked first
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/notes_page.jpg');
     await file.writeAsBytes(notesPhoto([
@@ -342,7 +343,7 @@ void main() {
     expect((await store.readPdf(note))!.length, greaterThan(1000),
         reason: 'the photo is kept as the original page');
 
-    // The note is in that folder, under Notes.
+    // The note is in that folder's Notebook.
     await tester.pageBack();
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(AppTab.library.icon));
@@ -352,24 +353,37 @@ void main() {
     await tester.tap(find.text('Chemistry Check'));
     await tester.pumpAndSettle();
     expect(find.byType(FolderScreen), findsOneWidget);
-    expect(find.text('Notes'), findsWidgets);
-    expect(find.text(note.title), findsOneWidget);
+    expect(find.textContaining('latest: ${note.title}'), findsOneWidget);
     await shot(tester, '13-folder');
+    await tester.tap(find.text('Notebook'));
+    await tester.pumpAndSettle();
+    expect(find.text('Chemistry Check Notebook'), findsOneWidget);
+    expect(find.text(note.title), findsOneWidget);
+    await shot(tester, '14-notebook');
 
-    // Opened from the folder, it's on its text; Make Flashcards makes a set.
+    // Opened from the Notebook, it's on its text. Make Flashcards asks where
+    // the cards go: here, a new set in another folder.
     await tester.tap(find.text(note.title));
     await tester.pumpAndSettle();
     expect(find.byType(NoteTextScreen), findsOneWidget);
     await tester.tap(find.text('Make Flashcards'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<StudyFolder>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Biology Check').last);
+    await tester.pumpAndSettle();
+    await shot(tester, '15-cards-go-to');
+    await tester.tap(find.text('Make Flashcards').last);
     await waitFor(tester, find.byType(SetScreen));
     await tester.pumpAndSettle();
     final deck = store.sets.singleWhere((s) => !knownSets.contains(s.id));
     debugPrint('Cards suggested: '
         '${deck.suggestions.map((c) => '${c.front} = ${c.back}').join('; ')}');
-    expect(deck.folderId, chemistry.id);
+    expect(deck.folderId, biology.id);
+    expect(store.note(note.id)!.folderId, chemistry.id);
     expect(deck.suggestions.map((c) => c.front.toLowerCase()),
         containsAll(['osmosis', 'diffusion']));
-    await shot(tester, '14-flashcards');
+    await shot(tester, '16-flashcards');
   });
 
   testWidgets('the page models find the page on a white desk, among clutter '

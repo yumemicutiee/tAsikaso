@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
-import '../widgets/common.dart';
 import '../widgets/list_items.dart';
 import 'actions.dart';
+import 'notebook_screen.dart';
 
-/// One folder's notes and flashcard sets.
+/// One folder: its Notebook (the notes) and its flashcard sets.
 class FolderScreen extends StatelessWidget {
   const FolderScreen({super.key, required this.folderId});
 
@@ -76,26 +75,23 @@ class FolderScreen extends StatelessWidget {
                 '${plural(notes.length, 'note')} · ${plural(sets.length, 'flashcard set')}',
                 style: AppText.statLabel,
               ),
-              if (notes.isEmpty && sets.isEmpty) ...[
-                const SizedBox(height: 16),
-                const EmptyState(
-                  icon: AppIcons.newFolder,
-                  message: 'This folder is empty. Scan notes or make a '
-                      'flashcard set and save it here.',
-                ),
-              ],
-              if (sets.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text('Flashcard Sets', style: AppText.sectionTitle),
-                const SizedBox(height: 4),
+              // Each folder has one Notebook, where its notes are.
+              const SizedBox(height: 16),
+              NotebookCard(folder: folder, notes: notes),
+              const SizedBox(height: 24),
+              Text('Flashcard Sets', style: AppText.sectionTitle),
+              const SizedBox(height: 4),
+              if (sets.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No flashcard sets yet. Open a note in the Notebook and '
+                    'tap Make Flashcards, or make a set from the menu.',
+                    style: AppText.statLabel,
+                  ),
+                )
+              else
                 for (final s in sets) setTile(context, s),
-              ],
-              if (notes.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text('Notes', style: AppText.sectionTitle),
-                const SizedBox(height: 4),
-                for (final n in notes) noteTile(context, n),
-              ],
             ],
           ),
         );

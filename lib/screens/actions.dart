@@ -20,6 +20,7 @@ import '../widgets/dialogs.dart';
 import '../widgets/list_items.dart';
 import 'capture/notes_pdf.dart';
 import 'capture/pdf_import.dart' show kPdfPagesLeftOut, pickAndReadPdf;
+import 'flashcards/cards_destination_sheet.dart';
 import 'flashcards/quiz_options.dart';
 import 'flashcards/quiz_screen.dart';
 import 'flashcards/set_screen.dart';
@@ -285,12 +286,14 @@ QuizQuestion _about(QuizQuestion q, String cardId) => QuizQuestion(
 ///
 /// With [fromText] (an imported PDF's text), the cards come from that text
 /// instead and are added to what the set already has; [note] is said after.
-Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck,
+///
+/// Returns false when nothing was done (cancelled, or no text to use).
+Future<bool> makeCardsForSet(BuildContext context, FlashcardSet deck,
     {String? fromText, String? note}) async {
   final left = _store.suggestedCardsLeft;
   if (left == 0) {
     await showPlusPrompt(context, PlusFeature.unlimitedSuggestions);
-    return;
+    return false;
   }
   final ai = StudyAi.isOn;
   final adding = fromText != null;
@@ -300,7 +303,11 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck,
   try {
     await runWithProgress(
       context,
-      ai ? 'Making your flashcards…' : 'Reading your photos…',
+      ai
+          ? 'Making your flashcards…'
+          : adding
+              ? 'Finding cards in the text…'
+              : 'Reading your photos…',
       (cancel) async {
         if (!adding && text.trim().isEmpty && deck.photoCount > 0) {
           final photos = <Uint8List>[];
@@ -320,21 +327,21 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck,
       },
     );
   } on StudyAiException catch (e) {
-    if (e.isCancelled) return; // nothing is saved
+    if (e.isCancelled) return false; // nothing is saved
     problem = e.message;
   } catch (e) {
     debugPrint('Making cards failed: $e');
     problem = "Couldn't make cards. Please try again.";
   }
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
   if (text.trim().isEmpty) {
     _toast(context, adding
         ? 'No text was found in this PDF.'
         : 'No text could be read from the photos.');
-    return;
+    return false;
   }
   final current = _store.setById(deck.id);
-  if (current == null) return;
+  if (current == null) return false;
   // The set's text grows with each PDF, so cards can be made from all of it.
   final sourceText = adding
       ? [current.sourceText.trim(), text.trim()].where((t) => t.isNotEmpty).join('\n\n')
@@ -378,7 +385,7 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck,
         ? 'No new cards to add.'
         : '${plural(kept.length, 'card')} added.';
     _toast(context, said(dropped > 0 ? '$made $suggestionLimitNote' : made));
-    return;
+    return true;
   }
 
   final (:kept, :dropped) = _store.takeSuggestedCards([
@@ -394,6 +401,7 @@ Future<void> makeCardsForSet(BuildContext context, FlashcardSet deck,
       : '${plural(kept.length, 'card')} suggested from the text.';
   if (dropped > 0) made = '$made $suggestionLimitNote';
   _toast(context, said(problem == null ? made : '$problem $made'));
+  return true;
 }
 
 /// "Make Cards from a PDF" in a set's menu: cards from an imported PDF's
@@ -419,8 +427,9 @@ Future<void> makeCardsFromPdf(BuildContext context, FlashcardSet deck) async {
       fromText: pdf.text, note: pdf.more ? kPdfPagesLeftOut : null);
 }
 
-/// A new flashcard set from a note's text, in the note's folder. The free
-/// plan gets [kFreeSuggestedCardsPerMonth] suggested cards a month.
+/// Flashcards from a note's text. The user picks where they go first: a
+/// new set (in the note's folder or another) or a set they already have.
+/// The free plan gets [kFreeSuggestedCardsPerMonth] suggested cards a month.
 Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
   final text = note.displayText;
   if (text.trim().isEmpty) {
@@ -432,6 +441,14 @@ Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
     await showPlusPrompt(context, PlusFeature.unlimitedSuggestions);
     return;
   }
+  final to = await askCardsDestination(context, note);
+  if (to == null || !context.mounted) return;
+  if (to.set case final deck?) {
+    final added = await makeCardsForSet(context, deck, fromText: text);
+    if (added && context.mounted) openSet(context, deck);
+    return;
+  }
+  final folderId = to.folder?.id ?? note.folderId;
   StudyKit? kit;
   String? problem;
   if (StudyAi.isOn) {
@@ -461,7 +478,7 @@ Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
       : (kept: const <Flashcard>[], dropped: 0);
   final deck = await _store.addSet(
     title: note.title,
-    folderId: note.folderId,
+    folderId: folderId,
     cards: cards,
     suggestions: suggestions,
     // The text as read, unless it was fixed by hand.
