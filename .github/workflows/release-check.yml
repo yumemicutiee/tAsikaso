@@ -1,0 +1,78 @@
+# Checks text recognition in a release build (shrunk by R8, as the
+# published APK is) on an emulator: tool/release_check/main.dart reads a
+# photo and a PDF and logs what it found. Run by hand.
+name: Release text recognition check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/release-ocr]
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - name: Generate the Android project
+        run: |
+          flutter create . --platforms=android --org com.tasikaso --project-name study_app
+          dart run tool/setup_android.dart
+      - run: flutter pub get
+      - name: Build the check (release, like the APK)
+        run: |
+          mkdir -p release-check
+          set -o pipefail
+          flutter build apk --release -t tool/release_check/main.dart \
+            --dart-define=STUDY_AI_URL="${{ vars.STUDY_AI_URL }}" 2>&1 | tee release-check/build.txt
+      - name: Run it on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb install -r build/app/outputs/flutter-apk/app-release.apk
+            adb logcat -c
+            adb shell am start -n com.tasikaso.study_app/.MainActivity
+            for i in $(seq 1 90); do adb logcat -d | grep -q "RELEASECHECK done" && break; sleep 2; done
+            adb logcat -d > release-check/logcat.txt
+            grep RELEASECHECK release-check/logcat.txt || echo "no RELEASECHECK lines"
+            grep -E " E |AndroidRuntime|FATAL|mlkit|MlKit" release-check/logcat.txt | tail -60 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-check
+          path: release-check
+      - name: Save results
+        if: always()
+        run: |
+          mkdir -p release-check
+          cd release-check
+          git init -q -b release-check
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Release check for ${{ github.sha }}" --allow-empty
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" release-check
