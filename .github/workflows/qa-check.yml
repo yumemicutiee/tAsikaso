@@ -1,0 +1,101 @@
+# Checks the fix branch before it goes to main: analyze + tests, a web build
+# for browser testing (to the qa-web-build branch) and the emulator
+# walkthrough (to the qa-results branch).
+name: QA check
+
+on:
+  push:
+    branches: [fix/qa-findings]
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze 2>&1 | tee analyze.txt
+      - run: flutter test 2>&1 | tail -60
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build web --release --no-web-resources-cdn --base-href /
+      - name: Save the build to the qa-web-build branch
+        run: |
+          cd build/web
+          git init -q -b qa-web-build
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Web build for QA of ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" qa-web-build
+
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - name: Generate the Android project
+        run: |
+          flutter create . --platforms=android --org com.tasikaso --project-name study_app
+          dart run tool/setup_android.dart
+      - run: flutter pub get
+      - name: Build the app
+        run: |
+          mkdir -p emulator-results
+          flutter build apk --debug > emulator-results/build.txt 2>&1 || flutter build apk --debug >> emulator-results/build.txt 2>&1
+          tail -5 emulator-results/build.txt
+      - name: Walk through the app on an emulator
+        timeout-minutes: 80
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 4096M
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated
+          disable-animations: true
+          script: bash tool/qa_walkthrough.sh
+      - name: Save results to the qa-results branch
+        if: always()
+        run: |
+          mkdir -p emulator-results
+          cp -r emulator-results /tmp/qa-results
+          cd /tmp/qa-results
+          git init -q -b qa-results
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "QA walkthrough results for ${{ github.sha }}" --allow-empty
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" qa-results
