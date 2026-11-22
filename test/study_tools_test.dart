@@ -349,7 +349,16 @@ void main() {
   group('Notebook', () {
     testWidgets("a folder's notes are in its Notebook", (tester) async {
       usePhoneSize(tester);
-      final note = await addNote(title: 'Cells Lecture', textNote: true);
+      // A real thumbnail: the Notebook shows it.
+      final note = await store.addNote(
+        title: 'Cells Lecture',
+        folderId: store.folders.first.id,
+        pdf: Uint8List(0),
+        thumbnail: Uint8List.fromList(img.encodePng(img.Image(width: 4, height: 6))),
+        pageCount: 1,
+        text: ocrText,
+        textNote: true,
+      );
       final folder = store.folder(note.folderId)!;
       await tester.pumpWidget(MaterialApp(home: FolderScreen(folderId: folder.id)));
       expect(find.text('Notebook'), findsOneWidget);
