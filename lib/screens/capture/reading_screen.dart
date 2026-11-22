@@ -283,6 +283,8 @@ class _PageBeingRead extends StatelessWidget {
       aspectRatio: aspect,
       child: Container(
         decoration: BoxDecoration(
+          // A blank page while the photo is still being decoded.
+          color: const Color(0xFFE9EAEE),
           borderRadius: BorderRadius.circular(10),
           boxShadow: const [
             BoxShadow(color: Colors.black45, blurRadius: 24, offset: Offset(0, 8)),
