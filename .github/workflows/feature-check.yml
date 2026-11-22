@@ -21,7 +21,8 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze
-      - run: flutter test 2>&1 | tail -80
+      - run: flutter test --reporter failures-only
+        shell: bash
 
   web:
     runs-on: ubuntu-latest
