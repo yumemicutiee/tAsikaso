@@ -201,8 +201,8 @@ class _NoteTextScreenState extends State<NoteTextScreen> {
               Text(
                 showTyped
                     ? 'Typed up by your study server from the text read '
-                        'from your photos, so check names and numbers.'
-                    : 'Read automatically from your photos, so check names '
+                        'from your pages, so check names and numbers.'
+                    : 'Read automatically from your pages, so check names '
                         'and numbers.',
                 style: AppText.itemMeta,
               ),

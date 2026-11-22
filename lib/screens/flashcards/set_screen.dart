@@ -206,7 +206,7 @@ class SetScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Found in the text of your photos. Add the ones you want.',
+                  'Found in the text of your pages. Add the ones you want.',
                   style: AppText.itemMeta,
                 ),
                 const SizedBox(height: 10),
