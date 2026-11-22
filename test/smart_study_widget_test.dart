@@ -181,7 +181,8 @@ void main() {
       expect((await store.readPdf(note))!.length, greaterThan(1000));
       expect(find.byType(NoteTextScreen), findsOneWidget);
       expect(find.text('Text Notes'), findsOneWidget); // the screen's title
-      expect(find.textContaining('Osmosis: movement of water'), findsOneWidget);
+      // The title and the first line of the text.
+      expect(find.textContaining('Osmosis: movement of water'), findsNWidgets(2));
       expect(find.byTooltip('View Pages'), findsOneWidget);
       expect(find.byTooltip('Edit'), findsOneWidget);
       expect(find.text('Make Flashcards'), findsOneWidget);
