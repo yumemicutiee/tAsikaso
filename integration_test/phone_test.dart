@@ -32,6 +32,9 @@ import 'package:study_app/utils/page_model.dart';
 import 'package:study_app/screens/capture/notes_pdf.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/focus_screen.dart';
+import 'package:study_app/screens/flashcards/set_screen.dart';
+import 'package:study_app/screens/note_viewer_screen.dart';
+import 'package:study_app/screens/folder_screen.dart';
 import 'package:study_app/services/notification_service.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
@@ -279,6 +282,94 @@ void main() {
     expect(saved.pageCount, 1);
     expect((await store.readPdf(saved))!.length, greaterThan(10000));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('a photo of notes → text notes in a chosen folder → flashcards',
+      (tester) async {
+    // The whole study flow on the phone: a photo of notes is read (ML Kit),
+    // saved as Text Notes in the folder picked on the save sheet, found in
+    // that folder, then turned into flashcards.
+    final before = store.prefs;
+    store.updatePrefs(before.copyWith(useAi: false));
+    addTearDown(() => store.updatePrefs(before));
+    final chemistry = store.addFolder('Chemistry Check', 0xFFF5C2A9);
+    store.addFolder('Biology Check', 0xFFA9CFF5); // the newest: picked first
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/notes_page.jpg');
+    await file.writeAsBytes(notesPhoto([
+      'OSMOSIS: water across a membrane',
+      'DIFFUSION: particles spreading out',
+    ]));
+    final pick = CaptureScreen.pickImages;
+    CaptureScreen.pickImages = () async => [XFile(file.path)];
+    addTearDown(() => CaptureScreen.pickImages = pick);
+    final known = {for (final n in store.notes) n.id};
+    final knownSets = {for (final s in store.sets) s.id};
+
+    await tester.pumpWidget(const StudyApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CameraButton));
+    await waitFor(tester, find.byTooltip('Import From Gallery'));
+    await tester.tap(find.byTooltip('Import From Gallery'));
+    await waitFor(tester, find.byType(ReviewScreen),
+        timeout: const Duration(seconds: 90));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Text Notes are the first choice; the folder is picked here.
+    expect(find.text('Save as Notes'), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<StudyFolder>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chemistry Check').last);
+    await tester.pumpAndSettle();
+    await shot(tester, '11-save-as-notes');
+    await tester.tap(find.text('Save as Notes'));
+    await waitFor(tester, find.byType(NoteTextScreen),
+        timeout: const Duration(seconds: 90),
+        failsOn: find.textContaining("can't be saved as Text Notes"));
+    await tester.pumpAndSettle();
+    await shot(tester, '12-text-notes');
+
+    final note = store.notes.singleWhere((n) => !known.contains(n.id));
+    debugPrint('Text Notes read: ${note.text}');
+    expect(note.textNote, isTrue);
+    expect(note.folderId, chemistry.id);
+    expect(note.text.toLowerCase(), contains('osmosis'));
+    expect(note.text.toLowerCase(), contains('diffusion'));
+    expect(find.textContaining(RegExp('osmosis', caseSensitive: false)),
+        findsWidgets);
+    expect((await store.readPdf(note))!.length, greaterThan(1000),
+        reason: 'the photo is kept as the original page');
+
+    // The note is in that folder, under Notes.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(AppTab.library.icon));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Chemistry Check'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Chemistry Check'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FolderScreen), findsOneWidget);
+    expect(find.text('Notes'), findsWidgets);
+    expect(find.text(note.title), findsOneWidget);
+    await shot(tester, '13-folder');
+
+    // Opened from the folder, it's on its text; Make Flashcards makes a set.
+    await tester.tap(find.text(note.title));
+    await tester.pumpAndSettle();
+    expect(find.byType(NoteTextScreen), findsOneWidget);
+    await tester.tap(find.text('Make Flashcards'));
+    await waitFor(tester, find.byType(SetScreen));
+    await tester.pumpAndSettle();
+    final deck = store.sets.singleWhere((s) => !knownSets.contains(s.id));
+    debugPrint('Cards suggested: '
+        '${deck.suggestions.map((c) => '${c.front} = ${c.back}').join('; ')}');
+    expect(deck.folderId, chemistry.id);
+    expect(deck.suggestions.map((c) => c.front.toLowerCase()),
+        containsAll(['osmosis', 'diffusion']));
+    await shot(tester, '14-flashcards');
   });
 
   testWidgets('the page models find the page on a white desk, among clutter '
