@@ -10,16 +10,20 @@ import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/common.dart';
+import '../widgets/dialogs.dart';
 import '../widgets/list_items.dart';
 import 'actions.dart';
 import 'capture/notes_pdf.dart';
 
 /// Shows a saved note's PDF with built-in Share and Print buttons, plus
-/// Rename / Move / Delete in the menu.
+/// Rename / Move / Delete in the menu. For Text Notes this shows the
+/// original pages, opened from the text ([fromText]), so it has no menu of
+/// its own and no button back to the text.
 class NoteViewerScreen extends StatefulWidget {
-  const NoteViewerScreen({super.key, required this.noteId});
+  const NoteViewerScreen({super.key, required this.noteId, this.fromText = false});
 
   final String noteId;
+  final bool fromText;
 
   @override
   State<NoteViewerScreen> createState() => _NoteViewerScreenState();
@@ -60,9 +64,10 @@ class _NoteViewerScreenState extends State<NoteViewerScreen> {
         })
           ..remove('Open')
           ..remove('Share PDF');
-        final hasText = note.text.isNotEmpty ||
-            note.cleanText.isNotEmpty ||
-            note.concepts.isNotEmpty;
+        final hasText = !widget.fromText &&
+            (note.text.isNotEmpty ||
+                note.cleanText.isNotEmpty ||
+                note.concepts.isNotEmpty);
 
         return Scaffold(
           appBar: AppBar(
@@ -70,7 +75,7 @@ class _NoteViewerScreenState extends State<NoteViewerScreen> {
             surfaceTintColor: Colors.transparent,
             foregroundColor: AppColors.ink,
             title: Text(
-              note.title,
+              widget.fromText ? 'Original Pages' : note.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -91,7 +96,7 @@ class _NoteViewerScreenState extends State<NoteViewerScreen> {
                   ),
                   icon: const Icon(AppIcons.text, size: 22),
                 ),
-              ActionsMenu(actions: actions),
+              if (!widget.fromText) ActionsMenu(actions: actions),
             ],
           ),
           body: FutureBuilder<Uint8List?>(
@@ -132,9 +137,11 @@ class _NoteViewerScreenState extends State<NoteViewerScreen> {
 
 /// A note's text: typed up by the study server when it was (with the
 /// summary and key concepts), or as read from the pages. Selectable, with
-/// Copy, and a button to make flashcards from it. With Smart Study on, the
-/// text as read can be typed up (again). Reads the note from the store, so
-/// a rename shows here too.
+/// Edit (to fix misread words), Copy, and a big Make Flashcards button. With
+/// Smart Study on, the text as read can be typed up (again). Text Notes open
+/// here, with the original pages one tap away, Rename / Move / Delete in the
+/// menu, and Share as a text PDF. Reads the note from the store, so a rename
+/// or an edit shows here too.
 class NoteTextScreen extends StatefulWidget {
   const NoteTextScreen({super.key, required this.noteId});
 
@@ -147,6 +154,20 @@ class NoteTextScreen extends StatefulWidget {
 class _NoteTextScreenState extends State<NoteTextScreen> {
   /// Show the text as read from the photos instead of the typed-up notes.
   bool _asRead = false;
+
+  void _viewPages(Note note) => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => NoteViewerScreen(noteId: note.id, fromText: true),
+        ),
+      );
+
+  Future<void> _edit(Note note, {required bool typedUp}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoteEditScreen(noteId: note.id, typedUp: typedUp),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,46 +191,98 @@ class _NoteTextScreenState extends State<NoteTextScreen> {
           visualDensity: VisualDensity.compact,
           textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         );
+        final menu = noteActions(context, note, onDeleted: () {
+          if (mounted) Navigator.of(this.context).pop();
+        })
+          ..remove('Open')
+          ..remove('View Pages');
 
         return Scaffold(
-          appBar: subPageAppBar('Note Text', actions: [
-            IconButton(
-              tooltip: 'Make Flashcards',
-              icon: const Icon(AppIcons.flashcards, size: 22),
-              onPressed: () => makeFlashcardsFromNote(context, note),
+          appBar: subPageAppBar(note.textNote ? 'Text Notes' : 'Note Text',
+              actions: [
+                if (note.textNote)
+                  IconButton(
+                    tooltip: 'View Pages',
+                    icon: const Icon(AppIcons.photo, size: 22),
+                    onPressed: () => _viewPages(note),
+                  ),
+                IconButton(
+                  tooltip: 'Edit',
+                  icon: const Icon(AppIcons.edit, size: 22),
+                  onPressed: () => _edit(note, typedUp: showTyped),
+                ),
+                IconButton(
+                  tooltip: 'Copy All',
+                  icon: const Icon(AppIcons.copy, size: 22),
+                  onPressed: text.isEmpty
+                      ? null
+                      : () async {
+                          await Clipboard.setData(ClipboardData(text: text));
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                                const SnackBar(content: Text('Text copied')));
+                        },
+                ),
+                if (note.textNote) ActionsMenu(actions: menu),
+              ]),
+          bottomNavigationBar: SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: SizedBox(
+                height: 50,
+                child: FilledButton.icon(
+                  onPressed: note.displayText.trim().isEmpty
+                      ? null
+                      : () => makeFlashcardsFromNote(context, note),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onFill,
+                    disabledBackgroundColor: AppColors.primarySoft,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(AppIcons.flashcards, size: 20),
+                  label: const Text('Make Flashcards',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                ),
+              ),
             ),
-            IconButton(
-              tooltip: 'Copy All',
-              icon: const Icon(AppIcons.copy, size: 22),
-              onPressed: text.isEmpty
-                  ? null
-                  : () async {
-                      await Clipboard.setData(ClipboardData(text: text));
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(
-                            const SnackBar(content: Text('Text copied')));
-                    },
-            ),
-          ]),
+          ),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
             children: [
               Text(note.title, style: AppText.sectionTitle),
               const SizedBox(height: 4),
               Text(
-                showTyped
-                    ? 'Typed up by your study server from the text read '
-                        'from your pages, so check names and numbers.'
-                    : 'Read automatically from your pages, so check names '
-                        'and numbers.',
+                note.edited
+                    ? 'Edited by you.'
+                    : showTyped
+                        ? 'Typed up by your study server from the text read '
+                            'from your pages, so check names and numbers.'
+                        : 'Read automatically from your pages, so check names '
+                            'and numbers. Tap Edit to fix a word.',
                 style: AppText.itemMeta,
               ),
-              if (typedUp || canTypeUp)
+              if (note.textNote || typedUp || canTypeUp)
                 Wrap(
                   spacing: 16,
                   children: [
+                    if (note.textNote)
+                      TextButton.icon(
+                        style: linkStyle,
+                        onPressed: () => _viewPages(note),
+                        icon: const Icon(AppIcons.photo, size: 15),
+                        label: Text(note.pageCount == 1
+                            ? 'View the original page'
+                            : 'View the original pages'),
+                      ),
                     if (typedUp)
                       TextButton(
                         style: linkStyle,
@@ -270,6 +343,126 @@ class _NoteTextScreenState extends State<NoteTextScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Edits a note's text, to fix words that were misread: the typed-up notes
+/// when [typedUp], else the text as read. Asks before throwing changes away.
+class NoteEditScreen extends StatefulWidget {
+  const NoteEditScreen({super.key, required this.noteId, this.typedUp = false});
+
+  final String noteId;
+  final bool typedUp;
+
+  @override
+  State<NoteEditScreen> createState() => _NoteEditScreenState();
+}
+
+class _NoteEditScreenState extends State<NoteEditScreen> {
+  final _store = AppStore.instance;
+  late final TextEditingController _text;
+  late final String _original;
+
+  @override
+  void initState() {
+    super.initState();
+    final note = _store.note(widget.noteId);
+    _original = note == null
+        ? ''
+        : widget.typedUp
+            ? note.cleanText
+            : note.text;
+    _text = TextEditingController(text: _original);
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  bool get _changed => _text.text != _original;
+
+  void _save() {
+    final note = _store.note(widget.noteId);
+    final messenger = ScaffoldMessenger.of(context);
+    final saved = note != null && _changed;
+    if (saved) {
+      final text = _text.text.trimRight();
+      _store.updateNote(widget.typedUp
+          ? note.copyWith(cleanText: text, edited: true)
+          : note.copyWith(text: text, edited: true));
+    }
+    Navigator.of(context).pop();
+    if (saved) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Notes saved')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_changed,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final discard = await showConfirmDialog(context,
+            title: 'Discard Changes?',
+            message: 'Your changes to these notes will be lost.',
+            confirmLabel: 'Discard',
+            cancelLabel: 'Keep Editing');
+        if (discard && context.mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        appBar: subPageAppBar('Edit Notes', actions: [
+          TextButton(
+            onPressed: _save,
+            child: const Text('Save',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 8),
+        ]),
+        body: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.typedUp
+                    ? 'Fix anything the study server got wrong. Lines starting '
+                        'with # are headings and - are bullets.'
+                    : 'Fix any words that were read wrong.',
+                style: AppText.itemMeta,
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: TextField(
+                  controller: _text,
+                  maxLines: null,
+                  expands: true,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  textAlignVertical: TextAlignVertical.top,
+                  onChanged: (_) => setState(() {}),
+                  style: TextStyle(
+                      fontSize: 14, height: 1.5, color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Your notes',
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.border),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

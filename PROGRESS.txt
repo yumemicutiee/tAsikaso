@@ -120,6 +120,8 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
+0.7.0  22 Nov  Text Notes: scans and PDFs saved as text first (in place of Text
+               PDF), opened on the text, editable, with a big Make Flashcards
 0.6.0  22 Nov  Import PDF: a PDF (slides, handouts, scanned) saved as a note,
                a Text PDF or flashcards; Make Cards from a PDF in a set
 0.5.2  22 Nov  QA fixes (typed quiz answers judged strictly, alarm notice after

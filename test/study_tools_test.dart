@@ -12,6 +12,7 @@ import 'package:study_app/data/app_store.dart';
 import 'package:study_app/data/backup.dart';
 import 'package:study_app/data/plans.dart';
 import 'package:study_app/models/models.dart';
+import 'package:study_app/screens/actions.dart';
 import 'package:study_app/screens/capture/captured_page.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/flashcards/quiz_screen.dart';
@@ -138,6 +139,7 @@ void main() {
     String cleanText = '',
     String summary = '',
     List<Concept> concepts = const [],
+    bool textNote = false,
   }) =>
       store.addNote(
         title: 'Bio Notes',
@@ -149,6 +151,7 @@ void main() {
         cleanText: cleanText,
         summary: summary,
         concepts: concepts,
+        textNote: textNote,
       );
 
   List<Flashcard> cards(int n) => [
@@ -228,7 +231,7 @@ void main() {
       serverAnswers((_) => kitReply(cards: twoCards));
       final note = await addNote();
       await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
-      await tester.tap(find.byTooltip('Make Flashcards'));
+      await tester.tap(find.text('Make Flashcards'));
       await tester.pumpAndSettle();
 
       final deck = store.sets.single;
@@ -246,13 +249,134 @@ void main() {
       usePhoneSize(tester);
       final note = await addNote();
       await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
-      await tester.tap(find.byTooltip('Make Flashcards'));
+      await tester.tap(find.text('Make Flashcards'));
       await tester.pumpAndSettle();
 
       final deck = store.sets.single;
       expect(deck.cards, isEmpty);
       expect(deck.suggestions.map((c) => c.front), ['Osmosis', 'Diffusion']);
       expect(find.text('2 cards suggested from the text.'), findsOneWidget);
+    });
+  });
+
+  group('Text Notes', () {
+    test('remember that they are Text Notes, and edited, in a backup', () {
+      final note = Note(
+          id: 'n1',
+          title: 'Cells',
+          folderId: 'f1',
+          createdAt: DateTime(2026),
+          text: 'Mitosis',
+          textNote: true,
+          edited: true);
+      final back = Note.fromJson(note.toJson());
+      expect(back.textNote, isTrue);
+      expect(back.edited, isTrue);
+      final plain = Note.fromJson(note.copyWith(textNote: false, edited: false).toJson());
+      expect(plain.textNote, isFalse);
+      expect(plain.toJson().containsKey('textNote'), isFalse);
+    });
+
+    testWidgets('open on their text; other notes open on their PDF',
+        (tester) async {
+      usePhoneSize(tester);
+      final textNote = await addNote(textNote: true);
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => openNote(context, textNote),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+      expect(find.byType(NoteViewerScreen), findsNothing);
+      expect(find.text('Text Notes'), findsOneWidget);
+      expect(find.text('View the original page'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('View Pages'));
+      await tester.pump();
+      expect(find.byType(NoteViewerScreen), findsOneWidget);
+      expect(find.text('Original Pages'), findsOneWidget);
+      // No way back to the text but Back, and no second menu.
+      expect(find.byTooltip('View Text'), findsNothing);
+    });
+
+    testWidgets('Edit fixes a misread word, and cards are made from the fixed '
+        'text', (tester) async {
+      usePhoneSize(tester);
+      final note = await addNote(
+          text: 'Osmosls: movement of water across a membrane', textNote: true);
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
+      expect(find.textContaining('Tap Edit to fix a word'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Edit'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NoteEditScreen), findsOneWidget);
+      await tester.enterText(find.byType(TextField),
+          'Osmosis: movement of water across a membrane');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final saved = store.note(note.id)!;
+      expect(saved.text, 'Osmosis: movement of water across a membrane');
+      expect(saved.edited, isTrue);
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+      expect(find.text('Edited by you.'), findsOneWidget);
+      expect(find.text('Notes saved'), findsOneWidget);
+
+      await tester.tap(find.text('Make Flashcards'));
+      await tester.pumpAndSettle();
+      final deck = store.sets.single;
+      expect(deck.suggestions.single.front, 'Osmosis');
+      expect(deck.sourceText, 'Osmosis: movement of water across a membrane');
+    });
+
+    testWidgets('Edit changes the typed-up notes when they are shown',
+        (tester) async {
+      usePhoneSize(tester);
+      final note = await addNote(
+          text: 'raw', cleanText: '# Cells\n- Mitocondria', textNote: true);
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
+      await tester.tap(find.byTooltip('Edit'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Lines starting with #'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '# Cells\n- Mitochondria');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final saved = store.note(note.id)!;
+      expect(saved.cleanText, '# Cells\n- Mitochondria');
+      expect(saved.text, 'raw');
+    });
+
+    testWidgets('leaving Edit with changes asks first', (tester) async {
+      usePhoneSize(tester);
+      final note = await addNote(textNote: true);
+      await tester.pumpWidget(MaterialApp(home: NoteTextScreen(noteId: note.id)));
+      await tester.tap(find.byTooltip('Edit'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Something else');
+      await tester.pump();
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      expect(find.text('Discard Changes?'), findsOneWidget);
+
+      await tester.tap(find.text('Keep Editing'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NoteEditScreen), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Discard'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NoteEditScreen), findsNothing);
+      expect(store.note(note.id)!.text, ocrText);
+      expect(store.note(note.id)!.edited, isFalse);
     });
   });
 
@@ -409,20 +533,20 @@ void main() {
       });
     }
 
-    testWidgets('a Text PDF is refused when no text was read, and the pages '
+    testWidgets('Text Notes are refused when no text was read, and the pages '
         'stay', (tester) async {
       ScanService.debugRead =
           (jpegs) async => [for (final _ in jpegs) const RecognizedPage()];
       await openSaveSheet(tester);
-      await tester.tap(find.text('Text PDF'));
+      await tester.tap(find.text('Text Notes'));
       await tester.pump();
-      await tester.tap(find.text('Save as PDF'));
+      await tester.tap(find.text('Save as Notes'));
       await tester.pump();
       await waitUntil(tester,
           () => find.textContaining('No text could be read').evaluate().isNotEmpty);
       await tester.pumpAndSettle();
 
-      expect(find.textContaining("a Text PDF can't be made"), findsOneWidget);
+      expect(find.textContaining("can't be saved as Text Notes"), findsOneWidget);
       expect(store.notes, isEmpty);
       expect(store.folders.any((f) => f.name == 'My Notes'), isFalse);
       expect(find.byType(ReviewScreen), findsOneWidget); // nothing is lost

@@ -358,6 +358,8 @@ void main() {
       };
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Scan PDF'));
+      await tester.pump();
       await tester.tap(find.text('Save as PDF'));
       await tester.pump();
       await tester.runAsync(() async {

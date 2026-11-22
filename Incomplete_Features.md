@@ -351,8 +351,8 @@ set's ⋮ → Make Cards from a PDF (`lib/screens/capture/pdf_import.dart`).
   handouts and scanned PDFs all work offline. On the web the PDF's own text
   layer is read with pdf.js (`window.tasikasoPdfText` in `web/index.html`);
   a scanned PDF has none there, and the sheet says so.
-- Saved as: the PDF as it is (whole file, text kept for search), a Text PDF
-  (typed up by Smart Study) or a flashcard set (cards and a quiz from Smart
+- Saved as: the PDF as it is (whole file, text kept for search), Text Notes
+  (0.7.0; before that a Text PDF) or a flashcard set (cards and a quiz from Smart
   Study, or cards suggested from the text). Free plan: the 20 suggested
   cards a month apply, as for scans.
 - Into an existing set, the PDF's text is added to the set's text; its
@@ -360,3 +360,27 @@ set's ⋮ → Make Cards from a PDF (`lib/screens/capture/pdf_import.dart`).
 
 Still to check on a real phone: reading speed on a 30-page PDF, and very
 large pages (posters, A3) at 150 dpi.
+
+## 15. Text Notes (0.7.0, 22 Nov)
+
+Photos of notes (or an imported PDF) become text notes that become
+flashcards. On the save sheet **Text Notes** replaced Text PDF and comes
+first; it's picked when the text can be read.
+
+- A Text Note keeps the photos (Scan PDF with its text layer) or the
+  imported PDF as its pages, with the text as read and, with Smart Study,
+  the typed-up notes, summary and key concepts (`Note.textNote`).
+- It opens on its text (`NoteTextScreen`, via `openNote`), straight after
+  saving too. "View Pages" / "View the original pages" shows the file
+  (`NoteViewerScreen(fromText: true)`).
+- **Edit** (`NoteEditScreen`) fixes what is shown: the typed-up notes or the
+  text as read. It asks before throwing changes away; edited notes say
+  "Edited by you." (`Note.edited`) and their cards are made from the fixed
+  text.
+- A big **Make Flashcards** button at the bottom; ⋮ has Share as PDF (a
+  tidy PDF of the text, made when shared), Share Original Pages, Rename,
+  Move and Delete.
+- Notes saved before 0.7.0 open as they did (on their PDF, with View Text).
+
+On the web photos aren't read, so only an imported PDF with text can be
+saved as Text Notes there.

@@ -653,6 +653,7 @@ class AppStore extends ChangeNotifier {
     String cleanText = '',
     String summary = '',
     List<Concept> concepts = const [],
+    bool textNote = false,
   }) async {
     final note = Note(
       id: newId(),
@@ -664,6 +665,7 @@ class AppStore extends ChangeNotifier {
       cleanText: cleanText,
       summary: summary,
       concepts: concepts,
+      textNote: textNote,
     );
     await _storage.writeBytes(note.pdfKey, pdf);
     await _storage.writeBytes(note.thumbKey, thumbnail);

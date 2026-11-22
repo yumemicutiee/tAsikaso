@@ -66,9 +66,11 @@ lecture-note capture → PDF or flashcards.
   falls back to the offline behaviour and says so, and server errors end
   with a short "Ref" code that finds the request in the server's log. Only
   text leaves the phone — never the photos.
-- **Save Notes As:** choose **Scan PDF** (the pages as photos, text
-  selectable), **Text PDF** (the notes typed up, with the key concepts at
-  the end; needs text recognition) or **Flashcards**, a title and a folder,
+- **Save Notes As:** choose **Text Notes** (first: the text read from the
+  pages, typed up with key concepts when Smart Study is on; it opens on the
+  text, with **Edit** to fix misread words, a big **Make Flashcards** button,
+  and the photos one tap away; needs text recognition), **Scan PDF** (the
+  pages as photos, text selectable) or **Flashcards**, a title and a folder,
   or tap **New** to create a folder right there.
 - **Library & folders:** create folders with a colour, open a folder to see
   its notes and sets, edit or delete folders (long-press a folder too).
@@ -172,7 +174,7 @@ and the plans page stops handing out plans.
 a user account on a server: today the plan is kept on the device, so anyone
 can start a test plan. Smart Study needs your own study server and Anthropic
 API key; on the free plan it is capped by the 20 suggested cards a month,
-but typing up notes (Text PDF) isn't limited.
+but typing up notes (Text Notes) isn't limited.
 
 A first launch starts with five sample folders and five sample tasks so the
 app isn't empty. They can be edited or deleted.
@@ -322,7 +324,7 @@ the microphone permission it also asks for, since nothing is recorded).
 | Profile | `lib/screens/profile_screen.dart` | Name (tap to edit), stats, Plus card, Analysis and Settings |
 | Scan flow | `lib/screens/capture/scan_flow.dart` | Smart Scanner first, the app's camera as fallback |
 | Capture | `lib/screens/capture/capture_screen.dart` | App camera: Single / Multiple, flash, gallery import |
-| Review & crop | `lib/screens/capture/review_screen.dart` | Rotate, drag the 4 corners (pre-set on the page edges when found), then save as **Scan PDF**, **Text PDF** or **Flashcards** |
+| Review & crop | `lib/screens/capture/review_screen.dart` | Rotate, drag the 4 corners (pre-set on the page edges when found), then save as **Text Notes**, **Scan PDF** or **Flashcards** |
 | Note viewer | `lib/screens/note_viewer_screen.dart` | View, share or print a saved PDF; rename, move, delete; View Text (typed-up notes, summary, key concepts, Make Flashcards) |
 | Folder | `lib/screens/folder_screen.dart` | A folder's notes and flashcard sets |
 | Flashcard set | `lib/screens/flashcards/set_screen.dart` | Photos, key concepts, cards, add/edit cards, Study and Take a Quiz buttons |
@@ -349,7 +351,7 @@ lib/
   widgets/                     header, bottom bar, folder card, list rows, dialogs
   screens/                     Dashboard, Library, Folder, Study, Profile,
                                Settings, capture/, flashcards/, actions.dart
-  screens/capture/notes_pdf.dart  Scan PDF (hidden text layer) and Text PDF builders
+  screens/capture/notes_pdf.dart  Scan PDF (hidden text layer) and text PDF (Share as PDF) builders
 assets/fonts/                  Plus Jakarta Sans (headings, numbers), Inter (text), Phosphor icons
 server/                        the study server: Node.js + Claude (its own README)
 ```

@@ -7,6 +7,7 @@ import 'package:image/image.dart' as img;
 import 'package:study_app/data/app_store.dart';
 import 'package:study_app/screens/capture/pdf_import.dart';
 import 'package:study_app/screens/flashcards/set_screen.dart';
+import 'package:study_app/screens/note_viewer_screen.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/app_colors.dart';
@@ -90,6 +91,7 @@ void main() {
     await tester.tap(find.text('Import PDF'));
     await tester.pump();
     await waitFor(tester, () => find.text('Make Flashcards').evaluate().isNotEmpty ||
+        find.text('Save as Notes').evaluate().isNotEmpty ||
         find.text('Save PDF').evaluate().isNotEmpty);
   }
 
@@ -138,6 +140,8 @@ void main() {
       await openImport(tester);
       expect(find.text('Import PDF'), findsWidgets);
       expect(find.text('2 pages'), findsOneWidget);
+      await tester.tap(find.text('PDF'));
+      await tester.pump();
       await tester.tap(find.text('Save PDF'));
       await tester.pump();
       await waitFor(tester, () => store.notes.isNotEmpty);
@@ -147,7 +151,27 @@ void main() {
       expect(note.text, slideText);
       expect(note.pageCount, 2);
       expect(await store.readPdf(note), pdfBytes);
+      expect(note.textNote, isFalse);
       expect(find.textContaining('Saved to'), findsOneWidget);
+    });
+
+    testWidgets('as Text Notes (the first choice when it has text), it opens '
+        'on its text and keeps the PDF as its pages', (tester) async {
+      pdfWith(2, text: slideText);
+      await openImport(tester);
+      expect(find.text('Save as Notes'), findsOneWidget);
+      await tester.tap(find.text('Save as Notes'));
+      await tester.pump();
+      await waitFor(tester, () => store.notes.isNotEmpty);
+
+      final note = store.notes.single;
+      expect(note.textNote, isTrue);
+      expect(note.title, 'Lecture 7 - Cells');
+      expect(note.text, slideText);
+      expect(note.pageCount, 2);
+      expect(await store.readPdf(note), pdfBytes);
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+      expect(find.textContaining('Osmosis: movement of water'), findsOneWidget);
     });
 
     testWidgets('as flashcards without the study server, cards are suggested '

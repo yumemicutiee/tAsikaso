@@ -13,6 +13,7 @@ import 'package:study_app/screens/capture/captured_page.dart';
 import 'package:study_app/screens/capture/review_screen.dart';
 import 'package:study_app/screens/flashcards/quiz_screen.dart';
 import 'package:study_app/screens/flashcards/set_screen.dart';
+import 'package:study_app/screens/note_viewer_screen.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
 import 'package:study_app/theme/app_colors.dart';
@@ -90,25 +91,54 @@ void main() {
   }
 
   group('Save Notes As', () {
-    testWidgets('offers Scan PDF, Text PDF and Flashcards', (tester) async {
+    testWidgets('offers Text Notes, Scan PDF and Flashcards', (tester) async {
       await openSaveSheet(tester);
+      expect(find.text('Text Notes'), findsOneWidget);
       expect(find.text('Scan PDF'), findsOneWidget);
-      expect(find.text('Text PDF'), findsOneWidget);
       expect(find.text('Flashcards'), findsOneWidget);
-      // No text recognition here, so Text PDF can't be chosen.
+      // Text Notes come first.
+      expect(tester.getTopLeft(find.text('Text Notes')).dy,
+          lessThan(tester.getTopLeft(find.text('Scan PDF')).dy));
+      // No text recognition here, so Text Notes can't be chosen.
       expect(find.text('Needs text recognition (Android or iOS)'), findsOneWidget);
       expect(find.text('Save as PDF'), findsOneWidget);
+    });
+
+    testWidgets('Text Notes are picked when the text can be read, and open on '
+        'the text with the pages kept', (tester) async {
+      readsText();
+      await openSaveSheet(tester);
+      expect(find.text('Save as Notes'), findsOneWidget);
+      await tester.tap(find.text('Save as Notes'));
+      await tester.pump();
+      await waitFor(tester, () => store.notes.isNotEmpty);
+
+      final note = store.notes.single;
+      expect(note.textNote, isTrue);
+      expect(note.text, ocrText);
+      expect(note.pageCount, 1);
+      // The photos are kept as the note's PDF.
+      expect((await store.readPdf(note))!.length, greaterThan(1000));
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+      expect(find.text('Text Notes'), findsOneWidget); // the screen's title
+      expect(find.textContaining('Osmosis: movement of water'), findsOneWidget);
+      expect(find.byTooltip('View Pages'), findsOneWidget);
+      expect(find.byTooltip('Edit'), findsOneWidget);
+      expect(find.text('Make Flashcards'), findsOneWidget);
     });
 
     testWidgets('a scan PDF keeps the text that was read, and no server is '
         'needed', (tester) async {
       readsText();
       await openSaveSheet(tester);
+      await tester.tap(find.text('Scan PDF'));
+      await tester.pump();
       await tester.tap(find.text('Save as PDF'));
       await tester.pump();
       await waitFor(tester, () => store.notes.isNotEmpty);
 
       final note = store.notes.single;
+      expect(note.textNote, isFalse);
       expect(note.text, ocrText);
       expect(note.cleanText, '');
       expect(note.pageCount, 1);
@@ -116,7 +146,7 @@ void main() {
       expect((await store.readPdf(note))!.length, greaterThan(1000));
     });
 
-    testWidgets('a text PDF is typed up by the study server, with concepts',
+    testWidgets('Text Notes are typed up by the study server, with concepts',
         (tester) async {
       readsText();
       serverAnswers(200, {
@@ -132,18 +162,20 @@ void main() {
         },
       });
       await openSaveSheet(tester);
-      await tester.tap(find.text('Text PDF'));
+      await tester.tap(find.text('Text Notes'));
       await tester.pump();
-      await tester.tap(find.text('Save as PDF'));
+      await tester.tap(find.text('Save as Notes'));
       await tester.pump();
       await waitFor(tester, () => store.notes.isNotEmpty);
 
       final note = store.notes.single;
+      expect(note.textNote, isTrue);
       expect(note.cleanText, startsWith('# Transport'));
       expect(note.summary, 'How things move.');
       expect(note.concepts.single.term, 'Osmosis');
       expect(note.displayText, note.cleanText);
-      expect(note.pageCount, greaterThanOrEqualTo(1));
+      expect(note.pageCount, 1);
+      expect(find.text('Key Concepts'), findsOneWidget);
     });
 
     testWidgets('flashcards come from the study server when it is on',

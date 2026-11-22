@@ -83,6 +83,8 @@ class Note {
     this.cleanText = '',
     this.summary = '',
     this.concepts = const [],
+    this.textNote = false,
+    this.edited = false,
   });
 
   final String id;
@@ -90,6 +92,13 @@ class Note {
   final String folderId;
   final DateTime createdAt;
   final int pageCount;
+
+  /// Saved as Text Notes: it opens on its text, with the pages (the photos
+  /// or the imported PDF) one tap away.
+  final bool textNote;
+
+  /// The text has been fixed by hand, so it's shown as it was edited.
+  final bool edited;
 
   /// Text read from the pages (OCR). Empty if none was found or OCR isn't
   /// available on this device. Used for search and "View Text".
@@ -115,9 +124,12 @@ class Note {
   Note copyWith({
     String? title,
     String? folderId,
+    String? text,
     String? cleanText,
     String? summary,
     List<Concept>? concepts,
+    bool? textNote,
+    bool? edited,
   }) =>
       Note(
         id: id,
@@ -125,10 +137,12 @@ class Note {
         folderId: folderId ?? this.folderId,
         createdAt: createdAt,
         pageCount: pageCount,
-        text: text,
+        text: text ?? this.text,
         cleanText: cleanText ?? this.cleanText,
         summary: summary ?? this.summary,
         concepts: concepts ?? this.concepts,
+        textNote: textNote ?? this.textNote,
+        edited: edited ?? this.edited,
       );
 
   Json toJson() => {
@@ -142,6 +156,8 @@ class Note {
         if (summary.isNotEmpty) 'summary': summary,
         if (concepts.isNotEmpty)
           'concepts': [for (final c in concepts) c.toJson()],
+        if (textNote) 'textNote': true,
+        if (edited) 'edited': true,
       };
 
   factory Note.fromJson(Json j) => Note(
@@ -154,6 +170,8 @@ class Note {
         cleanText: j['clean'] as String? ?? '',
         summary: j['summary'] as String? ?? '',
         concepts: Concept.listFromJson(j['concepts']),
+        textNote: j['textNote'] == true,
+        edited: j['edited'] == true,
       );
 }
 

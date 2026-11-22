@@ -46,8 +46,10 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 - [ ] Share that PDF to Google Drive or a PDF viewer: the text on the pages can be **selected, searched and
       copied** (the hidden text layer). Does the selection sit over the right words? ________
 - [ ] Android app info → Permissions: no Microphone permission is listed.
-- [ ] Open the note → "View Text" shows the recognised text; Copy works; the flashcards button makes a set.
-- [ ] Save as **Text PDF** (with Smart Study off): a document of the recognised text, one line per line.
+- [ ] Open the note → "View Text" shows the recognised text; Copy works.
+- [ ] Save as **Text Notes** (with Smart Study off; it's the first choice): the note opens on the recognised
+      text. "View the original page" shows the photo. Edit → fix a word → Save → "Edited by you.".
+      Make Flashcards (the big button) makes a set from the fixed text. ⋮ → Share as PDF: a document of the text.
 - [ ] Settings → turn Smart Scanner OFF → camera button opens the app's own camera.
       Single / Multiple, flash, gallery import, rotate, four-corner crop.
 - [ ] App camera: photograph a page on a darker desk → the crop corners start on the page's edges and
@@ -61,8 +63,8 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
       Enter the App Token too. Enter a wrong address → "no study server answered there".
 - [ ] Scan 2–3 pages → Save as **Flashcards**: "Making your flashcards…" shows, then the set opens with cards,
       a summary and Key Concepts. How long did it take? ________ s. Are the cards good? ________
-- [ ] Save as **Text PDF**: "Typing up your notes…", then a clean document with headings, bullets and
-      Key Concepts at the end. View Text shows the typed-up notes with "Show the text as read".
+- [ ] Save as **Text Notes**: "Typing up your notes…", then the note opens on the typed-up notes with headings,
+      bullets, a summary and Key Concepts, and "Show the text as read".
 - [ ] Save as **Scan PDF** with Smart Study on: the note still gets a summary and Key Concepts on View Text.
 - [ ] Set screen → Take a Quiz: questions of all four types; a wrong multiple-choice shows the right one;
       a typed answer in other words is still marked right (by meaning); the score at the end;

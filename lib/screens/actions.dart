@@ -42,10 +42,36 @@ void _toast(BuildContext context, String text) {
 
 // ---- Notes -------------------------------------------------------------------
 
+/// Opens a note: Text Notes on their text, other notes on their PDF.
 void openNote(BuildContext context, Note note) {
-  Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => NoteViewerScreen(noteId: note.id)),
-  );
+  Navigator.of(context).push(MaterialPageRoute(
+    builder: (_) => note.textNote
+        ? NoteTextScreen(noteId: note.id)
+        : NoteViewerScreen(noteId: note.id),
+  ));
+}
+
+/// Shares Text Notes as a tidy PDF of their text (with the summary and key
+/// concepts when they were typed up), as the text is now.
+Future<void> shareNoteText(BuildContext context, Note note) async {
+  final text = note.displayText;
+  if (text.trim().isEmpty) {
+    _toast(context, 'This note has no text to share.');
+    return;
+  }
+  try {
+    final pdf = await buildTextPdf(
+      title: note.title,
+      text: text,
+      summary: note.cleanText.isNotEmpty ? note.summary : '',
+      concepts: note.cleanText.isNotEmpty ? note.concepts : const [],
+      date: note.createdAt,
+    );
+    await Printing.sharePdf(bytes: pdf, filename: pdfFileName(note.title));
+  } catch (e) {
+    debugPrint('Could not share the notes: $e');
+    if (context.mounted) _toast(context, "These notes couldn't be shared.");
+  }
 }
 
 Future<void> shareNote(BuildContext context, Note note) async {
@@ -66,7 +92,13 @@ Future<void> shareNote(BuildContext context, Note note) async {
 /// [onDeleted] runs after the note is deleted (e.g. to close its screen).
 MenuActions noteActions(BuildContext context, Note note, {VoidCallback? onDeleted}) => {
       'Open': () => openNote(context, note),
-      'Share PDF': () => shareNote(context, note),
+      if (note.textNote) ...{
+        'View Pages': () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => NoteViewerScreen(noteId: note.id, fromText: true))),
+        'Share as PDF': () => shareNoteText(context, note),
+        'Share Original Pages': () => shareNote(context, note),
+      } else
+        'Share PDF': () => shareNote(context, note),
       'Rename': () async {
         final name = await showTextInputDialog(context,
             title: 'Rename Note', initial: note.title);
@@ -432,7 +464,8 @@ Future<void> makeFlashcardsFromNote(BuildContext context, Note note) async {
     folderId: note.folderId,
     cards: cards,
     suggestions: suggestions,
-    sourceText: note.text.isNotEmpty ? note.text : text,
+    // The text as read, unless it was fixed by hand.
+    sourceText: note.text.isNotEmpty && !note.edited ? note.text : text,
     summary: kit?.summary ?? note.summary,
     concepts: kit?.concepts ?? note.concepts,
     quiz: kit == null ? const [] : _quizFor(kit.quiz, cards),

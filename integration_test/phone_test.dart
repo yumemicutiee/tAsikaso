@@ -222,6 +222,9 @@ void main() {
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
+    // Text Notes come first where text is read; these keep the photos.
+    await tester.tap(find.text('Scan PDF'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save as PDF'));
     final waited = Stopwatch()..start();
     bool isNew(Note n) => !known.contains(n.id);
@@ -260,6 +263,9 @@ void main() {
     await shot(tester, '8-gallery-crop');
 
     await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    // Text Notes come first where text is read; these keep the photos.
+    await tester.tap(find.text('Scan PDF'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save as PDF'));
     bool isNew(Note n) => !known.contains(n.id);
@@ -460,6 +466,9 @@ void main() {
     await tester.pumpAndSettle();
     final imported = took.elapsedMilliseconds;
     await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    // Text Notes come first where text is read; these keep the photos.
+    await tester.tap(find.text('Scan PDF'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save as PDF'));
     bool isNew(Note n) => !known.contains(n.id);

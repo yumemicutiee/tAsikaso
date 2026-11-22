@@ -243,7 +243,8 @@ Future<ImportedPdf?> pickAndReadPdf(BuildContext context) async {
 }
 
 /// Import PDF: pick a PDF (lecture slides, a handout, a scanned PDF) and
-/// save it as a note, typed up as a Text PDF, or as flashcards.
+/// save it as Text Notes (to edit and make flashcards from), as the PDF
+/// it is, or as flashcards.
 Future<void> importPdf(BuildContext context) async {
   final pdf = await pickAndReadPdf(context);
   if (pdf == null || !context.mounted) return;
@@ -274,7 +275,7 @@ extension on String {
   String? get nullIfEmpty => isEmpty ? null : this;
 }
 
-/// Saves [pdf] as [request] asks: the PDF itself, a Text PDF or a
+/// Saves [pdf] as [request] asks: Text Notes, the PDF itself or a
 /// flashcard set (cards and a quiz from the study server when it's on,
 /// otherwise cards suggested from the text).
 @visibleForTesting
@@ -339,12 +340,12 @@ Future<void> saveImportedPdf(
         onCancel.value = null;
       }
     }
-    if (request.format == SaveFormat.textPdf &&
+    if (request.format == SaveFormat.textNotes &&
         text.trim().isEmpty &&
         (kit == null || kit.notes.trim().isEmpty)) {
       closeDialog(navigator, dialog);
-      toast("No text was found in this PDF, so a Text PDF can't be made. "
-          'Save it as a PDF instead.');
+      toast("No text was found in this PDF, so it can't be saved as Text "
+          'Notes. Save it as a PDF instead.');
       return;
     }
 
@@ -396,27 +397,15 @@ Future<void> saveImportedPdf(
       return;
     }
 
-    progress.value = 'Saving your PDF…';
-    final Uint8List file;
-    final int pageCount;
-    if (request.format == SaveFormat.textPdf) {
-      progress.value = 'Creating your PDF…';
-      final body = (kit?.notes.trim().isNotEmpty ?? false) ? kit!.notes : text;
-      file = await buildTextPdf(
-        title: request.title,
-        text: body,
-        summary: kit?.summary ?? '',
-        concepts: kit?.concepts ?? const [],
-      );
-      pageCount = pdfPageCount(file);
-    } else {
-      // The PDF as it is, every page of it.
-      file = pdf.bytes;
-      final counted = pdfPageCount(file);
-      pageCount = pdf.more
-          ? (counted > pdf.pages.length ? counted : pdf.pages.length + 1)
-          : pdf.pages.length;
-    }
+    // The PDF as it is, every page of it; Text Notes keep it as their
+    // original pages.
+    final textNotes = request.format == SaveFormat.textNotes;
+    progress.value = textNotes ? 'Saving your notes…' : 'Saving your PDF…';
+    final file = pdf.bytes;
+    final counted = pdfPageCount(file);
+    final pageCount = pdf.more
+        ? (counted > pdf.pages.length ? counted : pdf.pages.length + 1)
+        : pdf.pages.length;
     final thumb = await CapturedPage.thumbnail(pdf.pages.first);
     final note = await store.addNote(
       title: request.title,
@@ -428,9 +417,19 @@ Future<void> saveImportedPdf(
       cleanText: kit?.notes ?? '',
       summary: kit?.summary ?? '',
       concepts: kit?.concepts ?? const [],
+      textNote: textNotes,
     );
 
     navigator.popUntil((route) => route.isFirst);
+    if (textNotes) {
+      // Straight to the text, to check it and make flashcards from it.
+      navigator.push(
+          MaterialPageRoute(builder: (_) => NoteTextScreen(noteId: note.id)));
+      toast(withPagesNote(aiProblem == null
+          ? 'Saved to ${folder.name}'
+          : 'Saved to ${folder.name}. $aiProblem'));
+      return;
+    }
     toast(
       withPagesNote(aiProblem == null
           ? 'Saved to ${folder.name}'

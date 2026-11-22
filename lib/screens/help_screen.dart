@@ -28,9 +28,9 @@ class HelpScreen extends StatelessWidget {
           "Smart Scanner finds the page edges for you; the app's own camera "
           'finds them too (see below), and you can drag the four corners if '
           "they're off. "
-          'Scan several pages, then save them as a Scan PDF (your photos, '
-          'with the text selectable), a Text PDF (the notes typed up) or '
-          'Flashcards.',
+          'Scan several pages, then save them as Text Notes (the text of '
+          'your pages, to edit and turn into flashcards), a Scan PDF (your '
+          'photos, with the text selectable) or Flashcards.',
     ),
     (
       'How does the app find the page edges?',
@@ -44,14 +44,16 @@ class HelpScreen extends StatelessWidget {
     (
       'Can the app read the text in my photos?',
       'Yes, on phones. When you save, the text is read on your phone (no '
-          'internet needed). Notes become searchable, and "View Text" lets '
-          'you copy it or make flashcards. Without Smart Study, cards are '
-          'suggested from lines like "Term: definition" for you to add or skip.',
+          'internet needed). Save as Text Notes and the note opens on its '
+          'text: tap Edit to fix a misread word, and Make Flashcards to turn '
+          'it into cards. Your photos stay one tap away. Without Smart Study, '
+          'cards are suggested from lines like "Term: definition" for you to '
+          'add or skip.',
     ),
     (
       'Can I turn a PDF into notes or flashcards?',
       'Yes. Tap + and choose Import PDF (or the PDF button on the camera '
-          'screen), then save it as a PDF, a Text PDF or flashcards. Lecture '
+          'screen), then save it as Text Notes, a PDF or flashcards. Lecture '
           'slides and handouts work everywhere; scanned PDFs are read on '
           'Android and iOS. The first $kPdfImportPageLimit pages are read. '
           'To add cards to a set you already have, open the set and choose '
