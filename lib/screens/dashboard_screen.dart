@@ -257,7 +257,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (notes.isEmpty)
         EmptyState(
           icon: AppIcons.capture,
-          message: 'Scan the board or your notebook and save it as a PDF.',
+          message: 'Scan the board or your notebook to turn it into notes.',
           actionLabel: 'Scan Notes',
           onAction: widget.onCapture,
         )

@@ -569,10 +569,9 @@ class _ToolButton extends StatelessWidget {
 }
 
 /// Text Notes: the text read from the pages (typed up with Smart Study),
-/// to edit and make flashcards from, with the pages kept. Flashcards: a set
-/// with the photos (or the PDF's pages) to write cards from. For an
-/// imported PDF only, [scanPdf] keeps the PDF as it is.
-enum SaveFormat { textNotes, scanPdf, flashcards }
+/// to edit and make flashcards from, with the pages kept. Flashcards (for
+/// an imported PDF): a set with its pages to write cards from.
+enum SaveFormat { textNotes, flashcards }
 
 class SaveRequest {
   const SaveRequest({
@@ -590,7 +589,7 @@ class SaveRequest {
 
 /// Bottom sheet. For scanned pages, after their text was [read]: only the
 /// folder (they're saved as Text Notes). For an imported PDF ([pdfName]):
-/// Text Notes, the PDF as it is or Flashcards, a title and a folder.
+/// Text Notes or Flashcards, a title and a folder.
 class SaveSheet extends StatefulWidget {
   const SaveSheet({
     super.key,
@@ -636,13 +635,8 @@ class _SaveSheetState extends State<SaveSheet> {
       _folder = folder;
     });
   }
-  // Scanned pages are always Text Notes. A PDF: Text Notes first when it
-  // has text, otherwise the PDF as it is.
-  late SaveFormat _format = _canReadText || widget.read != null
-      ? SaveFormat.textNotes
-      : widget.pdfName != null
-          ? SaveFormat.scanPdf
-          : SaveFormat.flashcards;
+  // Text Notes first (scanned pages are always Text Notes).
+  SaveFormat _format = SaveFormat.textNotes;
   final _title = TextEditingController();
 
   /// Whether there is text: read from the scanned pages, or in the PDF.
@@ -744,11 +738,8 @@ class _SaveSheetState extends State<SaveSheet> {
               icon: AppIcons.text,
               title: 'Text Notes',
               subtitle: !canReadText
-                  ? (fromPdf
-                      ? 'No text was found in this PDF'
-                      : ScanService.canReadText
-                          ? 'No text was found on these pages'
-                          : 'Needs text recognition (Android or iOS)')
+                  ? 'No text was found; its pages are kept for you to type '
+                      'the notes in'
                   : ai
                       ? 'Typed up cleanly with key concepts, to edit and '
                           'turn into flashcards'
@@ -758,21 +749,8 @@ class _SaveSheetState extends State<SaveSheet> {
                           : 'Your notes as text, to edit and turn into '
                               'flashcards'),
               selected: _format == SaveFormat.textNotes,
-              enabled: canReadText,
               onTap: () => setState(() => _format = SaveFormat.textNotes),
             ),
-            if (fromPdf) ...[
-              const SizedBox(height: 8),
-              FormatOption(
-                icon: AppIcons.pdf,
-                title: 'PDF',
-                subtitle: canReadText
-                    ? 'Your PDF as it is; its text can be searched'
-                    : 'Your PDF as it is',
-                selected: _format == SaveFormat.scanPdf,
-                onTap: () => setState(() => _format = SaveFormat.scanPdf),
-              ),
-            ],
             const SizedBox(height: 8),
             FormatOption(
               icon: AppIcons.flashcards,
@@ -824,7 +802,6 @@ class _SaveSheetState extends State<SaveSheet> {
             AccentButton(
               label: switch (_format) {
                 SaveFormat.textNotes => 'Save as Notes',
-                SaveFormat.scanPdf => 'Save PDF',
                 SaveFormat.flashcards => 'Make Flashcards',
               },
               onPressed: _submit,

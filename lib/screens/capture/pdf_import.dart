@@ -24,7 +24,7 @@ import 'pdf_text_stub.dart' if (dart.library.js_interop) 'pdf_text_web.dart'
 import 'review_screen.dart' show SaveFormat, SaveRequest, SaveSheet;
 
 /// How many pages of an imported PDF are read (the rest of the file is still
-/// kept when it's saved as a PDF).
+/// kept with the notes, as their original pages).
 const kPdfImportPageLimit = 30;
 
 /// Imported PDFs larger than this are refused (they'd fill the phone's
@@ -318,10 +318,8 @@ Future<void> saveImportedPdf(
     final cardsUsedUp = asCards && left == 0;
     StudyKit? kit;
     String? aiProblem;
-    // The study server types the text up or writes cards and a quiz; a
-    // plain "PDF" save keeps the file as it is and only needs the text.
-    final wantsKit = request.format != SaveFormat.scanPdf;
-    if (wantsKit && StudyAi.isOn && text.trim().length >= 20 && !cardsUsedUp) {
+    // The study server types the text up or writes cards and a quiz.
+    if (StudyAi.isOn && text.trim().length >= 20 && !cardsUsedUp) {
       progress.value =
           asCards ? 'Making your flashcards…' : 'Typing up your notes…';
       final cancel = CancelToken();
@@ -340,15 +338,6 @@ Future<void> saveImportedPdf(
         onCancel.value = null;
       }
     }
-    if (request.format == SaveFormat.textNotes &&
-        text.trim().isEmpty &&
-        (kit == null || kit.notes.trim().isEmpty)) {
-      closeDialog(navigator, dialog);
-      toast("No text was found in this PDF, so it can't be saved as Text "
-          'Notes. Save it as a PDF instead.');
-      return;
-    }
-
     final folder = request.folder ??
         (created = store.addFolder('My Notes', AppColors.folderPalette.first));
 
@@ -397,10 +386,9 @@ Future<void> saveImportedPdf(
       return;
     }
 
-    // The PDF as it is, every page of it; Text Notes keep it as their
-    // original pages.
-    final textNotes = request.format == SaveFormat.textNotes;
-    progress.value = textNotes ? 'Saving your notes…' : 'Saving your PDF…';
+    // Text Notes keep the PDF, every page of it, as their original pages.
+    // With no text, the notes can be typed in with Edit.
+    progress.value = 'Saving your notes…';
     final file = pdf.bytes;
     final counted = pdfPageCount(file);
     final pageCount = pdf.more
@@ -417,30 +405,16 @@ Future<void> saveImportedPdf(
       cleanText: kit?.notes ?? '',
       summary: kit?.summary ?? '',
       concepts: kit?.concepts ?? const [],
-      textNote: textNotes,
+      textNote: true,
     );
 
+    // Straight to the text, to check it and make flashcards from it.
     navigator.popUntil((route) => route.isFirst);
-    if (textNotes) {
-      // Straight to the text, to check it and make flashcards from it.
-      navigator.push(
-          MaterialPageRoute(builder: (_) => NoteTextScreen(noteId: note.id)));
-      toast(withPagesNote(aiProblem == null
-          ? 'Saved to ${folder.name}'
-          : 'Saved to ${folder.name}. $aiProblem'));
-      return;
-    }
-    toast(
-      withPagesNote(aiProblem == null
-          ? 'Saved to ${folder.name}'
-          : 'Saved to ${folder.name}. $aiProblem'),
-      action: SnackBarAction(
-        label: 'Open',
-        onPressed: () => navigator.push(
-          MaterialPageRoute(builder: (_) => NoteViewerScreen(noteId: note.id)),
-        ),
-      ),
-    );
+    navigator.push(
+        MaterialPageRoute(builder: (_) => NoteTextScreen(noteId: note.id)));
+    toast(withPagesNote(aiProblem == null
+        ? 'Saved to ${folder.name}'
+        : 'Saved to ${folder.name}. $aiProblem'));
   } catch (e, st) {
     debugPrint('Importing the PDF failed: $e\n$st');
     if (created != null &&

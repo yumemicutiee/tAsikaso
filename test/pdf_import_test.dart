@@ -90,9 +90,7 @@ void main() {
     ));
     await tester.tap(find.text('Import PDF'));
     await tester.pump();
-    await waitFor(tester, () => find.text('Make Flashcards').evaluate().isNotEmpty ||
-        find.text('Save as Notes').evaluate().isNotEmpty ||
-        find.text('Save PDF').evaluate().isNotEmpty);
+    await waitFor(tester, () => find.text('Save as Notes').evaluate().isNotEmpty);
   }
 
   group('A PDF file name as a title', () {
@@ -135,24 +133,16 @@ void main() {
   });
 
   group('Import PDF', () {
-    testWidgets('saves the PDF as it is, titled after the file', (tester) async {
+    testWidgets('offers Text Notes and Flashcards, not the PDF as it is',
+        (tester) async {
       pdfWith(2, text: slideText);
       await openImport(tester);
       expect(find.text('Import PDF'), findsWidgets);
       expect(find.text('2 pages'), findsOneWidget);
-      await tester.tap(find.text('PDF'));
-      await tester.pump();
-      await tester.tap(find.text('Save PDF'));
-      await tester.pump();
-      await waitFor(tester, () => store.notes.isNotEmpty);
-
-      final note = store.notes.single;
-      expect(note.title, 'Lecture 7 - Cells');
-      expect(note.text, slideText);
-      expect(note.pageCount, 2);
-      expect(await store.readPdf(note), pdfBytes);
-      expect(note.textNote, isFalse);
-      expect(find.textContaining('Saved to'), findsOneWidget);
+      expect(find.text('Text Notes'), findsOneWidget);
+      expect(find.text('Flashcards'), findsOneWidget);
+      expect(find.text('PDF'), findsNothing);
+      expect(find.text('Save PDF'), findsNothing);
     });
 
     testWidgets('as Text Notes (the first choice when it has text), it opens '
@@ -194,17 +184,23 @@ void main() {
       expect(find.textContaining('We found 2 cards to suggest'), findsOneWidget);
     });
 
-    testWidgets('a PDF without text can still be kept, but not typed up',
+    testWidgets('a PDF without text is still saved as notes, to type them in',
         (tester) async {
       pdfWith(1); // scanned, read where there's no text recognition
       await openImport(tester);
       expect(find.text('1 page · no text found'), findsOneWidget);
-      expect(find.text('No text was found in this PDF'), findsOneWidget);
+      expect(find.textContaining('No text was found; its pages are kept'),
+          findsOneWidget);
       expect(find.textContaining('scanned PDFs are read in the Android'), findsOneWidget);
-      await tester.tap(find.text('Save PDF'));
+      await tester.tap(find.text('Save as Notes'));
       await tester.pump();
       await waitFor(tester, () => store.notes.isNotEmpty);
-      expect(store.notes.single.text, '');
+      final note = store.notes.single;
+      expect(note.text, '');
+      expect(note.textNote, isTrue);
+      expect(await store.readPdf(note), pdfBytes);
+      expect(find.byType(NoteTextScreen), findsOneWidget);
+      expect(find.byTooltip('Edit'), findsOneWidget);
     });
 
     testWidgets('says when only the first pages were read', (tester) async {

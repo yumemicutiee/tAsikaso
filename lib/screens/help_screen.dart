@@ -61,7 +61,7 @@ class HelpScreen extends StatelessWidget {
     (
       'Can I turn a PDF into notes or flashcards?',
       'Yes. Tap + and choose Import PDF (or the PDF button on the camera '
-          'screen), then save it as Text Notes, a PDF or flashcards. Lecture '
+          'screen), then save it as Text Notes or flashcards. Lecture '
           'slides and handouts work everywhere; scanned PDFs are read on '
           'Android and iOS. The first $kPdfImportPageLimit pages are read. '
           'To add cards to a set you already have, open the set and choose '

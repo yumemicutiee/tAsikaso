@@ -351,7 +351,7 @@ set's ⋮ → Make Cards from a PDF (`lib/screens/capture/pdf_import.dart`).
   handouts and scanned PDFs all work offline. On the web the PDF's own text
   layer is read with pdf.js (`window.tasikasoPdfText` in `web/index.html`);
   a scanned PDF has none there, and the sheet says so.
-- Saved as: the PDF as it is (whole file, text kept for search), Text Notes
+- Saved as: (until 0.7.1) the PDF as it is (whole file, text kept for search), Text Notes
   (0.7.0; before that a Text PDF) or a flashcard set (cards and a quiz from Smart
   Study, or cards suggested from the text). Free plan: the 20 suggested
   cards a month apply, as for scans.
@@ -416,6 +416,8 @@ saved as Text Notes there.
   cropped, turned, added or deleted (`readKey`).
 - **Scan PDF and Flashcards are gone** from the photo flow: flashcards are
   made from the note (Make Flashcards, which asks where they go). An
-  imported PDF still offers Text Notes, the PDF as it is, or Flashcards.
+  imported PDF offers Text Notes or Flashcards (the "PDF as it is" choice
+  was removed too; Text Notes keep the whole PDF as their pages, and with
+  no text they're saved for the notes to be typed in).
 - The Smart Study step (typing up) runs after Save Notes.
 - Notes saved as Scan PDFs before 0.7.1 still open as they did.

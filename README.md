@@ -1,7 +1,7 @@
 # tAsikaso
 
 tAsikaso is a Flutter app for Android (and web) with a Pomodoro timer + task list, and
-lecture-note capture → PDF or flashcards.
+lecture-note capture → text notes → flashcards.
 
 **What works**
 - **Saved on the phone:** folders, notes (PDFs), flashcards, tasks, settings

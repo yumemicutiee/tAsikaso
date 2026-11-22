@@ -70,7 +70,8 @@ class Concept {
       ];
 }
 
-/// Captured lecture notes saved as a PDF.
+/// Notes: the text read from captured pages (or an imported PDF), with
+/// the pages kept as a PDF.
 @immutable
 class Note {
   const Note({
