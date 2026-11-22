@@ -220,7 +220,17 @@ Future<void> shots(String name, int n) async {
   }
 }
 
+/// System back, but only when something is open on top: on the first
+/// screen, back would close the app and the run would hang.
 Future<void> back() async {
+  final canPop = find.byType(Navigator).evaluate().any((e) {
+    final s = (e as StatefulElement).state;
+    return s is NavigatorState && s.canPop();
+  });
+  if (!canPop) {
+    debugPrint('QA_MISSING [$stage] nothing to go back from');
+    return;
+  }
   await t.binding.handlePopRoute();
   await settle(700);
 }
