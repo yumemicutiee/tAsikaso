@@ -300,6 +300,7 @@ void main() {
 
       await tester.tap(find.byTooltip('View Pages'));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400)); // the page slides in
       expect(find.byType(NoteViewerScreen), findsOneWidget);
       expect(find.text('Original Pages'), findsOneWidget);
       // No way back to the text but Back, and no second menu.
