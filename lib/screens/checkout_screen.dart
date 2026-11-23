@@ -26,6 +26,8 @@ import '../widgets/common.dart' show AccentButton;
 /// 4000 0000 0000 0002, which is declined.
 Future<bool> openCheckout(BuildContext context, PlusPlan plan,
     {bool switching = false}) async {
+  // A message still showing would sit over the checkout's buttons.
+  ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
   final paid = await Navigator.of(context).push<bool>(
     MaterialPageRoute(
         builder: (_) => CheckoutScreen(plan: plan, switching: switching)),
