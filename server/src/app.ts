@@ -300,6 +300,17 @@ export function createApp(options: AppOptions = {}) {
       res.setHeader("Cache-Control", "no-store");
       res.json({ ...(result ?? { total: 0, rows: [] }), page, pageSize });
     });
+
+    // Crash reports of the last ?days= days (1 to 90; 7 by default),
+    // grouped by error, version and system.
+    app.get("/v1/admin/crashes", async (req, res) => {
+      adminOf(res);
+      const n = Number.parseInt(String(req.query.days ?? "7"), 10);
+      const days = Number.isFinite(n) ? Math.min(Math.max(n, 1), 90) : 7;
+      const crashes = await reports.crashes(days);
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ days, crashReportsSaved: storeCrashReports, crashes });
+    });
   }
 
   app.get("/v1/usage", (req, res) => {

@@ -105,12 +105,6 @@ tbody tr:nth-child(even) td:last-child{border-radius:0 12px 12px 0}
 td .meta{white-space:nowrap}
 .pager{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
 .pager div{display:flex;gap:8px}
-details.crash{background:var(--row);border-radius:16px;padding:12px 14px}
-details.crash summary{display:flex;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}
-details.crash summary::-webkit-details-marker{display:none}
-details.crash .msg{font-size:13px;font-weight:600;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-details.crash .count{font-size:14px;font-weight:700;color:var(--bad);white-space:nowrap}
-details.crash pre{margin:10px 0 0;font-size:12px;white-space:pre-wrap;word-break:break-word;color:#3A3D46;max-height:240px;overflow:auto}
 .note{font-size:13px;color:var(--muted)}
 .empty{font-size:14px;color:var(--muted);padding:8px 0}
 .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -269,6 +263,58 @@ main.content{container-type:inline-size;display:flex;flex-direction:column;gap:2
   #users .tablebox{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -8px;padding:0 8px}
   #users .pager{padding-top:12px;border-top:1px solid var(--line)}
 }
+/* ---- Crash reports ---------------------------------------------------------- */
+#crashes{flex:1 1 auto;min-width:0}
+.ico.warn{background:#FDE8E6;color:#B3261E}
+.cstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.cstats > div{background:var(--row);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.cstats .lbl{font-size:12px;color:var(--muted)}
+.cstats strong{font-size:24px;font-weight:600;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crashlist{display:flex;flex-direction:column;gap:10px}
+details.crash{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:0;overflow:hidden}
+details.crash[open]{border-color:#C9CEDA;box-shadow:0 4px 14px rgba(22,24,29,.06)}
+details.crash summary{display:grid;grid-template-columns:4px minmax(0,1fr) auto 20px;align-items:center;gap:14px;padding:14px 16px 14px 0;cursor:pointer;list-style:none}
+details.crash summary::-webkit-details-marker{display:none}
+details.crash summary:hover{background:var(--row)}
+details.crash .sev{align-self:stretch;border-radius:0 4px 4px 0;background:#C9CEDA}
+details.crash .sev.mid{background:#E9A23B}
+details.crash .sev.high{background:#D93A2F}
+details.crash .what{min-width:0;display:flex;flex-direction:column;gap:4px}
+details.crash .type{font-size:14px;font-weight:700;color:var(--ink)}
+details.crash .msg{font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:#3A3D46;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
+details.crash .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+details.crash .tags span{font-size:11.5px;font-weight:600;color:#3A3D46;background:var(--well);border-radius:999px;padding:2px 9px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+details.crash .num{text-align:right;white-space:nowrap}
+details.crash .num strong{display:block;font-size:20px;font-weight:700;color:var(--ink)}
+details.crash .num span{font-size:12px;color:var(--muted)}
+details.crash .chev{width:18px;height:18px;color:var(--faint);transition:transform .15s}
+details.crash[open] .chev{transform:rotate(180deg)}
+details.crash .body{padding:0 16px 16px 18px;display:flex;flex-direction:column;gap:8px}
+details.crash .bodyhead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+details.crash pre{margin:0;background:#16181D;color:#E6E8EE;border-radius:12px;padding:14px 16px;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;overflow:auto;max-height:280px}
+details.crash pre .ln{color:#6E7380;user-select:none;display:inline-block;min-width:2.2em}
+details.crash pre .app{color:#9FCBF5}
+.copybtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--ink)}
+.cempty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:40px 16px;color:var(--muted);font-size:14px;flex:1}
+.cempty .big-ico{width:56px;height:56px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;background:#E2F5E9;color:#15803D}
+.cempty .big-ico.off{background:var(--well);color:var(--muted)}
+.cempty strong{color:var(--ink);font-size:16px}
+.cempty code{background:var(--well);border-radius:6px;padding:2px 6px;font-size:13px}
+@media (min-width:641px){
+  body[data-view="crashes"] .wrap{height:100dvh;padding-bottom:24px}
+  body[data-view="crashes"] main.content{flex:1 1 auto;min-height:0}
+  body[data-view="crashes"] main.content > .row{flex:1 1 auto;min-height:0}
+  #crashes{height:100%;min-height:0}
+  #crashes .crashlist{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -8px;padding:2px 8px 8px}
+}
+@media (max-width:900px){ .cstats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:640px){
+  #crashes .cardhead .seg{width:100%}
+  #crashes .cardhead .seg button{flex:1;padding:6px 4px}
+  #crashTools .searchbox{width:100%}
+  details.crash summary{grid-template-columns:4px minmax(0,1fr) auto;gap:10px}
+  details.crash .chev{display:none}
+}
 /* Short menu labels on phones. */
 .short{display:none}
 @media (max-width:640px){
@@ -333,6 +379,8 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     <symbol id="i-google" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.6 2.6L16 9.6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 8l4 3.5L12 5l4 6.5L20 8l-1.8 10H5.8z"/><path d="M6 21h12"/></symbol>
   </svg>
 
@@ -494,10 +542,32 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
       </div>
     </section>
 
-    <section class="card" style="flex:1 1 340px" id="crashes">
-      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-alert"/></svg></span><div><h2 class="ttl">Crash reports</h2><p class="sub">Last 7 days, grouped by error</p></div></div>
-      <div class="big" id="crashTotal">–</div>
-      <div id="crashList" style="display:flex;flex-direction:column;gap:10px"></div>
+    <section class="card" id="crashes">
+      <div class="cardhead">
+        <div class="ttlrow"><span class="ico warn"><svg class="i"><use href="#i-alert"/></svg></span><div><h2 class="ttl">Crash reports</h2><p class="sub">Errors the app didn't handle, grouped by error, version and system</p></div></div>
+        <div class="seg small" role="group" aria-label="Crash reports period">
+          <button type="button" data-days="1" aria-pressed="false">24 h</button>
+          <button type="button" data-days="7" aria-pressed="true">7 days</button>
+          <button type="button" data-days="30" aria-pressed="false">30 days</button>
+          <button type="button" data-days="90" aria-pressed="false">90 days</button>
+        </div>
+      </div>
+      <div class="cstats" id="crashStats">
+        <div><span class="lbl">Crashes</span><strong id="cTotal">–</strong></div>
+        <div><span class="lbl">Users affected</span><strong id="cUsers">–</strong></div>
+        <div><span class="lbl">Different errors</span><strong id="cGroups">–</strong></div>
+        <div><span class="lbl">Latest</span><strong id="cLatest">–</strong></div>
+      </div>
+      <div class="filters" id="crashTools">
+        <div class="searchbox">
+          <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+          <label class="sr" for="crashSearch">Search errors</label>
+          <input id="crashSearch" type="search" placeholder="Search errors or code" autocomplete="off" spellcheck="false">
+        </div>
+        <label class="pick"><span>Version</span><select id="crashVersion"><option value="">All</option></select></label>
+        <label class="pick"><span>System</span><select id="crashSystem"><option value="">All</option></select></label>
+      </div>
+      <div class="crashlist" id="crashList"></div>
     </section>
   </div>
   </main>
@@ -637,7 +707,7 @@ async function load() {
   renderNewUsers();
   renderPlans();
   renderPayments();
-  renderCrashes();
+  if (crashDays === 7) { crashData = null; renderCrashes(); } else loadCrashes(crashDays);
   loadUsers();
 }
 $("refresh").addEventListener("click", load);
@@ -917,10 +987,16 @@ for (const b of document.querySelectorAll(".seg button[data-period]")) {
 
 // ---- Plans and payments ------------------------------------------------------
 
+/** One colour per plan, the same on the Overview and in the Users list. */
+const PLAN_COLOR = {
+  monthly: { solid: "#2F6FDB", tint: "#E3EDFD", ink: "#1D4FA8" },
+  semester: { solid: "#7A4BD1", tint: "#EEE7FB", ink: "#5A31A8" },
+  yearly: { solid: "#12936F", tint: "#DDF3EC", ink: "#0B6B51" },
+};
 const PLAN_ROWS = [
-  ["monthly", "Monthly", "₱49 / month", "#1E3A6E", "#FFFFFF"],
-  ["semester", "Semester", "₱199 / 6 months", "#4C78BE", "#FFFFFF"],
-  ["yearly", "Yearly", "₱349 / year", "#9FCBF5", "#1E3A6E"],
+  ["monthly", "Monthly", "₱49 / month"],
+  ["semester", "Semester", "₱199 / 6 months"],
+  ["yearly", "Yearly", "₱349 / year"],
 ];
 
 function renderPlans() {
@@ -931,7 +1007,8 @@ function renderPlans() {
   $("planEnding").textContent = fmtNum(p.endingIn7Days);
   $("planFree").textContent = fmtNum(p.free);
   // One row per plan: its price, how many, and its share of the active plans.
-  const rows = PLAN_ROWS.map(([key, label, price, color, ink]) => {
+  const rows = PLAN_ROWS.map(([key, label, price]) => {
+    const color = PLAN_COLOR[key].solid, ink = "#FFFFFF";
     const n = p[key] ?? 0;
     const pct = active > 0 ? Math.round((n / active) * 100) : 0;
     return el("div", { class: "planrow" },
@@ -981,7 +1058,7 @@ async function loadUsers() {
       el("td", {},
         el("div", { style: "font-weight:600" }, u.anonymous ? "No account" : (u.email ?? u.name ?? "Google account")),
         el("div", { class: "meta" }, u.anonymous ? `id ${u.id.slice(0, 13)}` : (u.name || "Google"))),
-      el("td", {}, el("span", { class: `pill ${u.plan ? "plus" : ""}` }, plan)),
+      el("td", {}, el("span", { class: "pill", style: u.plan ? `background:${PLAN_COLOR[u.plan].tint};color:${PLAN_COLOR[u.plan].ink}` : "" }, plan)),
       el("td", u.plan ? { "data-label": "Plan ends" } : { class: "noplan" }, u.plan ? fmtDate(u.planEndsAt) : "—"),
       el("td", { "data-label": "Joined" }, fmtDate(u.createdAt)),
     );
@@ -1043,24 +1120,130 @@ $("next").addEventListener("click", () => { userState.page++; loadUsers(); });
 
 // ---- Crash reports -------------------------------------------------------------
 
+let crashData = null;      // { days, crashReportsSaved, crashes }
+let crashDays = 7;
+
 function renderCrashes() {
-  const c = dash.crashes;
-  if (!dash.crashReportsSaved && !c.total) {
-    $("crashTotal").textContent = "Not saved yet";
-    $("crashTotal").style.fontSize = "24px";
-    $("crashList").replaceChildren(el("div", { class: "note" },
-      "Crash reports only go to the study server's log for now. Set STORE_CRASH_REPORTS=1 on Render to keep them here for 90 days."));
+  if (!crashData) crashData = { days: 7, crashReportsSaved: dash.crashReportsSaved, crashes: dash.crashes };
+  const { crashes: c, crashReportsSaved: saved, days } = crashData;
+  const groups = c.groups ?? [];
+  for (const b of document.querySelectorAll("[data-days]")) b.setAttribute("aria-pressed", String(+b.dataset.days === crashDays));
+  const latest = groups.reduce((m, g) => (!m || g.lastAt > m ? g.lastAt : m), null);
+  $("cTotal").textContent = fmtNum(c.total ?? 0);
+  $("cUsers").textContent = fmtNum(c.users ?? 0);
+  $("cGroups").textContent = fmtNum(groups.length);
+  $("cLatest").textContent = latest ? fmtAgo(latest) : "—";
+  // Version and system choices from what came in (newest version first).
+  fillSelect("crashVersion", [...new Set(groups.map((g) => g.version))].sort().reverse(), (v) => `v${v}`);
+  fillSelect("crashSystem", [...new Set(groups.map((g) => systemName(g.platform)))].sort(), (v) => v);
+  const range = days === 1 ? "24 hours" : `${days} days`;
+  if (!saved && !c.total) {
+    $("crashTools").hidden = true;
+    $("crashList").replaceChildren(el("div", { class: "cempty" },
+      el("span", { class: "big-ico off" }, icon("i-alert", 26)),
+      el("strong", {}, "Crash reports aren't kept yet"),
+      el("div", {}, "They only go to the study server's log for now. Set ", el("code", {}, "STORE_CRASH_REPORTS=1"), " on Render to keep them here for 90 days.")));
     return;
   }
-  $("crashTotal").style.fontSize = "";
-  $("crashTotal").replaceChildren(fmtNum(c.total), " ", el("small", {}, `crash${c.total === 1 ? "" : "es"} · ${fmtNum(c.users)} user${c.users === 1 ? "" : "s"}`));
-  const groups = c.groups.map((g) => el("details", { class: "crash" },
+  $("crashTools").hidden = groups.length === 0;
+  const q = $("crashSearch").value.trim().toLowerCase();
+  const ver = $("crashVersion").value, sys = $("crashSystem").value;
+  const shown = groups.filter((g) =>
+    (!ver || g.version === ver) && (!sys || systemName(g.platform) === sys) &&
+    (!q || `${g.message}\n${g.stack ?? ""}`.toLowerCase().includes(q)));
+  if (!groups.length) {
+    $("crashList").replaceChildren(el("div", { class: "cempty" },
+      el("span", { class: "big-ico" }, icon("i-check", 28)),
+      el("strong", {}, `No crashes in the last ${range}`),
+      el("div", {}, "Nothing went wrong that the app didn't handle.")));
+    return;
+  }
+  if (!shown.length) {
+    $("crashList").replaceChildren(el("div", { class: "cempty" }, el("strong", {}, "No crash matches"), el("div", {}, "Try another search, version or system.")));
+    return;
+  }
+  $("crashList").replaceChildren(...shown.map(crashRow));
+}
+
+/** "PlatformException(camera_error, …)" → ["PlatformException", "camera_error, …"]. */
+function splitError(message) {
+  // "SocketException: …" and "RangeError (index): …"
+  let m = /^([A-Za-z_$][\w$<>.]*)(?:\s*\([^)]*\))?\s*:\s*([\s\S]+)$/.exec(message);
+  if (m) return [m[1], m[2]];
+  // "PlatformException(camera_error, …)"
+  m = /^([A-Za-z_$][\w$<>.]*)\(([\s\S]*)\)$/.exec(message);
+  return m ? [m[1], m[2]] : ["Error", message];
+}
+/** "android 14 (UP1A…)" → "Android 14"; "web" → "Web". */
+function systemName(platform) {
+  const [os, ver] = String(platform ?? "").split(/\s+/);
+  const name = { android: "Android", ios: "iOS", web: "Web", windows: "Windows", macos: "macOS", linux: "Linux" }[os?.toLowerCase()] ?? os ?? "Unknown";
+  return /^\d/.test(ver ?? "") ? `${name} ${ver.split(".")[0]}` : name;
+}
+function icon(id, size = 20) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "i"); svg.setAttribute("aria-hidden", "true");
+  svg.style.width = svg.style.height = `${size}px`;
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", `#${id}`);
+  svg.append(use);
+  return svg;
+}
+function fillSelect(id, values, label) {
+  const sel = $(id), keep = sel.value;
+  sel.replaceChildren(el("option", { value: "" }, "All"), ...values.map((v) => el("option", { value: v }, label(v))));
+  sel.value = values.includes(keep) ? keep : "";
+  sel.closest(".pick").classList.toggle("on", !!sel.value);
+}
+
+function crashRow(g) {
+  const [type, detail] = splitError(g.message);
+  const sev = g.count >= 5 ? "high" : g.count >= 2 ? "mid" : "";
+  const pre = el("pre", {});
+  const lines = (g.stack || "No stack trace was sent.").split("\n");
+  lines.forEach((line, i) => {
+    const ln = el("span", { class: "ln" }, String(i + 1));
+    // The app's own code stands out from Flutter's and the packages'.
+    const text = el("span", line.includes("package:tasikaso/") ? { class: "app" } : {}, line);
+    pre.append(ln, text, i < lines.length - 1 ? "\n" : "");
+  });
+  const copy = el("button", { type: "button", class: "copybtn" }, "Copy");
+  copy.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const text = `${g.message}\nv${g.version} · ${g.platform}\n\n${g.stack ?? ""}`;
+    try { await navigator.clipboard.writeText(text); copy.textContent = "Copied"; } catch { copy.textContent = "Couldn't copy"; }
+    setTimeout(() => { copy.textContent = "Copy"; }, 1500);
+  });
+  const users = g.users ?? 1;
+  return el("details", { class: "crash" },
     el("summary", {},
-      el("div", { style: "min-width:0" }, el("div", { class: "msg" }, g.message), el("div", { class: "meta" }, `v${g.version} · ${g.platform} · ${fmtAgo(g.lastAt)}`)),
-      el("span", { class: "count" }, `${fmtNum(g.count)}×`)),
-    el("pre", {}, g.stack || "No stack trace was sent."),
-  ));
-  $("crashList").replaceChildren(...(groups.length ? groups : [el("div", { class: "empty" }, "No crashes in the last 7 days.")]));
+      el("span", { class: `sev ${sev}`, "aria-hidden": "true" }),
+      el("div", { class: "what" },
+        el("div", { class: "type" }, type),
+        el("div", { class: "msg", title: g.message }, detail),
+        el("div", { class: "tags" }, el("span", {}, `v${g.version}`), el("span", { title: g.platform }, systemName(g.platform)), el("span", {}, `Last ${fmtAgo(g.lastAt)}`))),
+      el("div", { class: "num" }, el("strong", {}, `${fmtNum(g.count)}×`), el("span", {}, `${fmtNum(users)} user${users === 1 ? "" : "s"}`)),
+      (() => { const c = icon("i-chev", 18); c.classList.add("chev"); return c; })()),
+    el("div", { class: "body" },
+      el("div", { class: "bodyhead" }, el("span", {}, "Where in the code"), copy),
+      pre));
+}
+
+async function loadCrashes(days) {
+  crashDays = days;
+  for (const b of document.querySelectorAll("[data-days]")) b.setAttribute("aria-pressed", String(+b.dataset.days === days));
+  try {
+    crashData = await api(`/v1/admin/crashes?days=${days}`);
+  } catch (e) {
+    $("crashList").replaceChildren(el("div", { class: "cempty" }, el("strong", {}, "Couldn't load crash reports"), el("div", {}, e.message)));
+    return;
+  }
+  if (crashDays === days) renderCrashes();
+}
+for (const b of document.querySelectorAll("[data-days]")) b.addEventListener("click", () => loadCrashes(+b.dataset.days));
+$("crashSearch").addEventListener("input", () => { if (crashData) renderCrashes(); });
+for (const id of ["crashVersion", "crashSystem"]) {
+  $(id).addEventListener("change", (e) => { e.target.closest(".pick").classList.toggle("on", !!e.target.value); renderCrashes(); });
 }
 
 // ---- Navigation highlight ------------------------------------------------------

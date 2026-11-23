@@ -147,6 +147,19 @@ test("the user list is searched and paged on the server", async () => {
   assert.equal((await call("GET", "/v1/admin/users", "student.tok.en")).status, 403);
 });
 
+test("crash reports for 1 to 90 days, admins only", async () => {
+  const { call, admin } = await start();
+  const r = await call("GET", "/v1/admin/crashes?days=30", "owner.tok.en");
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { days: 30, crashReportsSaved: false, crashes: { total: 0 } });
+  await call("GET", "/v1/admin/crashes?days=900", "owner.tok.en");
+  await call("GET", "/v1/admin/crashes?days=nope", "owner.tok.en");
+  await call("GET", "/v1/admin/crashes?days=0", "owner.tok.en");
+  assert.deepEqual(admin.calls, ["crashes 30", "crashes 90", "crashes 7", "crashes 1"]);
+  assert.equal((await call("GET", "/v1/admin/crashes", "student.tok.en")).status, 403);
+  assert.equal(admin.calls.length, 4);
+});
+
 test("the user list takes filters, and ignores ones it doesn't know", async () => {
   const { call, admin } = await start();
   await call("GET", "/v1/admin/users?account=google&plan=ending&days=30&sort=oldest", "owner.tok.en");

@@ -198,6 +198,8 @@ Errors look like `{"error": {"code": "…", "message": "…", "requestId": "…"
   payments, crashes}`, read with the `admin_*` functions of
   `0003_admin.sql`. Anyone else gets 403 `not_admin`; without
   `ADMIN_EMAILS` the route doesn't exist (404).
+- `GET /v1/admin/crashes?days=` (admin) → `{days, crashReportsSaved, crashes}`:
+  crash reports of the last 1 to 90 days (7 by default), grouped.
 - `GET /v1/admin/users?q=&page=` (admin) → `{total, rows[], page,
   pageSize}`: 25 users a page, newest first, searched by email, name or id.
 - `GET /v1/usage` (token needed) → today's numbers:
