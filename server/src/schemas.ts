@@ -142,6 +142,12 @@ export const ReadPageRequest = z.object({
 });
 export type ReadPageRequest = z.infer<typeof ReadPageRequest>;
 
+/** A test purchase: switch a plan on, or back to Free (null). */
+export const TestPlanRequest = z.object({
+  plan: z.enum(["monthly", "semester", "yearly"]).nullable(),
+});
+export type TestPlanRequest = z.infer<typeof TestPlanRequest>;
+
 /**
  * A crash report from the app. Only these fields are kept (zod drops any
  * others), each short, so nothing a student wrote can end up in the log:

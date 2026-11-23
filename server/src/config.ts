@@ -2,6 +2,8 @@
 // be used stops the server at start-up with a message saying which one,
 // instead of quietly turning a limit off.
 
+import { DEFAULT_TIER_LIMITS, type TierLimits } from "./accounts.js";
+
 export interface ServerConfig {
   port: number;
   /** Clients must send `Authorization: Bearer <token>`. Empty = open. */
@@ -26,6 +28,18 @@ export interface ServerConfig {
   timeZone: string;
   /** /health also says which model and effort are in use. */
   healthDetails: boolean;
+  /**
+   * Supabase accounts (both set, or neither): the project URL and its
+   * secret key. Off when empty: only the shared app token works.
+   */
+  supabaseUrl: string;
+  supabaseSecretKey: string;
+  /** Apps from before accounts may still use the shared app token. */
+  allowAppToken: boolean;
+  /** POST /v1/plan/test may switch plans on for free (test purchases). */
+  testPurchases: boolean;
+  /** Daily limits per tier for signed-in users: [anonymous, free, plus]. */
+  tierLimits: TierLimits;
 }
 
 export const DEFAULTS = {
@@ -93,6 +107,29 @@ export function hopsFromEnv(env: Env, name: string): number {
   return n;
 }
 
+/** Like boolFromEnv, but true when the variable isn't set. */
+export function boolFromEnvDefaultTrue(env: Env, name: string): boolean {
+  return raw(env, name) === undefined ? true : boolFromEnv(env, name);
+}
+
+/** "anonymous,free,plus" daily limits, e.g. "20,50,200"; 0 = no limit. */
+export function tierLimitFromEnv(
+  env: Env,
+  name: string,
+  fallback: TierLimits[keyof TierLimits],
+): TierLimits[keyof TierLimits] {
+  const v = raw(env, name);
+  if (v === undefined) return fallback;
+  const parts = v.split(",").map((s) => Number(s.trim()));
+  if (parts.length !== 3 || parts.some((n) => !Number.isInteger(n) || n < 0)) {
+    throw new ConfigError(
+      `${name} must be three whole numbers for no account, signed in and tAsikaso+, such as 20,50,200 (got "${v}").`,
+    );
+  }
+  const [anonymous, free, plus] = parts as [number, number, number];
+  return { anonymous, free, plus };
+}
+
 export function isValidTimeZone(timeZone: string): boolean {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone });
@@ -107,6 +144,18 @@ export function readConfig(env: Env = process.env): ServerConfig {
   if (!isValidTimeZone(timeZone)) {
     throw new ConfigError(`DAY_TIME_ZONE "${timeZone}" isn't a time zone (try Asia/Manila).`);
   }
+  const supabaseUrl = (raw(env, "SUPABASE_URL") ?? "").replace(/\/+$/, "");
+  const supabaseSecretKey = raw(env, "SUPABASE_SECRET_KEY") ?? "";
+  if (Boolean(supabaseUrl) !== Boolean(supabaseSecretKey)) {
+    throw new ConfigError("Set both SUPABASE_URL and SUPABASE_SECRET_KEY, or neither.");
+  }
+  if (supabaseUrl && !/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(supabaseUrl) &&
+      !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(supabaseUrl)) {
+    throw new ConfigError(`SUPABASE_URL should look like https://abcdefgh.supabase.co (got "${supabaseUrl}").`);
+  }
+  if (supabaseSecretKey.startsWith("sb_publishable_")) {
+    throw new ConfigError("SUPABASE_SECRET_KEY holds the publishable key; it needs the secret key (sb_secret_…).");
+  }
   return {
     port: intFromEnv(env, "PORT", DEFAULTS.port, 1),
     appToken: raw(env, "APP_TOKEN") ?? "",
@@ -118,5 +167,14 @@ export function readConfig(env: Env = process.env): ServerConfig {
     dailyBudgetUsd: numberFromEnv(env, "DAILY_BUDGET_USD", DEFAULTS.dailyBudgetUsd),
     timeZone,
     healthDetails: boolFromEnv(env, "HEALTH_DETAILS"),
+    supabaseUrl,
+    supabaseSecretKey,
+    allowAppToken: boolFromEnvDefaultTrue(env, "ALLOW_APP_TOKEN"),
+    testPurchases: boolFromEnvDefaultTrue(env, "TEST_PURCHASES"),
+    tierLimits: {
+      read: tierLimitFromEnv(env, "READ_LIMITS", DEFAULT_TIER_LIMITS.read),
+      study: tierLimitFromEnv(env, "STUDY_LIMITS", DEFAULT_TIER_LIMITS.study),
+      check: tierLimitFromEnv(env, "CHECK_LIMITS", DEFAULT_TIER_LIMITS.check),
+    },
   };
 }

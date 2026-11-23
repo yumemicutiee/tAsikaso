@@ -8,6 +8,7 @@ const { ConfigError, readConfig } = await import("./config.js");
 const { createApp } = await import("./app.js");
 const { CHECK_EFFORT, EFFORT, MODEL, READ_EFFORT } = await import("./claude.js");
 const { jsonLogger: log } = await import("./log.js");
+const { SupabaseStore, supabaseVerifier } = await import("./accounts.js");
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error("ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.");
@@ -39,6 +40,15 @@ const app = createApp({
   dailyBudgetUsd: config.dailyBudgetUsd,
   timeZone: config.timeZone,
   healthDetails: config.healthDetails,
+  allowAppToken: config.allowAppToken,
+  testPurchases: config.testPurchases,
+  accounts: config.supabaseUrl
+    ? {
+        verifier: supabaseVerifier(config.supabaseUrl),
+        store: new SupabaseStore(config.supabaseUrl, config.supabaseSecretKey),
+        limits: config.tierLimits,
+      }
+    : undefined,
 });
 
 const server = app.listen(config.port, () => {
@@ -51,6 +61,10 @@ const server = app.listen(config.port, () => {
     dailyLimit: config.dailyLimit,
     dailyCheckLimit: config.dailyCheckLimit,
     dailyReadLimit: config.dailyReadLimit,
+    accounts: config.supabaseUrl ? `on (${config.supabaseUrl})` : "off",
+    allowAppToken: config.allowAppToken,
+    testPurchases: config.testPurchases,
+    tierLimits: config.tierLimits,
     dailyBudgetUsd: config.dailyBudgetUsd,
     timeZone: config.timeZone,
   });

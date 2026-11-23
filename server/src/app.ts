@@ -25,6 +25,22 @@ import {
   RefusedError,
   TooLongError,
 } from "./claude.js";
+import {
+  type Account,
+  type AccountStore,
+  AccountsUnavailableError,
+  addMonths,
+  BadTokenError,
+  DEFAULT_TIER_LIMITS,
+  FREE_PLAN,
+  looksLikeJwt,
+  type Plan,
+  PLAN_MONTHS,
+  type Tier,
+  type TierLimits,
+  tierOf,
+  type TokenVerifier,
+} from "./accounts.js";
 import { DEFAULTS } from "./config.js";
 import {
   type Admission,
@@ -45,6 +61,7 @@ import {
   ReadPageRequest,
   type StudyKit,
   StudyKitRequest,
+  TestPlanRequest,
 } from "./schemas.js";
 
 /** The route that takes a page photo (a bigger body than the others). */
@@ -57,10 +74,23 @@ export class HttpError extends Error {
     readonly code: string,
     message: string,
     readonly headers: Record<string, string> = {},
+    /** Extra fields for the app, beside code and message (e.g. the tier). */
+    readonly extra: Record<string, string> = {},
   ) {
     super(message);
     this.name = "HttpError";
   }
+}
+
+/** Who sent a request: a signed-in user, or an app with the shared token. */
+type Auth = { kind: "user"; account: Account } | { kind: "app" };
+
+/** Supabase accounts: off unless SUPABASE_URL and its secret key are set. */
+export interface AccountsOptions {
+  verifier: TokenVerifier;
+  store: AccountStore;
+  /** Daily limits per tier; DEFAULT_TIER_LIMITS when left out. */
+  limits?: TierLimits;
 }
 
 type Work<I, O> = (input: I, call: CallOptions) => Promise<Generated<O>>;
@@ -95,6 +125,15 @@ export interface AppOptions {
   timeZone?: string;
   /** /health also reports the model and effort. */
   healthDetails?: boolean;
+  /** Signed-in users, their plans and their own daily limits. */
+  accounts?: AccountsOptions;
+  /**
+   * The shared app token still works (apps from before accounts). Default
+   * true; false once students have updated: those apps are told to.
+   */
+  allowAppToken?: boolean;
+  /** POST /v1/plan/test may switch plans on for free. Default true. */
+  testPurchases?: boolean;
   generators?: Partial<Generators>;
   log?: Logger;
   /** For tests: the clock the daily limits use. */
@@ -109,6 +148,9 @@ interface RequestContext {
   code?: string;
   /** The client hung up before the answer was ready. */
   clientGone: boolean;
+  /** A signed-in user: a short one-way code for their id, and their tier. */
+  user?: string;
+  tier?: Tier;
   /** A Claude call is running; its handler writes the log line. */
   pending: boolean;
   logged: boolean;
@@ -133,6 +175,11 @@ export function createApp(options: AppOptions = {}) {
     readPage,
     ...options.generators,
   };
+  const accounts = options.accounts;
+  const limits = accounts?.limits ?? DEFAULT_TIER_LIMITS;
+  const now = options.now ?? Date.now;
+  const allowAppToken = options.allowAppToken ?? true;
+  const testPurchases = options.testPurchases ?? true;
 
   const app = express();
   app.disable("x-powered-by");
@@ -147,7 +194,7 @@ export function createApp(options: AppOptions = {}) {
   app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-Id, X-Install-Id");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
     res.setHeader("Access-Control-Expose-Headers", "X-Request-Id, Retry-After");
     if (req.method === "OPTIONS") {
       res.status(204).end();
@@ -177,7 +224,7 @@ export function createApp(options: AppOptions = {}) {
     );
   });
 
-  app.use(requireToken(options.appToken ?? ""));
+  app.use(authenticate(options.appToken ?? "", accounts?.verifier, allowAppToken));
 
   app.get("/v1/usage", (req, res) => {
     const report = ledger.report(clientOf(req));
@@ -208,11 +255,53 @@ export function createApp(options: AppOptions = {}) {
         next(new HttpError(400, "bad_request", where + (issue?.message ?? "Bad request.")));
         return;
       }
-      const admission = ledger.admit(clientOf(req), kind, req.path);
-      if (!admission.ok) {
-        next(refusal(admission, ledger.secondsToMidnight()));
-        return;
+      const auth = authOf(res);
+      // A signed-in user's own limits are counted in Supabase, on the day
+      // the request was admitted (its cost goes on the same day's row).
+      let counted: { account: Account; day: string } | undefined;
+      if (auth.kind === "user" && accounts) {
+        const budget = ledger.checkBudget();
+        if (!budget.ok) {
+          next(refusal(budget, ledger.secondsToMidnight()));
+          return;
+        }
+        const { account } = auth;
+        const day = ledger.today();
+        let tier: Tier;
+        let n: number;
+        try {
+          tier = tierOf(account, await accounts.store.plan(account.id), now());
+          ctx.tier = tier;
+          n = await accounts.store.consume(account.id, day, kind, limits[kind][tier]);
+        } catch (e) {
+          next(e);
+          return;
+        }
+        if (n < 0) {
+          ledger.countRefusedLimit();
+          next(tierRefusal(kind, limits[kind][tier], tier, ledger.secondsToMidnight()));
+          return;
+        }
+        ledger.countAdmitted(req.path);
+        counted = { account, day };
+      } else {
+        const admission = ledger.admit(clientOf(req), kind, req.path);
+        if (!admission.ok) {
+          next(refusal(admission, ledger.secondsToMidnight()));
+          return;
+        }
       }
+      /** What a Claude call cost also goes on the user's row (logged if that fails). */
+      const recordUserCost = (usd: number) => {
+        if (!counted || !accounts || usd <= 0) return;
+        const { account, day } = counted;
+        accounts.store.recordCost(account.id, day, kind, usd).catch((e: unknown) =>
+          log("warn", "couldn't record a user's cost", {
+            requestId: ctx.id,
+            detail: e instanceof Error ? e.message : String(e),
+          }),
+        );
+      };
 
       const controller = new AbortController();
       const onClose = () => {
@@ -226,6 +315,7 @@ export function createApp(options: AppOptions = {}) {
         const result = await work(parsed.data, { signal: controller.signal });
         ctx.usage = usageFields(result);
         ledger.record(result);
+        recordUserCost(result.costUsd);
         if (controller.signal.aborted) {
           ctx.clientGone = true;
           return;
@@ -239,6 +329,7 @@ export function createApp(options: AppOptions = {}) {
         if (e instanceof ClaudeCallError && e.usage) {
           ctx.usage = e.usage;
           ledger.record(e.usage);
+          recordUserCost(e.usage.costUsd);
         }
         if (controller.signal.aborted) {
           ctx.clientGone = true;
@@ -259,6 +350,72 @@ export function createApp(options: AppOptions = {}) {
   app.post("/v1/check-answer", handle(CheckAnswerRequest, generators.checkAnswer, "check", "check"));
   // One photographed page in, its text out (Claude reads the photo).
   app.post(READ_PAGE_ROUTE, handle(ReadPageRequest, generators.readPage, "page", "read"));
+
+  if (accounts) {
+    const { store } = accounts;
+    /** The signed-in user, or 401 for an app using the shared token. */
+    const userOf = (res: Response): Account => {
+      const auth = authOf(res);
+      if (auth.kind !== "user") {
+        throw new HttpError(401, "sign_in_required", "Sign in to tAsikaso to see your account.");
+      }
+      return auth.account;
+    };
+    const describe = (account: Account, plan: Plan, used: Record<RequestKind, number>) => {
+      const tier = tierOf(account, plan, now());
+      const row = (kind: RequestKind) => ({ used: used[kind], limit: limits[kind][tier] || null });
+      return {
+        user: { id: account.id, anonymous: account.anonymous },
+        tier,
+        plan,
+        day: ledger.today(),
+        resetsInSeconds: ledger.secondsToMidnight(),
+        today: { read: row("read"), study: row("study"), check: row("check") },
+      };
+    };
+
+    // The user's plan, and today's usage against their limits.
+    app.get("/v1/me", async (_req, res) => {
+      const account = userOf(res);
+      const [plan, used] = await Promise.all([
+        store.plan(account.id),
+        store.usage(account.id, ledger.today()),
+      ]);
+      res.json(describe(account, plan, used));
+    });
+
+    // Test purchases: a plan switched on (or back to Free) without payment,
+    // until real payments exist.
+    app.post("/v1/plan/test", async (req, res) => {
+      const account = userOf(res);
+      if (!testPurchases) {
+        throw new HttpError(403, "test_purchases_off", "Plans can't be switched on for free any more.");
+      }
+      const parsed = TestPlanRequest.safeParse(req.body);
+      if (!parsed.success) throw new HttpError(400, "bad_request", "plan: monthly, semester, yearly or null.");
+      const name = parsed.data.plan;
+      const start = new Date(now());
+      const plan: Plan = name
+        ? {
+            name,
+            startedAt: start.toISOString(),
+            endsAt: addMonths(start, PLAN_MONTHS[name]).toISOString(),
+            test: true,
+          }
+        : FREE_PLAN;
+      const saved = await store.setPlan(account.id, plan);
+      res.json(describe(account, saved, await store.usage(account.id, ledger.today())));
+    });
+
+    // Delete Account: the user, their profile and usage (payments stay,
+    // unlinked). Notes on the phone and in Drive aren't touched.
+    app.delete("/v1/me", async (_req, res) => {
+      const account = userOf(res);
+      await store.deleteUser(account.id);
+      log("info", "account deleted", { requestId: ctxOf(res).id, user: ctxOf(res).user });
+      res.status(204).end();
+    });
+  }
 
   // A crash report from the app: one log line, nothing stored. Behind the
   // token and the per-client rate limit; doesn't count against the daily
@@ -334,6 +491,8 @@ function writeLog(log: Logger, req: Request, res: Response, ctx: RequestContext)
     ...(gone ? { code: "cancelled" } : ctx.code ? { code: ctx.code } : {}),
     ms: Date.now() - ctx.started,
     client: createHash("sha256").update(clientKey(req)).digest("hex").slice(0, 12),
+    ...(ctx.user ? { user: ctx.user } : {}),
+    ...(ctx.tier ? { tier: ctx.tier } : {}),
     ...(u
       ? {
           model: u.model,
@@ -362,22 +521,74 @@ function sha256(s: string): Buffer {
   return createHash("sha256").update(s).digest();
 }
 
-function requireToken(token: string) {
-  const expected = sha256(token);
-  return (req: Request, _res: Response, next: NextFunction) => {
-    if (!token) {
+const authOf = (res: Response) => res.locals.auth as Auth;
+
+/**
+ * Who is asking. A Supabase access token (a JWT) is checked against the
+ * project's signing keys and makes a signed-in user. Otherwise the shared
+ * app token of apps from before accounts, while [allowAppToken]; with no
+ * app token set, the server is open (local testing).
+ */
+function authenticate(appToken: string, verifier: TokenVerifier | undefined, allowAppToken: boolean) {
+  const expected = sha256(appToken);
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const header = req.header("authorization") ?? "";
+    const given = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+    if (given && verifier && looksLikeJwt(given)) {
+      try {
+        const account = await verifier.verify(given);
+        res.locals.auth = { kind: "user", account } satisfies Auth;
+        ctxOf(res).user = createHash("sha256").update(account.id).digest("hex").slice(0, 12);
+        next();
+      } catch (e) {
+        next(
+          e instanceof BadTokenError
+            ? new HttpError(401, "session_expired", "Your sign-in has expired. Please open tAsikaso again.")
+            : e,
+        );
+      }
+      return;
+    }
+    if (!appToken) {
+      res.locals.auth = { kind: "app" } satisfies Auth;
       next();
       return;
     }
-    const header = req.header("authorization") ?? "";
-    const given = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
     // Compare digests in constant time, so the token can't be guessed from timings.
     if (!given || !timingSafeEqual(sha256(given), expected)) {
       next(new HttpError(401, "unauthorized", "This app isn't allowed to use the server."));
       return;
     }
+    if (!allowAppToken) {
+      next(new HttpError(401, "update_required", "Please update tAsikaso to keep using Smart Study."));
+      return;
+    }
+    res.locals.auth = { kind: "app" } satisfies Auth;
     next();
   };
+}
+
+/** What a signed-in user hears at their daily limit, by tier. */
+function tierRefusal(kind: RequestKind, limit: number, tier: Tier, secondsToMidnight: number): HttpError {
+  const what =
+    kind === "read"
+      ? `${limit === 1 ? "page" : "pages"} read by Claude`
+      : kind === "study"
+        ? `Smart Study ${limit === 1 ? "request" : "requests"}`
+        : `answer ${limit === 1 ? "check" : "checks"}`;
+  const next =
+    tier === "anonymous"
+      ? "Continue with Google in tAsikaso for more, or try again tomorrow."
+      : tier === "free"
+        ? "Try again tomorrow, or get tAsikaso+ for more."
+        : "Try again tomorrow.";
+  return new HttpError(
+    429,
+    "daily_limit",
+    `You've reached today's limit of ${limit} ${what}. ${next}`,
+    { "Retry-After": String(secondsToMidnight) },
+    { tier },
+  );
 }
 
 /**
@@ -476,6 +687,17 @@ export function describeError(
           : "these notes";
 
   if (err instanceof HttpError) return { error: err };
+  if (err instanceof AccountsUnavailableError) {
+    return {
+      error: fail(
+        503,
+        "accounts_unavailable",
+        "The study server can't check your account right now. Please try again in a minute.",
+        { "Retry-After": "30" },
+      ),
+      detail: { detail: err.message },
+    };
+  }
   if (err instanceof RefusedError) {
     return {
       error: fail(422, "declined", `Claude couldn't work with ${what}.`),
@@ -622,7 +844,7 @@ function errorHandler(log: Logger) {
     }
     for (const [name, value] of Object.entries(error.headers)) res.setHeader(name, value);
     res.status(error.status).json({
-      error: { code: error.code, message: error.message, requestId: ctx.id },
+      error: { ...error.extra, code: error.code, message: error.message, requestId: ctx.id },
     });
   };
 }

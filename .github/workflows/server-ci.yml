@@ -7,10 +7,12 @@ on:
   push:
     paths:
       - "server/**"
+      - "supabase/**"
       - ".github/workflows/server-ci.yml"
   pull_request:
     paths:
       - "server/**"
+      - "supabase/**"
       - ".github/workflows/server-ci.yml"
   workflow_dispatch:
 

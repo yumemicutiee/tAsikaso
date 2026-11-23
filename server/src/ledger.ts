@@ -139,6 +139,33 @@ export class DailyLedger {
     return { ok: true };
   }
 
+  /**
+   * For a signed-in user, whose own limits are counted in Supabase: only
+   * the server-wide budget is checked here. Then [countAdmitted] or
+   * [countRefusedLimit], once Supabase has answered.
+   */
+  checkBudget(): Admission {
+    this.rollOver();
+    const { budgetUsd } = this.opts;
+    if (budgetUsd > 0 && this.spent >= budgetUsd) {
+      this.refused.budget++;
+      return { ok: false, reason: "budget" };
+    }
+    return { ok: true };
+  }
+
+  /** A signed-in user's request that goes on to Claude, for /v1/usage. */
+  countAdmitted(route: string): void {
+    this.rollOver();
+    this.byRoute[route] = (this.byRoute[route] ?? 0) + 1;
+  }
+
+  /** A request refused by a signed-in user's own daily limit, for /v1/usage. */
+  countRefusedLimit(): void {
+    this.rollOver();
+    this.refused.daily_limit++;
+  }
+
   private limitFor(kind: RequestKind): number {
     switch (kind) {
       case "study":
