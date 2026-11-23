@@ -100,12 +100,14 @@ class FolderCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
+                      // Numbers only: the tile is small, the icons say what.
                       MetaRow(
                         [
-                          MetaItem(AppIcons.notebook, notes),
-                          MetaItem(AppIcons.flashcards, sets),
+                          MetaItem(AppIcons.notebook, '$noteCount'),
+                          MetaItem(AppIcons.flashcards, '$setCount'),
                         ],
-                        gap: 8,
+                        gap: 10,
+                        label: contents,
                         style: TextStyle(
                           color: AppColors.ink.withValues(alpha: 0.65),
                           fontSize: 9.5,

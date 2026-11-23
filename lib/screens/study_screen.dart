@@ -423,7 +423,8 @@ class _TodayStrip extends StatelessWidget {
                         )),
                     const SizedBox(width: 12),
                     Flexible(
-                      child: MetaRow([
+                      // On a small phone, the minutes go under, whole.
+                      child: MetaRow(wrap: true, [
                         MetaItem(AppIcons.timer, plural(pomodoros, 'Pomodoro')),
                         MetaItem(AppIcons.clock, formatMinutes(minutes)),
                       ], style: TextStyle(
