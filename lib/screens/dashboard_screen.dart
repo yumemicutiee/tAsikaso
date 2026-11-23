@@ -150,7 +150,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             : '${weekdayShort(day)}, ${day.day} ${monthShort(day)}',
         minutes: store.focusMinutesOn(day),
         goal: store.settings.dailyGoalMinutes,
-        cards: store.cardsReviewedOn(day),
         onStart: startFocusFrom,
       ),
       const SizedBox(height: 14),
@@ -172,7 +171,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (task != null)
         _ContinueCard(
           task: task,
-          focusLength: store.settings.focusMinutes,
           onTap: widget.onOpenStudy,
           onPlay: startFocusFrom,
         )
@@ -277,20 +275,19 @@ BoxDecoration _cardBox(double radius) => BoxDecoration(
       border: Border.all(color: AppColors.border),
     );
 
-/// Ring toward the daily focus goal, the numbers, and a Start Focus button.
+/// Ring toward the daily focus goal, minutes of the goal, and a Start Focus
+/// button.
 class _GoalCard extends StatelessWidget {
   const _GoalCard({
     required this.title,
     required this.minutes,
     required this.goal,
-    required this.cards,
     required this.onStart,
   });
 
   final String title;
   final int minutes;
   final int goal;
-  final int cards;
 
   /// Called with the button's context, so Focus Mode can grow out of it.
   final void Function(BuildContext button) onStart;
@@ -344,9 +341,7 @@ class _GoalCard extends StatelessWidget {
                 Text.rich(
                   TextSpan(children: [
                     TextSpan(text: '$minutes', style: strong),
-                    TextSpan(text: ' of $goal min · '),
-                    TextSpan(text: '$cards', style: strong),
-                    TextSpan(text: cards == 1 ? ' card reviewed' : ' cards reviewed'),
+                    TextSpan(text: ' of $goal min'),
                   ]),
                   style: muted,
                 ),
@@ -566,13 +561,11 @@ class _MiniBar extends StatelessWidget {
 class _ContinueCard extends StatelessWidget {
   const _ContinueCard({
     required this.task,
-    required this.focusLength,
     required this.onTap,
     required this.onPlay,
   });
 
   final StudyTask task;
-  final int focusLength;
   final VoidCallback? onTap;
 
   /// Starts a Pomodoro on this task (Focus Mode grows out of the button).
@@ -604,8 +597,7 @@ class _ContinueCard extends StatelessWidget {
                         style: AppText.itemTitle.copyWith(fontSize: 13.5)),
                     const SizedBox(height: 2),
                     Text(
-                      '${task.pomodorosDone} of ${plural(task.pomodorosTotal, 'Pomodoro')} · '
-                      '${task.focusMinutes} / ${task.estimatedMinutes(focusLength)} min',
+                      '${task.pomodorosDone} of ${plural(task.pomodorosTotal, 'Pomodoro')}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
