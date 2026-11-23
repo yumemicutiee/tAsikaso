@@ -572,7 +572,7 @@ class _KeepProgressSheet extends StatelessWidget {
                       ),
                     ),
                     SizedBox(
-                      width: 250,
+                      width: 284,
                       height: 130,
                       child: Stack(
                         children: [
@@ -582,7 +582,7 @@ class _KeepProgressSheet extends StatelessWidget {
                             child: Transform.rotate(
                               angle: -0.12,
                               child: _PeekCard(
-                                width: 110,
+                                width: 112,
                                 color: AppColors.surface,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,7 +618,10 @@ class _KeepProgressSheet extends StatelessWidget {
                             child: Transform.rotate(
                               angle: 0.1,
                               child: _PeekCard(
-                                width: 104,
+                                width: 112,
+                                // Clear of the streak tile in the middle.
+                                padding:
+                                    const EdgeInsets.fromLTRB(22, 12, 10, 12),
                                 color: const Color(0xFFF5B5C8),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -643,11 +646,11 @@ class _KeepProgressSheet extends StatelessWidget {
                             ),
                           ),
                           Positioned(
-                            left: 75,
-                            top: 0,
+                            left: 98,
+                            top: 4,
                             child: Container(
-                              width: 100,
-                              height: 100,
+                              width: 88,
+                              height: 92,
                               decoration: BoxDecoration(
                                 color: const Color(0xFF1E3A6E),
                                 borderRadius: BorderRadius.circular(26),
@@ -774,16 +777,20 @@ class _KeepProgressSheet extends StatelessWidget {
 /// A small tilted card in the sheet's picture.
 class _PeekCard extends StatelessWidget {
   const _PeekCard(
-      {required this.width, required this.color, required this.child});
+      {required this.width,
+      required this.color,
+      required this.child,
+      this.padding = const EdgeInsets.all(12)});
 
   final double width;
+  final EdgeInsets padding;
   final Color color;
   final Widget child;
 
   @override
   Widget build(BuildContext context) => Container(
         width: width,
-        padding: const EdgeInsets.all(12),
+        padding: padding,
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(14),
