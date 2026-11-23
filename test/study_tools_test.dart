@@ -366,7 +366,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: FolderScreen(folderId: folder.id)));
       expect(find.text('Notebook'), findsOneWidget);
       // The Notebook card: how many notes, and the latest one's title.
-      expect(find.text('1 note'), findsOneWidget);
+      expect(find.text('1 note'), findsNWidgets(2)); // the folder's line too
       expect(find.text('Cells Lecture'), findsOneWidget);
 
       await tester.tap(find.text('Notebook'));
