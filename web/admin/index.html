@@ -1059,8 +1059,18 @@ async function loadUsers() {
   try {
     res = await api(`/v1/admin/users?${params}`);
   } catch (e) {
-    const hint = filtersOn() ? " Filters need supabase/migrations/0004_admin_history_filters.sql to be run once." : "";
-    $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error" }, `Couldn't load users: ${e.message}.${hint}`)));
+    // With a filter on, the usual cause is the database step that adds the
+    // filters (0004) not having been run yet: the study server then only
+    // says it "can't check your account", which doesn't help.
+    if (filtersOn()) {
+      const clear = el("button", { type: "button", class: "linkbtn" }, "Clear filters");
+      clear.addEventListener("click", () => $("fClear").click());
+      $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error", style: "white-space:normal" },
+        "Filters aren't set up in the database yet. Run supabase/migrations/0004_admin_history_filters.sql once in Supabase (SQL Editor → New query → paste → Run), then try again. ",
+        clear, " to see everyone meanwhile.")));
+    } else {
+      $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error", style: "white-space:normal" }, `Couldn't load users: ${e.message}`)));
+    }
     return;
   }
   // A newer search or filter is on its way.
