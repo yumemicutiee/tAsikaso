@@ -1,0 +1,30 @@
+# Temporary (QA): builds the web app exactly like deploy-web.yml and puts
+# build/web on the qa-web-build branch so it can be checked offline.
+name: QA site build
+on:
+  push:
+    branches: [qa/site-check]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: |
+          flutter build web --release --base-href /tAsikaso/ \
+            --dart-define=GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}" \
+            --dart-define=STUDY_AI_URL=https://tasikaso-study-server.onrender.com
+      - name: Push build/web to qa-web-build
+        run: |
+          cd build/web
+          git init -q -b qa-web-build
+          git config user.name "qa-bot"; git config user.email "qa-bot@users.noreply.github.com"
+          git add -A && git commit -q -m "QA web build of ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" qa-web-build
