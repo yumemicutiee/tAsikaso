@@ -200,10 +200,6 @@ class _PlansScreenState extends State<PlansScreen> {
                   subtitle: 'Cards made from your notes, your full focus '
                       'history, and backup for everything.',
                 ),
-              if (kTestPurchases) ...[
-                const SizedBox(height: 12),
-                const _TestModeNote(),
-              ],
               const SizedBox(height: 20),
               const _Comparison(),
               const SizedBox(height: 20),
@@ -249,8 +245,7 @@ class _PlansScreenState extends State<PlansScreen> {
               const SizedBox(height: 10),
               Text(
                 kTestPurchases
-                    ? 'Test checkout with GCash or a card: no money is '
-                        'taken. ${_picked.title} runs until '
+                    ? 'Pay with GCash or a card. ${_picked.title} runs until '
                         '${formatNoteDate(_picked.endFrom(clock.now()))}; '
                         'switch plans or go back to Free anytime.'
                     : 'Free for 7 days, then ${_picked.price} every '
@@ -297,40 +292,7 @@ class _CurrentPlan extends StatelessWidget {
         if (end != null)
           'active until ${formatNoteDate(end)}'
               '${daysLeft != null && daysLeft <= 31 ? ' (${plural(daysLeft, 'day')} left)' : ''}',
-        if (subscription.test) 'test plan, no charge',
       ].join(', '),
-    );
-  }
-}
-
-/// Says plainly that plans cost nothing while payments aren't connected.
-class _TestModeNote extends StatelessWidget {
-  const _TestModeNote();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: AppColors.goldSoft,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // goldSoft is a dark brown in dark mode, so the text follows ink.
-          Icon(AppIcons.suggest, size: 16, color: AppColors.ink),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Test mode: payments aren’t connected yet. The checkout '
-              '(GCash or a card) is pretend and no money is taken, so try '
-              'any plan, switch between them, or go back to Free.',
-              style: TextStyle(fontSize: 11.5, height: 1.4, color: AppColors.ink),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

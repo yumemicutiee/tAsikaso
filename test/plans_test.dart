@@ -273,7 +273,9 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      expect(find.textContaining('Test mode'), findsWidgets);
+      // We know payments are pretend; the app doesn't say so.
+      expect(find.textContaining('Test mode'), findsNothing);
+      expect(find.textContaining('pretend'), findsNothing);
       await show('Start Yearly Plan');
 
       await show('Semester');
@@ -341,7 +343,7 @@ void main() {
       await tester.scrollUntilVisible(
           find.text("You're on tAsikaso+ Semester"), -300, scrollable: list);
       expect(find.text("You're on tAsikaso+ Semester"), findsOneWidget);
-      expect(find.textContaining('test plan, no charge'), findsOneWidget);
+      expect(find.textContaining('test plan'), findsNothing);
     });
 
     testWidgets('Analysis: heatmap and earlier weeks lock on the free plan',
