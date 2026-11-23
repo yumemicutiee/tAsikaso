@@ -128,7 +128,12 @@ VERSION HISTORY (recent)
                Logo: sky-blue letters with a navy outline on transparent (white
                behind it where Android needs a background; tool/make_icons.py).
                Each folder has a Notebook (its notes); Make Flashcards asks
-               where the cards go: a new set in any folder, or an existing set
+               where the cards go: a new set in any folder, or an existing set.
+               New: a loading screen when the app opens (also on the web page and
+               Android's launch screen); a welcome screen (Continue with Google,
+               or without an account and just a name) and slides about the app,
+               shown once. No more sample folders and tasks: a new install starts
+               empty, and an update removes the unused ones.
 0.7.0  22 Nov  Text Notes: scans and PDFs saved as text first (in place of Text
                PDF), opened on the text, editable, with a big Make Flashcards
 0.6.0  22 Nov  Import PDF: a PDF (slides, handouts, scanned) saved as a note,

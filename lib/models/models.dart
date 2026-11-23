@@ -945,6 +945,7 @@ class AppPrefs {
     this.installId = '',
     this.alarmSound = true,
     this.alarmNotice = false,
+    this.welcomed = false,
   });
 
   /// Shown in greetings ("Hello, Budi!").
@@ -1025,6 +1026,11 @@ class AppPrefs {
   /// notification sound, until the notice has been seen.
   final bool alarmNotice;
 
+  /// The welcome (sign in with Google, or carry on without an account)
+  /// and the slides about the app have been seen. They show once, on the
+  /// first launch, and again only after Delete All Data.
+  final bool welcomed;
+
   /// What happens when time is up: the four choices in Settings, made of
   /// [timerAlerts], [alarmSound] and [vibrateOnFinish].
   TimeUpAlert get timeUpAlert => !timerAlerts
@@ -1072,6 +1078,7 @@ class AppPrefs {
     String? installId,
     bool? alarmSound,
     bool? alarmNotice,
+    bool? welcomed,
   }) =>
       AppPrefs(
         userName: userName ?? this.userName,
@@ -1098,6 +1105,7 @@ class AppPrefs {
         installId: installId ?? this.installId,
         alarmSound: alarmSound ?? this.alarmSound,
         alarmNotice: alarmNotice ?? this.alarmNotice,
+        welcomed: welcomed ?? this.welcomed,
       );
 
   Json toJson() => {
@@ -1124,6 +1132,7 @@ class AppPrefs {
         if (installId.isNotEmpty) 'install': installId,
         'alarm': alarmSound,
         if (alarmNotice) 'alarmNotice': true,
+        if (welcomed) 'welcomed': true,
       };
 
   factory AppPrefs.fromJson(Json j) => AppPrefs(
@@ -1163,5 +1172,6 @@ class AppPrefs {
         // alerts on: its sound changes from a notification to an alarm.
         alarmNotice: _bool(j['alarmNotice']) ||
             (!j.containsKey('alarm') && j.containsKey('alerts') && j['alerts'] != false),
+        welcomed: _bool(j['welcomed']),
       );
 }

@@ -27,6 +27,8 @@ void main() {
 
   setUpAll(() async {
     await store.init(createDeviceStorage());
+    // Straight into the app (the welcome is phone_test's).
+    store.updatePrefs(store.prefs.copyWith(welcomed: true));
     await NotificationService.init();
   });
 

@@ -1,7 +1,9 @@
 import '../models/models.dart';
 
-/// What a brand-new install starts with, so the app isn't empty on first
-/// launch. Everything here can be edited or deleted by the user.
+/// Sample folders and tasks. The tests start with them
+/// (`AppStore.resetForTesting`); a real install starts empty. Versions
+/// before 0.7.1 started every install with them, so the store also uses
+/// this list to remove the ones never used from older save files.
 class SeedData {
   SeedData._();
 

@@ -57,6 +57,8 @@ flutter:
     # The logo, as two masks tinted with the app's colors (widgets/app_logo.dart).
     - assets/brand/logo_outline.png
     - assets/brand/logo_fill.png
+    # The Google "G" on the Continue with Google button (welcome screen).
+    - assets/brand/google_g.png
 
   fonts:
     # Plus Jakarta Sans (headings, numbers, buttons) and Inter (body text),

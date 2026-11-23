@@ -31,7 +31,7 @@ class _NewerDataException implements Exception {
 /// `ListenableBuilder`; every change is saved to the device automatically.
 class AppStore extends ChangeNotifier {
   AppStore._() {
-    _seed();
+    if (samplesOnFirstLaunch) _seed();
   }
 
   static final AppStore instance = AppStore._();
@@ -108,12 +108,20 @@ class AppStore extends ChangeNotifier {
   Future<void> get pendingSaves =>
       _saveIdle ? Future<void>.value() : _saveChain;
 
-  /// Starter data for a first launch: sample folders and tasks.
+  /// The sample folders and tasks the tests start with ([resetForTesting]).
+  /// A real install starts empty.
   void _seed() {
     _clear();
     _folders.addAll(SeedData.folders);
     _tasks.addAll(SeedData.tasks());
+    _prefs = const AppPrefs(welcomed: true);
   }
+
+  /// Tests: a first launch ([init] with nothing saved) starts with the
+  /// sample data, already welcomed, as [resetForTesting] does, instead of
+  /// empty. Real installs always start empty.
+  @visibleForTesting
+  static bool samplesOnFirstLaunch = false;
 
   /// No data at all.
   void _clear() {
@@ -134,9 +142,9 @@ class AppStore extends ChangeNotifier {
     _timer = null;
   }
 
-  /// Loads saved data (or saves the starter data on first launch).
+  /// Loads saved data. A first launch starts with no data at all.
   ///
-  /// Saved data is never replaced with sample data. If it can't be read, a
+  /// Saved data is never replaced with other data. If it can't be read, a
   /// copy is kept, the last copy that worked is tried, and [problem] tells
   /// the user what happened.
   Future<void> init(LocalStorage storage) => _init(storage);
@@ -162,8 +170,12 @@ class AppStore extends ChangeNotifier {
     }
 
     if (raw == null) {
-      _seed();
-      _persist(); // first launch: save the starter data
+      if (samplesOnFirstLaunch) {
+        _seed();
+      } else {
+        _clear();
+      }
+      _persist(); // first launch: nothing yet, but the file is made
       notifyListeners();
       return;
     }
@@ -377,7 +389,8 @@ class AppStore extends ChangeNotifier {
     }
   }
 
-  /// Back to starter data with in-memory storage. For tests.
+  /// Back to the sample data (already welcomed) with in-memory storage.
+  /// For tests.
   @visibleForTesting
   void resetForTesting() {
     _storage = MemoryStorage();
@@ -483,7 +496,31 @@ class AppStore extends ChangeNotifier {
     _prefs = prefs;
     _timer = timer;
     _thumbs.clear();
+    // Save files from before 0.7.1 started with sample folders and tasks.
+    if (j['noSamples'] != true) _removeSamples();
     return skipped;
+  }
+
+  /// Removes the sample folders and tasks older versions started with,
+  /// unless the user has used them: a folder with notes or sets in it, or a
+  /// task with Pomodoros focused on it, stays.
+  void _removeSamples() {
+    final sampleTasks = {for (final t in SeedData.tasks()) t.id: t};
+    _tasks.removeWhere((t) {
+      final sample = sampleTasks[t.id];
+      return sample != null &&
+          t.title == sample.title &&
+          t.pomodorosDone == sample.pomodorosDone &&
+          t.focusMinutes == sample.focusMinutes;
+    });
+    if (_currentTaskId != null && task(_currentTaskId!) == null) {
+      _currentTaskId = null;
+    }
+    final sampleFolders = {for (final f in SeedData.folders) f.id};
+    _folders.removeWhere((f) =>
+        sampleFolders.contains(f.id) &&
+        !_notes.any((n) => n.folderId == f.id) &&
+        !_sets.any((s) => s.folderId == f.id));
   }
 
   Map<String, int> _intMap(Object? v) => {
@@ -497,6 +534,7 @@ class AppStore extends ChangeNotifier {
   /// server's app token: it stays on this device.
   Map<String, Object?> _toJson({bool forExport = false}) => {
         'version': _dataVersion,
+        'noSamples': true,
         'folders': [for (final f in _folders) f.toJson()],
         'notes': [for (final n in _notes) n.toJson()],
         'tasks': [for (final t in _tasks) t.toJson()],

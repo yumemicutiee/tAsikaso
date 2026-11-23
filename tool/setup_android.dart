@@ -36,6 +36,7 @@ void main() {
       File('android/app/src/main/res/drawable/ic_stat_notify.xml'));
   _copyLauncherIcons(Directory('tool/android_icon/res'),
       Directory('android/app/src/main/res'));
+  _writeLaunchScreen(Directory('android/app/src/main/res'));
   stdout.writeln('Done. Now run: flutter pub get && flutter run');
 }
 
@@ -58,6 +59,52 @@ void _copyLauncherIcons(Directory from, Directory to) {
     copied++;
   }
   stdout.writeln('Copied the launcher icon ($copied files)');
+}
+
+/// What shows while the app starts, before its own loading screen: the
+/// logo on the app's background (white, or dark blue in dark mode), so the
+/// hand-over to lib/screens/loading_screen.dart is seamless. Android 12+
+/// draws its own splash from the launcher icon; it gets the same background.
+/// Always written, replacing `flutter create`'s plain white screen.
+void _writeLaunchScreen(Directory res) {
+  void write(String path, String text) {
+    final file = File('${res.path}/$path');
+    file.parent.createSync(recursive: true);
+    file.writeAsStringSync(text);
+  }
+
+  const layers = '''
+<?xml version="1.0" encoding="utf-8"?>
+<!-- tAsikaso's launch screen (tool/setup_android.dart). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item>
+        <bitmap android:gravity="center" android:src="@mipmap/ic_launcher_foreground" />
+    </item>
+</layer-list>
+''';
+  write('drawable/launch_background.xml', layers);
+  write('drawable-v21/launch_background.xml', layers);
+  String color(String hex) => '''
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="splash_background">$hex</color>
+</resources>
+''';
+  write('values/splash_colors.xml', color('#FFFFFF'));
+  write('values-night/splash_colors.xml', color('#0F1320'));
+  String v31(String parent) => '''
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="LaunchTheme" parent="$parent">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+    </style>
+</resources>
+''';
+  write('values-v31/styles.xml', v31('@android:style/Theme.Light.NoTitleBar'));
+  write('values-night-v31/styles.xml', v31('@android:style/Theme.Black.NoTitleBar'));
+  stdout.writeln('Wrote the launch screen');
 }
 
 /// The status-bar icon for timer alerts (white on transparent, as Android

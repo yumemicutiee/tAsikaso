@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'data/app_store.dart';
 import 'models/models.dart';
 import 'screens/home_shell.dart';
+import 'screens/welcome/welcome_screen.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'theme/brand.dart';
@@ -85,7 +86,9 @@ class _StudyAppState extends State<StudyApp> with WidgetsBindingObserver {
           ),
         ),
       ),
-      home: const HomeShell(),
+      // A new install starts with the welcome (sign in or not) and the
+      // slides about the app, once.
+      home: _store.prefs.welcomed ? const HomeShell() : const WelcomeScreen(),
     );
   }
 }

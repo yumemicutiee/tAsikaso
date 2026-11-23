@@ -437,3 +437,31 @@ it. The emulator tests run debug builds, without R8.
 - Guard: `.github/workflows/release-check.yml` builds
   `tool/release_check/main.dart` in release mode (with R8, like the APK),
   runs it on an emulator, and fails unless a photo and a PDF are read.
+
+## 19. Welcome, slides, loading screen; no test data (0.7.1, 23 Nov)
+
+- **No test data.** A new install starts empty (`AppStore.init` with
+  nothing saved). Save files without the `noSamples` flag (0.7.0 and older)
+  lose the sample folders and tasks (`SeedData`) once, unless used: a sample
+  folder with notes or sets, or a sample task whose Pomodoros changed, stays.
+  The tests still start with the samples (`resetForTesting`, and
+  `AppStore.samplesOnFirstLaunch`, set in `test/flutter_test_config.dart`).
+- **Welcome** (`lib/screens/welcome/welcome_screen.dart`), while
+  `AppPrefs.welcomed` is false: Continue with Google (`DriveSync.signIn`;
+  takes the account's name and photo; if the account has data on Drive,
+  offers to bring it back) or Continue without an account (asks a name,
+  optional). Older installs see it once too; Delete All Data shows it again
+  on the next launch.
+- **Slides** (`intro_slides.dart`): five, Skip / Next / Get Started; then
+  `welcomed` is saved and the app opens with no way back.
+- **Loading screen** (`lib/screens/loading_screen.dart`): `main` runs
+  `AppLoader`, which shows it while the data loads (at least 1.1 s), then
+  fades to the app. `web/index.html` shows the same screen until Flutter's
+  first frame; `tool/setup_android.dart` writes Android's launch screen
+  (logo on white / dark blue, and the Android 12+ splash background).
+- **Google sign-in on Android** needs the APK signed with the registered
+  upload key (SHA-1 `34:1D:FC:8F:…:66:3C`) and, while the consent screen is
+  in Testing, the user added as a test user. The GitHub Actions APK is
+  signed with it only when the `ANDROID_KEYSTORE_BASE64` and
+  `ANDROID_KEYSTORE_PASSWORD` secrets exist; otherwise sign-in fails and
+  the welcome says so (Continue without an account still works).

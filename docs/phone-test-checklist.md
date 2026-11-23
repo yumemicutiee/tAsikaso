@@ -9,8 +9,12 @@ Write down: phone model ________  Android version ________  APK: debug / release
 Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 
 ## First launch
-- [ ] App opens; five sample folders and five sample tasks are there.
-- [ ] Greeting asks for your name; the name shows in "Hello, …!".
+- [ ] The loading screen (logo, tAsikaso, moving bar) shows, then the welcome screen.
+- [ ] Continue with Google signs in (needs the signed APK and a test user); the name comes from Google.
+- [ ] Or Continue without an account → type a name → Continue.
+- [ ] The slides about the app show; Next goes through them; Skip or Get Started opens the app.
+- [ ] No sample folders or tasks; the name shows in "Hello, …!".
+- [ ] Close and reopen: the loading screen, then straight to the app (no welcome, no slides).
 
 ## Pomodoro & Focus Mode
 - [ ] START asks "Allow notifications?" the first time.
@@ -115,7 +119,7 @@ Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 - [ ] Daily reminder at a time 2 minutes from now → notification arrives.
 - [ ] Appearance System / Light / Dark switches instantly everywhere.
 - [ ] App Color: locked colours open the plans page; with Plus on (debug) they apply.
-- [ ] Delete All Data → everything gone, sample data NOT re-added, reopen app → still empty.
+- [ ] Delete All Data → everything gone; reopen app → still empty, and the welcome shows again.
 - [ ] Help & FAQ opens.
 
 ## Anything that crashed, froze, or looked wrong

@@ -74,8 +74,29 @@ void main() {
     final again = store.notes.singleWhere((n) => n.id == note.id);
     expect(await store.readPdf(again), pdf);
 
+    // A fresh install: no sample data, and the welcome comes first.
+    expect(store.activeTasks, isEmpty);
+    expect(store.prefs.welcomed, isFalse);
     await tester.pumpWidget(const StudyApp());
     await tester.pumpAndSettle();
+    expect(find.text('Continue with Google'), findsOneWidget);
+    await shot(tester, '0a-welcome');
+    await tester.tap(find.text('Continue without an account'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Emulator');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome, Emulator!'), findsOneWidget);
+    await shot(tester, '0b-slide-1');
+    for (var i = 2; find.text('Next').evaluate().isNotEmpty; i++) {
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await shot(tester, '0b-slide-$i');
+    }
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+    expect(store.prefs.welcomed, isTrue);
+
     expect(find.text("Today's Focus"), findsOneWidget);
     await shot(tester, '1-dashboard');
     for (final (i, tab) in [AppTab.library, AppTab.study, AppTab.profile].indexed) {

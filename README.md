@@ -182,8 +182,23 @@ can start a test plan. Smart Study needs your own study server and Anthropic
 API key; on the free plan it is capped by the 20 suggested cards a month,
 but typing up notes (Text Notes) isn't limited.
 
-A first launch starts with five sample folders and five sample tasks so the
-app isn't empty. They can be edited or deleted.
+**Opening the app.** A loading screen (the logo and a moving bar) shows
+while the saved data is read; the web page and Android show the same screen
+before the app starts, so it hands over without a flash. A new install
+starts empty, with no sample data, on the welcome screen: **Continue with
+Google** (signs up or logs in; a copy of the account's data on Google Drive
+can be brought back) or **Continue without an account** (asks only for a
+name). Then a few slides say what the app does, once; Skip or Get Started
+opens the app. Updating from 0.7.0 or older removes the sample folders and
+tasks those versions started with, unless they were used (a folder with
+notes or sets, a task with Pomodoros focused on it).
+
+Google sign-in on Android only works in an APK signed with the key whose
+SHA-1 is registered for the app's OAuth client, and while the OAuth consent
+screen is in Testing, only for the test users added there. The APK built by
+GitHub Actions uses that key only when the `ANDROID_KEYSTORE_BASE64` and
+`ANDROID_KEYSTORE_PASSWORD` secrets are set; without them it is debug-signed
+and Google sign-in fails (Continue without an account still works).
 
 ## Design system
 
