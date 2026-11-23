@@ -424,7 +424,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     </section>
 
     <section class="card" id="plans">
-      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-crown"/></svg></span><div><h2 class="ttl">tAsikaso+ plans <span class="pill demo" id="planDemo" hidden>Test</span></h2><p class="sub">Active right now</p></div></div>
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-crown"/></svg></span><div><h2 class="ttl">tAsikaso+ plans</h2><p class="sub">Active right now</p></div></div>
       <div class="planhead"><span class="big" id="planActive">–</span><span class="delta flat" id="planShare">–</span><span class="meta">of all users</span></div>
       <div class="planrows" id="planRows"></div>
       <div class="planfoot"><span>Ending in 7 days <strong id="planEnding">–</strong></span><span>On Free <strong id="planFree">–</strong></span></div>
@@ -928,7 +928,6 @@ function renderPlans() {
   const active = p.monthly + p.semester + p.yearly;
   $("planActive").textContent = fmtNum(active);
   $("planShare").textContent = share(active, dash.overview.total);
-  $("planDemo").hidden = !(active > 0 && p.test === active);
   $("planEnding").textContent = fmtNum(p.endingIn7Days);
   $("planFree").textContent = fmtNum(p.free);
   // One row per plan: its price, how many, and its share of the active plans.
@@ -977,12 +976,12 @@ async function loadUsers() {
   const sortName = { newest: "Newest first", oldest: "Oldest first", ending: "Plan ending soonest" }[st.sort];
   $("userNote").textContent = st.q || filtersOn() ? `${fmtNum(res.total)} found · ${sortName.toLowerCase()}` : `${sortName} · ${fmtNum(res.total)} in total`;
   const rows = res.rows.map((u) => {
-    const plan = u.plan ? `${u.test ? "Test · " : "tAsikaso+ "}${PLAN_TITLE[u.plan]}` : "Free";
+    const plan = u.plan ? `tAsikaso+ ${PLAN_TITLE[u.plan]}` : "Free";
     return el("tr", {},
       el("td", {},
         el("div", { style: "font-weight:600" }, u.anonymous ? "No account" : (u.email ?? u.name ?? "Google account")),
         el("div", { class: "meta" }, u.anonymous ? `id ${u.id.slice(0, 13)}` : (u.name || "Google"))),
-      el("td", {}, el("span", { class: `pill ${u.plan ? (u.test ? "test" : "plus") : ""}` }, plan)),
+      el("td", {}, el("span", { class: `pill ${u.plan ? "plus" : ""}` }, plan)),
       el("td", u.plan ? { "data-label": "Plan ends" } : { class: "noplan" }, u.plan ? fmtDate(u.planEndsAt) : "—"),
       el("td", { "data-label": "Joined" }, fmtDate(u.createdAt)),
     );
