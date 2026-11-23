@@ -58,7 +58,7 @@ class MetaRow extends StatelessWidget {
         );
     return Semantics(
       label: label ??
-          [if (lead != null) lead!, for (final i in items) i.text].join(', '),
+          [?lead, for (final i in items) i.text].join(', '),
       excludeSemantics: true,
       child: wrap
           ? Wrap(
