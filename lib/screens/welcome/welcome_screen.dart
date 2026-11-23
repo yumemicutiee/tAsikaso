@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/brand.dart';
 import '../../widgets/app_logo.dart';
 import '../actions.dart';
+import '../loading_screen.dart';
 import 'intro_slides.dart';
 
 /// The first screen of a new install: sign up or log in with Google, or
@@ -125,31 +126,59 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final background =
+        AppColors.isDark ? AppColors.background : const Color(0xFFF4F8FD);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: background,
       body: SafeArea(
         child: LayoutBuilder(
-          builder: (context, box) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight - 36),
-              child: IntrinsicHeight(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Spacer(),
-                    const _Brand(),
-                    const Spacer(),
-                    const SizedBox(height: 28),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      child: _step == _Step.choose ? _choose() : _askName(),
-                    ),
-                  ],
+          builder: (context, box) {
+            // The picture of the app shrinks on short screens.
+            final scale = ((box.maxHeight - 470) / _AppPeek.height)
+                .clamp(0.55, 1.0)
+                .clamp(0.0, (box.maxWidth - 48) / _AppPeek.width);
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: box.maxHeight - 38),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const _Header(),
+                      const SizedBox(height: 10),
+                      Center(child: _AppPeek(scale: scale)),
+                      const SizedBox(height: 10),
+                      Text(LoadingScreen.tagline,
+                          style: TextStyle(
+                            fontFamily: kHeadingFont,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            height: 1.2,
+                            color: AppColors.ink,
+                          )),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Your timer, your class notes and your flashcards '
+                        'in one place.',
+                        style: TextStyle(
+                            fontSize: 14,
+                            height: 1.5,
+                            color: AppColors.textSecondary),
+                      ),
+                      const Spacer(),
+                      const SizedBox(height: 24),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        child: _step == _Step.choose ? _choose() : _askName(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -160,12 +189,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       key: const ValueKey('choose'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Sign up or log in',
-            textAlign: TextAlign.center, style: AppText.sectionTitle),
-        const SizedBox(height: 4),
-        Text('New to $kAppName? Your Google account signs you up.',
-            textAlign: TextAlign.center, style: AppText.statLabel),
-        const SizedBox(height: 16),
         _GoogleButton(busy: _busy, onPressed: _busy ? null : _google),
         if (_error case final error?) ...[
           const SizedBox(height: 10),
@@ -174,17 +197,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               style: TextStyle(
                   fontSize: 12, height: 1.35, color: AppColors.streakText)),
         ],
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(child: Divider(color: AppColors.divider)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text('or', style: AppText.statLabel),
-            ),
-            Expanded(child: Divider(color: AppColors.divider)),
-          ],
-        ),
         const SizedBox(height: 6),
         SizedBox(
           height: 46,
@@ -195,13 +207,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Center(
           child: Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text('Your notes stay on your phone. ',
+              Text('New here? Google signs you up. Your notes stay on your phone. ',
+                  textAlign: TextAlign.center,
                   style: AppText.itemMeta.copyWith(fontSize: 11)),
               GestureDetector(
                 onTap: () => openPrivacyPolicy(context),
@@ -281,33 +294,257 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 }
 
-/// The logo, the name and what the app is for.
-class _Brand extends StatelessWidget {
-  const _Brand();
+/// The small logo and the name, top left.
+class _Header extends StatelessWidget {
+  const _Header();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       children: [
-        const AppLogo(size: 104),
-        const SizedBox(height: 14),
+        const AppLogo(size: 34),
+        const SizedBox(width: 8),
         Text(kAppName,
             style: TextStyle(
               fontFamily: kHeadingFont,
-              fontSize: 34,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.6,
+              letterSpacing: -0.3,
               color: AppColors.ink,
             )),
-        const SizedBox(height: 8),
-        Text(
-          'Focus with Pomodoro, snap your notes into text, '
-          'and turn them into flashcards.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              fontSize: 14, height: 1.45, color: AppColors.textSecondary),
-        ),
       ],
+    );
+  }
+}
+
+/// A peek at the app: Today's Focus, a note whose text was found and a
+/// flashcard, tilted on top of each other.
+class _AppPeek extends StatelessWidget {
+  const _AppPeek({required this.scale});
+
+  static const double width = 342;
+  static const double height = 370;
+
+  final double scale;
+
+  static const _deg = 3.14159265 / 180;
+
+  List<BoxShadow> get _shadow => [
+        BoxShadow(
+          color: const Color(0xFF1E3A6E).withValues(alpha: AppColors.isDark ? 0.4 : 0.13),
+          blurRadius: 28,
+          offset: const Offset(0, 12),
+        ),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = AppColors.isDark;
+    final card = dark ? AppColors.raised : Colors.white;
+    final lineBlue = dark ? const Color(0xFF2A4470) : const Color(0xFFCFE4FA);
+    final lineGrey = AppColors.thumbnail;
+    Widget line(double w, Color c, {double top = 8}) => Padding(
+          padding: EdgeInsets.only(top: top),
+          child: FractionallySizedBox(
+            widthFactor: w,
+            alignment: Alignment.centerLeft,
+            child: Container(
+              height: 7,
+              decoration: BoxDecoration(
+                  color: c, borderRadius: BorderRadius.circular(3)),
+            ),
+          ),
+        );
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: width * scale,
+        height: height * scale,
+        child: FittedBox(
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Today's Focus.
+                Positioned(
+                  left: 8,
+                  top: 24,
+                  child: Transform.rotate(
+                    angle: -6 * _deg,
+                    child: Container(
+                      width: 210,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: card,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: _shadow,
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 58,
+                            height: 58,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                CircularProgressIndicator(
+                                  value: 0.8,
+                                  strokeWidth: 7,
+                                  strokeCap: StrokeCap.round,
+                                  color: AppColors.primary,
+                                  backgroundColor: AppColors.primarySoft,
+                                ),
+                                Center(
+                                  child: Text('80%',
+                                      style: TextStyle(
+                                        fontFamily: kHeadingFont,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.primaryDeep,
+                                      )),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Today's Focus",
+                                    style: TextStyle(
+                                      fontFamily: kHeadingFont,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.ink,
+                                    )),
+                                const SizedBox(height: 3),
+                                Text('120 of 150 min',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // A note, its text found.
+                Positioned(
+                  right: 4,
+                  top: 64,
+                  child: Transform.rotate(
+                    angle: 5 * _deg,
+                    child: Container(
+                      width: 170,
+                      height: 216,
+                      padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+                      decoration: BoxDecoration(
+                        color: card,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: _shadow,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Photosynthesis',
+                              style: TextStyle(
+                                fontFamily: kHeadingFont,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.ink,
+                              )),
+                          line(0.92, lineBlue, top: 12),
+                          line(0.78, lineBlue),
+                          line(0.86, lineBlue),
+                          line(0.70, lineGrey, top: 16),
+                          line(0.90, lineGrey),
+                          line(0.60, lineGrey),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 9, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: dark
+                                  ? const Color(0xFF1F3B2E)
+                                  : const Color(0xFFD4EEE0),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text('Text found',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: dark
+                                      ? const Color(0xFFA8DCC1)
+                                      : const Color(0xFF2C6B4C),
+                                )),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // A flashcard.
+                Positioned(
+                  left: 34,
+                  top: 188,
+                  child: Transform.rotate(
+                    angle: -2 * _deg,
+                    child: Container(
+                      width: 220,
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                      decoration: BoxDecoration(
+                        color: AppColors.heroTop,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: _shadow,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('FLASHCARD',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.6,
+                                color: Color(0xFFA9D2F7),
+                              )),
+                          const SizedBox(height: 8),
+                          const Text('Where does photosynthesis happen?',
+                              style: TextStyle(
+                                fontFamily: kHeadingFont,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                height: 1.35,
+                                color: Colors.white,
+                              )),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text('Show Answer',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.onFill,
+                                )),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -323,14 +560,14 @@ class _GoogleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 50,
+      height: 52,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.isDark ? AppColors.raised : Colors.white,
           foregroundColor: AppColors.ink,
           side: BorderSide(color: AppColors.border, width: 1.2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

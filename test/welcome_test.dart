@@ -154,7 +154,8 @@ void main() {
 
       expect(find.byType(WelcomeScreen), findsOneWidget);
       expect(find.byType(HomeShell), findsNothing);
-      expect(find.text('Sign up or log in'), findsOneWidget);
+      expect(find.text('Snap. Study. Recall.'), findsOneWidget);
+      expect(find.textContaining('Google signs you up'), findsOneWidget);
       expect(find.text('Continue with Google'), findsOneWidget);
       expect(find.text('Continue without an account'), findsOneWidget);
     });
