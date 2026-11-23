@@ -8,6 +8,7 @@ import '../services/account_data.dart';
 import '../services/accounts.dart';
 import '../services/drive_sync.dart';
 import '../services/notification_service.dart';
+import '../services/study_ai.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -210,10 +211,11 @@ class ProfileScreen extends StatelessWidget {
   /// and their pages stay on this phone (Google Drive keeps them with
   /// Backup & Sync).
   ///
-  /// Without one there's no account to come back to, so nothing is
-  /// cleared but the name.
+  /// Without one there's nothing to log back in to: [_logOutWithoutAccount]
+  /// warns, offers Google sign-in, and otherwise deletes everything.
   static Future<void> _logOut(BuildContext context) async {
     final sync = DriveSync.instance;
+    if (!sync.isSignedIn) return _logOutWithoutAccount(context);
     final navigator = Navigator.of(context, rootNavigator: true);
     final messenger = ScaffoldMessenger.of(context);
     final store = AppStore.instance;
@@ -228,13 +230,9 @@ class ProfileScreen extends StatelessWidget {
               'saved to your account (${sync.email}), then cleared from this '
               'phone. Continue with Google to get them back, here or on '
               'another phone. Your notes and flashcards stay on this phone.'
-          : sync.isSignedIn
-              ? "You'll be signed out of Google (${sync.email}) and go back "
-                  'to the welcome screen. Your notes, flashcards and tasks '
-                  'stay on this phone.'
-              : "You don't have an account yet, so your notes, statistics and "
-                  'tasks stay on this phone. Continue with Google first to '
-                  'keep them in an account.',
+          : "You'll be signed out of Google (${sync.email}) and go back "
+              'to the welcome screen. Your notes, flashcards and tasks '
+              'stay on this phone.',
       confirmLabel: 'Log Out',
       danger: false,
     );
@@ -262,6 +260,95 @@ class ProfileScreen extends StatelessWidget {
       await store.setProfilePhoto(null);
     }
     store.updatePrefs(store.prefs.copyWith(userName: '', welcomed: false));
+    navigator.pushAndRemoveUntil(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (_, _, _) => const WelcomeScreen(),
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+      (_) => false,
+    );
+  }
+
+  /// Log Out without an account: there is no account to log back in to,
+  /// so logging out deletes everything on this phone. Warns first, and
+  /// offers Google sign-in to keep it all instead.
+  static Future<void> _logOutWithoutAccount(BuildContext context) async {
+    final sync = DriveSync.instance;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final messenger = ScaffoldMessenger.of(context);
+    final choice = await showDialog<_NoAccountLogOut>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(AppIcons.warning, size: 32, color: AppColors.streakRed),
+        title: Text("You Can't Log Back In", style: AppText.sectionTitle),
+        content: const Text(
+          "You're using $kAppName without an account, so there's nothing to "
+          'log back in to. Logging out deletes everything on this phone: '
+          'your notes, flashcards, tasks, Pomodoro statistics and settings.'
+          '\n\nSign in with Google to keep them in an account.',
+          style: TextStyle(height: 1.4),
+        ),
+        actionsOverflowDirection: VerticalDirection.up,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_NoAccountLogOut.delete),
+            style: TextButton.styleFrom(foregroundColor: AppColors.streakRed),
+            child: const Text('Log Out and Delete'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(_NoAccountLogOut.google),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onFill,
+            ),
+            child: const Text('Sign In with Google'),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+
+    if (choice == _NoAccountLogOut.google) {
+      final error = await sync.signIn();
+      if (!context.mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(sync.isSignedIn
+              ? 'Signed in as ${sync.email}. Your notes and progress are kept.'
+              : (error == null || error.isEmpty)
+                  ? "Google sign-in didn't finish. Nothing was deleted."
+                  : error),
+          showCloseIcon: true,
+        ));
+      return;
+    }
+
+    // Log Out and Delete: the timer and reminders stop, the account kept
+    // for this phone (plan, Smart Study use) goes, then everything here.
+    final store = AppStore.instance;
+    final account = Accounts.instance;
+    PomodoroController.instance.restart();
+    await NotificationService.cancelTimerEnd();
+    await NotificationService.setDailyReminder(null);
+    if (account.enabled && account.hasSession) {
+      try {
+        await StudyAi.deleteAccount();
+      } catch (e) {
+        debugPrint('Account not deleted at Log Out: $e');
+      }
+      await account.signOut();
+    }
+    await store.eraseEverything();
+    store.applyServerPlan(null);
+    store.updatePrefs(store.prefs.copyWith(userName: '', welcomed: false));
+    messenger.hideCurrentSnackBar();
     navigator.pushAndRemoveUntil(
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 350),
@@ -461,3 +548,6 @@ class _Group extends StatelessWidget {
     );
   }
 }
+
+/// What the user chose when logging out without an account.
+enum _NoAccountLogOut { google, delete }

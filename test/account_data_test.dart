@@ -303,18 +303,50 @@ void main() {
       expect(accounts.signOuts, 0);
     });
 
-    testWidgets('without an account: nothing is cleared but the name',
+    testWidgets("without an account: warns that you can't log back in; Cancel keeps everything",
         (tester) async {
       accounts.isAnonymous = true;
       useTheApp();
       await openProfile(tester);
       await tapLogOut(tester);
-      expect(find.textContaining("don't have an account yet"), findsOneWidget);
-      await tester.tap(find.text('Log Out').last);
+      expect(find.text("You Can't Log Back In"), findsOneWidget);
+      expect(find.text('Sign In with Google'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
       expect(store.sessions, hasLength(2));
-      expect(store.prefs.palette, 'plum');
+      expect(store.prefs.userName, 'Kristine');
+      expect(find.byType(WelcomeScreen), findsNothing);
+    });
+
+    testWidgets('without an account: Log Out and Delete deletes everything',
+        (tester) async {
+      accounts.isAnonymous = true;
+      useTheApp();
+      await openProfile(tester);
+      await tapLogOut(tester);
+      await tester.tap(find.text('Log Out and Delete'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+      await tester.pumpAndSettle();
+      expect(store.sessions, isEmpty);
+      expect(store.prefs.userName, '');
+      expect(store.prefs.welcomed, isFalse);
       expect(find.byType(WelcomeScreen), findsOneWidget);
+    });
+
+    testWidgets('without an account: Sign In with Google keeps everything',
+        (tester) async {
+      DriveSync.debugStore = MemoryDriveStore();
+      accounts.isAnonymous = true;
+      useTheApp();
+      await openProfile(tester);
+      await tapLogOut(tester);
+      await tester.tap(find.text('Sign In with Google'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+      await tester.pumpAndSettle();
+      expect(DriveSync.instance.isSignedIn, isTrue);
+      expect(store.sessions, hasLength(2));
+      expect(find.byType(WelcomeScreen), findsNothing);
+      expect(find.textContaining('Signed in as'), findsOneWidget);
     });
   });
 }
