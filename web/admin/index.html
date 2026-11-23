@@ -248,11 +248,23 @@ main.content{container-type:inline-size;display:flex;flex-direction:column;gap:2
 .searchbox:focus-within kbd{display:none}
 .filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding-bottom:14px;border-bottom:1px solid var(--line)}
 .seg.small button{padding:6px 14px;min-height:34px;font-size:13px}
-.pick{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 12px 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:13px;color:var(--muted);cursor:pointer}
+/* Dropdowns: a button that is as wide as its text, and a menu under it
+   (the browser's own select is kept, hidden, for the value). */
+.pick{position:relative;display:inline-flex;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.pick select{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.pickbtn{display:inline-flex;align-items:center;gap:6px;width:100%;height:100%;padding:0 12px 0 14px;border:0;background:none;border-radius:12px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap;outline:0}
+.pickbtn b{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+.pickbtn svg{width:14px;height:14px;flex:none;margin-left:auto;padding-left:2px;color:var(--muted);transition:transform .15s}
+.pick.open .pickbtn svg{transform:rotate(180deg)}
+.pickmenu{position:absolute;top:calc(100% + 6px);left:-1px;min-width:calc(100% + 2px);z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 28px rgba(22,24,29,.14);padding:6px;display:flex;flex-direction:column;gap:2px;max-height:320px;overflow:auto}
+.pickmenu button{display:flex;align-items:center;justify-content:space-between;gap:18px;border:0;background:none;border-radius:8px;padding:9px 10px 9px 12px;font:inherit;font-size:13px;color:var(--ink);text-align:left;cursor:pointer;white-space:nowrap;outline:0}
+.pickmenu button:hover,.pickmenu button:focus-visible{background:var(--row)}
+.pickmenu button[aria-selected="true"]{color:var(--accent);font-weight:600}
+.pickmenu button svg{width:16px;height:16px;visibility:hidden}
+.pickmenu button[aria-selected="true"] svg{visibility:visible}
 .pick:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
 .pick.on{border-color:var(--accent);background:var(--accent-tint)}
-.pick.on span{color:var(--accent)}
-.pick select{appearance:none;-webkit-appearance:none;border:0;outline:0;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2361646E' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0 center;font:inherit;font-size:13px;font-weight:600;color:var(--ink);padding:0 20px 0 0;height:100%;cursor:pointer}
+.pick.on .pickbtn{color:var(--accent)}
 .linkbtn{border:0;background:none;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;padding:8px 6px;text-decoration:underline;text-underline-offset:3px}
 #users thead th{position:sticky;top:0;z-index:1;background:var(--card)}
 @media (min-width:641px){
@@ -309,12 +321,12 @@ details.crash pre .app{color:#9FCBF5}
 @media (max-width:900px){ .cstats{grid-template-columns:repeat(2,minmax(0,1fr))} }
 #crashTools{gap:10px}
 #crashTools .searchbox{flex:1 1 260px;width:auto}
-#crashTools .pick{min-width:150px}
-#crashTools .pick select{flex:1}
+.pick{flex:0 0 auto}
 @media (max-width:640px){
   #crashes .cardhead .seg{width:100%}
   #crashes .cardhead .seg button{flex:1;padding:6px 4px}
-  #crashTools .pick{flex:1 1 0}
+  #crashTools .searchbox{flex:1 1 100%}
+  #crashTools .pick{flex:1 1 0;min-width:0}
   details.crash summary{grid-template-columns:minmax(0,1fr) auto;gap:10px}
   details.crash .chev{display:none}
 }
@@ -336,7 +348,6 @@ details.crash pre .app{color:#9FCBF5}
   .filters .seg.small{width:100%}
   .filters .seg.small button{flex:1}
   .pick{flex:1 1 140px;min-width:0}
-  .pick select{flex:1;min-width:0;width:100%;text-overflow:ellipsis}
   .searchbox kbd{display:none}
   #users .tablebox{overflow:visible}
   #users table{border-spacing:0 8px}
@@ -384,11 +395,12 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.6 2.6L16 9.6"/></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 8l4 3.5L12 5l4 6.5L20 8l-1.8 10H5.8z"/><path d="M6 21h12"/></symbol>
   </svg>
 
   <header class="top">
-    <div class="brand"><img src="../icons/Icon-192.png" alt="">tAsikaso <span>admin</span></div>
+    <div class="brand"><img src="../icons/Icon-192.png" alt="tAsikaso">Super Admin</div>
     <p class="side-label">Menu</p>
     <nav class="pills" aria-label="Admin sections">
       <a href="#overview" class="on"><svg class="i"><use href="#i-grid"/></svg>Overview</a>
@@ -1094,6 +1106,7 @@ $("fSort").addEventListener("change", (e) => { userState.sort = e.target.value; 
 $("fClear").addEventListener("click", () => {
   Object.assign(userState, { account: "all", plan: "all", days: "0", sort: "newest" });
   $("fPlan").value = "all"; $("fDays").value = "0"; $("fSort").value = "newest";
+  for (const id of ["fPlan", "fDays", "fSort"]) syncPick($(id));
   applyFilters();
 });
 
@@ -1196,6 +1209,7 @@ function fillSelect(id, values, label) {
   sel.replaceChildren(el("option", { value: "" }, "All"), ...values.map((v) => el("option", { value: v }, label(v))));
   sel.value = values.includes(keep) ? keep : "";
   sel.closest(".pick").classList.toggle("on", !!sel.value);
+  syncPick(sel);
 }
 
 function crashRow(g) {
@@ -1246,6 +1260,71 @@ $("crashSearch").addEventListener("input", () => { if (crashData) renderCrashes(
 for (const id of ["crashVersion", "crashSystem"]) {
   $(id).addEventListener("change", (e) => { e.target.closest(".pick").classList.toggle("on", !!e.target.value); renderCrashes(); });
 }
+
+// ---- Dropdowns ---------------------------------------------------------------
+
+/** Shows a select's current choice on its button. */
+function syncPick(sel) {
+  const pick = sel.closest(".pick");
+  if (!pick?._btn) return;
+  pick._btn.querySelector("b").textContent = sel.selectedOptions[0]?.textContent ?? "";
+}
+function closePicks(except) {
+  for (const p of document.querySelectorAll(".pick.open")) {
+    if (p === except) continue;
+    p.classList.remove("open");
+    p._btn.setAttribute("aria-expanded", "false");
+    p._menu.hidden = true;
+  }
+}
+/** Turns a <label class="pick"><span>Name</span><select></label> into a button and a menu. */
+function enhancePick(sel) {
+  const old = sel.closest(".pick");
+  const name = old.querySelector("span").textContent;
+  const pick = el("div", { class: old.className });
+  const btn = el("button", { type: "button", class: "pickbtn", "aria-haspopup": "listbox", "aria-expanded": "false" },
+    el("span", {}, name), el("b", {}), icon("i-chev", 14));
+  const menu = el("div", { class: "pickmenu", role: "listbox", "aria-label": name });
+  menu.hidden = true;
+  sel.tabIndex = -1;
+  sel.setAttribute("aria-hidden", "true");
+  old.replaceWith(pick);
+  pick.append(btn, menu, sel);
+  pick._btn = btn; pick._menu = menu;
+  const choose = (value) => {
+    closePicks();
+    btn.focus();
+    if (sel.value === value) return;
+    sel.value = value;
+    syncPick(sel);
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  const open = () => {
+    closePicks(pick);
+    menu.replaceChildren(...[...sel.options].map((o) => {
+      const b = el("button", { type: "button", role: "option", "aria-selected": String(o.value === sel.value), "data-value": o.value }, o.textContent, icon("i-tick", 16));
+      b.addEventListener("click", () => choose(o.value));
+      return b;
+    }));
+    menu.hidden = false;
+    pick.classList.add("open");
+    btn.setAttribute("aria-expanded", "true");
+    (menu.querySelector('[aria-selected="true"]') ?? menu.firstElementChild)?.focus();
+  };
+  btn.addEventListener("click", () => (pick.classList.contains("open") ? closePicks() : open()));
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); open(); } });
+  menu.addEventListener("keydown", (e) => {
+    const items = [...menu.children], i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); items[Math.min(i + 1, items.length - 1)]?.focus(); }
+    if (e.key === "ArrowUp") { e.preventDefault(); items[Math.max(i - 1, 0)]?.focus(); }
+    if (e.key === "Escape") { e.preventDefault(); closePicks(); btn.focus(); }
+    if (e.key === "Tab") closePicks();
+  });
+  sel.addEventListener("change", () => syncPick(sel));
+  syncPick(sel);
+}
+document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".pick")) closePicks(); });
+for (const sel of document.querySelectorAll(".pick select")) enhancePick(sel);
 
 // ---- Navigation highlight ------------------------------------------------------
 
