@@ -88,12 +88,15 @@
     <li>your <strong>settings</strong> (colours, theme, timer and alarm choices, reminder, Smart Study switches) and Pomodoro lengths,</li>
     <li>your <strong>Pomodoro tasks and statistics</strong>: each finished Pomodoro and break (when and how long, and the task's name), and how
         many minutes you focused and cards you reviewed each day,</li>
-    <li>your <strong>plan</strong> (which one, from when, until when), and later your payments,</li>
+    <li>your <strong>plan</strong> (which one, from when, until when); while payments aren't connected, switching a plan on also saves a
+        pretend payment record for our demo (the plan and its price; no money is involved and no payment details are asked for),</li>
     <li>how many Smart Study requests, answer checks and pages read by Claude you used <strong>each day</strong>, and their estimated cost.</li>
   </ul>
   <p>It is saved a few seconds after a change and before you log out. When you <em>Log Out</em> of a Google account, these are cleared from the
      phone and come back when you continue with Google again. Your notes, scanned pages and flashcards are <strong>not</strong> stored there.
-     Only you can read or change your own account data. <em>Settings &rarr; Your Data &rarr; Delete Account</em>
+     Only you can read or change your own account data. The app's owner can see, on a private admin page, the list of accounts (Google email
+     and name, or just an id without an account), when each was made, each plan, the pretend payments, and totals; never your settings'
+     details beyond these, your photo, notes or flashcards. <em>Settings &rarr; Your Data &rarr; Delete Account</em>
      deletes the account, its data, plan and usage at once (records of payments, once real payments exist, are kept without your name,
      for the books). Supabase's privacy policy: <a href="https://supabase.com/privacy">supabase.com/privacy</a>.</p>
 
@@ -114,6 +117,8 @@
   <h2>Crash reports</h2>
   <p>If the app runs into an error, it can send a short report to our study server so we can fix it: the error message and where in the app's code
      it happened, the app version and the Android or browser version. It never includes your notes, photos, flashcards, name or email.
+     The report is kept for <strong>90 days</strong> with Supabase, linked to your account id if you're signed in, so the app's owner can see
+     on a private admin page which errors happen and how often; then it is deleted. Deleting your account removes the link.
      You can turn this off in <em>Settings → Your Data → Send Crash Reports</em>.</p>
 
   <h2>What we don't do</h2>

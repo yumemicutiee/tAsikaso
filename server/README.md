@@ -116,7 +116,7 @@ than quietly switching a limit off.
 | `DAY_TIME_ZONE` | `Asia/Manila` | Whose midnight starts a new day for the daily limits. |
 | `HEALTH_DETAILS` | off | `1` = `/health` also shows the model and effort. |
 | `ADMIN_EMAILS` | (none: admin page off) | Google accounts allowed into the admin page (`web/admin/`), separated by commas. Needs accounts (`SUPABASE_URL`) and `supabase/migrations/0003_admin.sql`. |
-| `STORE_CRASH_REPORTS` | off | `1` = also keep the app's crash reports in Supabase (`crash_reports`, 90 days) for the admin page. Update `web/privacy.html` before turning it on. |
+| `STORE_CRASH_REPORTS` | off | `1` = also keep the app's crash reports in Supabase (`crash_reports`, 90 days) for the admin page (`web/privacy.html` says so). |
 | `DEMO_PAYMENTS` | on | Switching a plan on for free (`POST /v1/plan/test`) also writes a pretend payment (`payments.demo = true`) for the admin page's demo. `0` = off. |
 
 ## What it costs, and the limits that protect the bill
