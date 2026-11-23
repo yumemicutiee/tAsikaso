@@ -37,8 +37,9 @@ class BrandMark extends StatelessWidget {
 
   static const double barWidth = 206;
 
-  /// Where the top of the name goes in a screen [height] tall: centred.
-  static double topIn(double height) => height / 2 - wordHeight / 2;
+  /// Where the top of the name goes in a screen [height] tall: the name
+  /// and the bar under it, together, in the middle of the screen.
+  static double topIn(double height) => height / 2 - (barOffset + 4) / 2;
 
   /// The plus, 0 (gone) to 1 (shown).
   final double plus;
