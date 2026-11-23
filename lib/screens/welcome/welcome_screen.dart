@@ -384,14 +384,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       children: [
         Text('What should we call you?',
             textAlign: TextAlign.center, style: AppText.sectionTitle),
-        const SizedBox(height: 4),
-        Text(
-          signedIn != null
-              ? 'Signed in as $signedIn'
-              : 'For your greeting. You can change it later in Settings.',
-          textAlign: TextAlign.center,
-          style: AppText.statLabel,
-        ),
+        if (signedIn != null) ...[
+          const SizedBox(height: 4),
+          Text('Signed in as $signedIn',
+              textAlign: TextAlign.center, style: AppText.statLabel),
+        ],
         const SizedBox(height: 16),
         TextField(
           controller: _name,
