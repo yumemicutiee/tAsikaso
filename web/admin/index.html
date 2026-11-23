@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>tAsikaso admin</title>
+<link rel="icon" type="image/png" href="../favicon.png">
+<!--
+  tAsikaso's admin page, for the owner only (ADMIN_PAGE_PLAN.txt).
+
+  It holds no secrets and reads no database. It signs in with Google (the
+  same web client as the app), turns that into a Supabase session, and asks
+  the study server's /v1/admin routes, which check that the account is in
+  ADMIN_EMAILS on Render and read Supabase with the secret key. Anyone can
+  load this page; only an admin's account gets any data from it.
+
+  Published with the web app by .github/workflows/deploy-web.yml (Flutter
+  copies web/ into the build), at https://yumemicutiee.github.io/tAsikaso/admin/
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+:root{
+  --bg:#EDEEF1;--card:#FFFFFF;--ink:#16181D;--muted:#61646E;--faint:#9A9DA6;
+  --line:#E3E5EA;--well:#F0F1F4;--row:#F5F6F8;
+  --accent:#1E3A6E;--accent-ink:#FFFFFF;--accent-soft:#9FCBF5;--accent-tint:#E1EEFC;
+  --good:#22A55B;--warn-bg:#FFF1CC;--warn-ink:#7A5300;--bad:#B3261E;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',Inter,system-ui,sans-serif;font-size:15px;line-height:1.45}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+.wrap{max-width:1440px;margin:0 auto;padding:24px 32px 48px;display:flex;flex-direction:column;gap:24px}
+header.top{background:var(--card);border-radius:999px;padding:10px 12px 10px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:700;color:var(--accent)}
+.brand img{width:40px;height:40px}
+.brand span{font-weight:500;color:var(--muted)}
+nav.pills{background:var(--well);border-radius:999px;padding:5px;display:flex;flex-wrap:wrap;gap:2px}
+nav.pills a{font-size:15px;padding:10px 18px;border-radius:999px;color:#3A3D46;text-decoration:none;min-height:44px;display:flex;align-items:center}
+nav.pills a.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.round{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;color:var(--ink);text-decoration:none}
+.round:disabled{opacity:.5;cursor:default}
+.headline{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+h1{margin:0;font-size:38px;font-weight:600;letter-spacing:-.5px}
+h1 span{color:var(--muted);font-weight:500}
+.stamp{background:var(--card);border-radius:999px;padding:6px 6px 6px 20px;font-size:14px;display:flex;align-items:center;gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:20px}
+.card{background:var(--card);border-radius:24px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card.accent{background:var(--accent);color:var(--accent-ink)}
+.card.accent .sub,.card.accent .split{color:#D8E4F5}
+.cardhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.ttl{font-size:16px;font-weight:600;margin:0}
+.sub{font-size:13px;color:var(--muted);margin:2px 0 0}
+.big{font-size:40px;font-weight:600;letter-spacing:-1px;line-height:1.1}
+.big small{font-size:15px;font-weight:500;color:var(--muted);letter-spacing:0}
+.big .cents{color:var(--faint)}
+.split{display:flex;gap:16px;font-size:13px;flex-wrap:wrap}
+.kpi{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--accent);color:var(--accent-ink);white-space:nowrap}
+.chip.plain{background:var(--well);color:#3A3D46}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--well);color:#3A3D46;white-space:nowrap}
+.pill.plus{background:var(--accent-tint);color:var(--accent)}
+.pill.test,.pill.demo{background:var(--warn-bg);color:var(--warn-ink)}
+.seg{background:var(--well);border-radius:999px;padding:4px;display:flex}
+.seg button{border:0;background:none;padding:8px 18px;border-radius:999px;color:#3A3D46;min-height:40px;cursor:pointer;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.chart{position:relative;flex:1 1 260px;min-height:260px;margin-top:8px}
+.chart svg{width:100%;height:100%;display:block;overflow:visible}
+.chart .chip{position:absolute;right:0}
+.xlabels{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);text-transform:uppercase}
+.bars{display:flex;gap:12px;align-items:flex-end;height:150px}
+.bars > div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%}
+.bar{width:100%;max-width:56px;border-radius:18px;min-height:16px}
+.barlabels{display:flex;gap:12px}
+.barlabels div{flex:1;text-align:center;font-size:12px;color:var(--muted)}
+.line{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;padding:8px 0;border-top:1px solid var(--well)}
+.line .who{min-width:0}
+.line .who div:first-child{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--good)}
+.search{font:inherit;font-size:14px;padding:11px 18px;border:0;background:var(--well);border-radius:999px;width:260px;max-width:100%}
+.tablebox{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0 4px}
+th{font-size:13px;font-weight:500;color:var(--muted);text-align:left;padding:8px 12px;white-space:nowrap}
+td{font-size:14px;padding:12px;white-space:nowrap}
+tbody tr:nth-child(even) td{background:var(--row)}
+tbody tr:nth-child(even) td:first-child{border-radius:12px 0 0 12px}
+tbody tr:nth-child(even) td:last-child{border-radius:0 12px 12px 0}
+td .meta{white-space:nowrap}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.pager div{display:flex;gap:8px}
+details.crash{background:var(--row);border-radius:16px;padding:12px 14px}
+details.crash summary{display:flex;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}
+details.crash summary::-webkit-details-marker{display:none}
+details.crash .msg{font-size:13px;font-weight:600;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details.crash .count{font-size:14px;font-weight:700;color:var(--bad);white-space:nowrap}
+details.crash pre{margin:10px 0 0;font-size:12px;white-space:pre-wrap;word-break:break-word;color:#3A3D46;max-height:240px;overflow:auto}
+.note{font-size:13px;color:var(--muted)}
+.empty{font-size:14px;color:var(--muted);padding:8px 0}
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.gate .card{max-width:420px;width:100%;align-items:center;text-align:center;gap:18px;padding:36px 28px}
+.gate img{width:64px;height:64px}
+.gate h1{font-size:28px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:10px 20px;min-height:44px;cursor:pointer;font-size:14px}
+.error{color:var(--bad);font-size:14px}
+[hidden]{display:none !important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:640px){
+  .wrap{padding:16px 16px 40px}
+  header.top{border-radius:28px}
+  nav.pills{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto}
+  nav.pills a{white-space:nowrap;padding:10px 14px}
+  h1{font-size:28px}
+  .big{font-size:34px}
+  .search{width:100%}
+}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <div class="card">
+    <img src="../icons/Icon-192.png" alt="tAsikaso logo">
+    <h1>tAsikaso admin</h1>
+    <p id="gateText" class="sub" style="font-size:15px">Sign in with the Google account that runs tAsikaso.</p>
+    <div id="googleButton"></div>
+    <button id="gateSignOut" class="btn" type="button" hidden>Use another account</button>
+    <p id="gateError" class="error" role="alert"></p>
+  </div>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <header class="top">
+    <div class="brand"><img src="../icons/Icon-192.png" alt="">tAsikaso <span>admin</span></div>
+    <nav class="pills" aria-label="Admin sections">
+      <a href="#overview" class="on">Overview</a>
+      <a href="#users">Users</a>
+      <a href="#plans">Plans &amp; payments</a>
+      <a href="#crashes">Crash reports</a>
+    </nav>
+    <div style="display:flex;gap:10px">
+      <a class="round" href="#users" aria-label="Search users" id="jumpSearch">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </a>
+      <button class="round" type="button" id="signOut" aria-label="Sign out">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="headline" id="overview">
+    <h1>Welcome back, <span id="hello">admin</span></h1>
+    <div class="stamp">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <span id="stamp" aria-live="polite">Loading…</span>
+      <button class="round" type="button" id="refresh" aria-label="Refresh">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+      </button>
+    </div>
+  </div>
+  <p id="loadError" class="error" role="alert" hidden></p>
+
+  <div class="grid4">
+    <div class="card accent">
+      <div><p class="ttl">Total users</p><p class="sub">Everyone who has opened the app</p></div>
+      <div class="big" id="total">–</div>
+      <div class="split"><span id="google">Google –</span><span id="anonymous">No account –</span></div>
+    </div>
+    <div class="card">
+      <div><p class="ttl">New this week</p><p class="sub">Since Monday</p></div>
+      <div class="kpi"><div class="big" id="week">–</div><span class="chip" id="weekPrev"></span></div>
+    </div>
+    <div class="card">
+      <div><p class="ttl">New this month</p><p class="sub" id="monthName">This month</p></div>
+      <div class="kpi"><div class="big" id="month">–</div><span class="chip" id="monthPrev"></span></div>
+    </div>
+    <div class="card">
+      <div><p class="ttl">New this year</p><p class="sub" id="yearName">This year</p></div>
+      <div class="kpi"><div class="big" id="year">–</div><span class="chip" id="yearPrev"></span></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <section class="card" style="flex:999 1 560px">
+      <div class="cardhead">
+        <div><h2 class="ttl">New users</h2><p class="sub" id="chartNote"></p></div>
+        <div class="seg" role="group" aria-label="Period">
+          <button type="button" data-period="week" aria-pressed="false">Week</button>
+          <button type="button" data-period="month" aria-pressed="true">Month</button>
+          <button type="button" data-period="year" aria-pressed="false">Year</button>
+        </div>
+      </div>
+      <div class="chart">
+        <svg viewBox="0 0 600 200" preserveAspectRatio="none" role="img" id="chart">
+          <defs>
+            <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1E3A6E" stop-opacity="0.30"/>
+              <stop offset="1" stop-color="#1E3A6E" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="40" x2="600" y2="40" stroke="#E3E5EA" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
+          <line x1="0" y1="90" x2="600" y2="90" stroke="#E3E5EA" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
+          <line x1="0" y1="140" x2="600" y2="140" stroke="#E3E5EA" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
+          <path id="area" fill="url(#fill)"/>
+          <path id="curve" fill="none" stroke="#1E3A6E" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        </svg>
+        <span class="chip" id="lastChip"></span>
+      </div>
+      <div class="xlabels" id="xlabels"></div>
+    </section>
+
+    <div style="flex:1 1 340px;display:flex;flex-direction:column;gap:20px" id="plans">
+      <section class="card">
+        <div><h2 class="ttl">Plans</h2><p class="sub">tAsikaso+ plans running now</p></div>
+        <div class="bars" id="planBars"></div>
+        <div class="barlabels" id="planLabels"></div>
+        <div class="note" id="planNote"></div>
+      </section>
+      <section class="card">
+        <div class="cardhead">
+          <div><h2 class="ttl">Payments <span class="pill demo" id="demoPill" hidden>Demo</span></h2><p class="sub" id="payNote">This month</p></div>
+        </div>
+        <div class="kpi" style="justify-content:flex-start"><div class="big" id="payTotal">–</div><span class="chip" id="payCount"></span></div>
+        <div id="payList"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="row">
+    <section class="card" style="flex:999 1 640px" id="users">
+      <div class="cardhead">
+        <div><h2 class="ttl">Users</h2><p class="sub" id="userNote">Newest first</p></div>
+        <label><span class="sr">Search users</span><input class="search" id="search" type="search" placeholder="Search email, name or id" autocomplete="off"></label>
+      </div>
+      <div class="tablebox">
+        <table>
+          <thead><tr><th>User</th><th>Plan</th><th>Plan ends</th><th>Joined</th></tr></thead>
+          <tbody id="userRows"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <span id="pageNote"></span>
+        <div>
+          <button class="round" type="button" id="prev" aria-label="Previous page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="round" type="button" id="next" aria-label="Next page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="flex:1 1 340px" id="crashes">
+      <div><h2 class="ttl">Crash reports</h2><p class="sub">Last 7 days, grouped by error</p></div>
+      <div class="big" id="crashTotal">–</div>
+      <div id="crashList" style="display:flex;flex-direction:column;gap:10px"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+// Public settings, the same ones the app has built in (lib/services/
+// accounts.dart, drive_sync.dart, deploy-web.yml). None of them is secret.
+const SUPABASE_URL = "https://zwresopjspwugugikrqt.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dTGsBPMT_7QfOZS4RBntww_6y0DGv4A";
+const GOOGLE_CLIENT_ID = "308120396420-6n1da38mf6nok7j456s0mrmo859hbqda.apps.googleusercontent.com";
+const SERVER = "https://tasikaso-study-server.onrender.com";
+
+// Its own storage key, so signing in here never replaces a student
+// session of the web app on the same site.
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { storageKey: "tasikaso-admin-auth", persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+});
+
+const $ = (id) => document.getElementById(id);
+/** An element with text only: nothing from the server is ever read as HTML. */
+function el(tag, props = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "style") e.setAttribute("style", v);
+    else e.setAttribute(k, v);
+  }
+  for (const c of children) if (c != null) e.append(c instanceof Node ? c : String(c));
+  return e;
+}
+
+let tz = "Asia/Manila";
+let dash = null;
+let period = "month";
+const userState = { q: "", page: 1, total: 0, pageSize: 25 };
+
+const fmtNum = (n) => Number(n ?? 0).toLocaleString("en-US");
+const fmtDate = (iso) => iso ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: tz }).format(new Date(iso)) : "—";
+const fmtShort = (iso) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: tz }).format(new Date(iso));
+const fmtAgo = (iso) => {
+  const s = (Date.now() - Date.parse(iso)) / 1000;
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  const d = Math.round(s / 86400);
+  return d === 1 ? "yesterday" : `${d} days ago`;
+};
+const peso = (n) => {
+  const [whole, cents] = Number(n ?? 0).toFixed(2).split(".");
+  return [`₱${Number(whole).toLocaleString("en-US")}`, `.${cents}`];
+};
+const PLAN_TITLE = { monthly: "Monthly", semester: "Semester", yearly: "Yearly" };
+
+// ---- Signing in -----------------------------------------------------------
+
+function showGate(text, error = "", canSwitch = false) {
+  $("app").hidden = true;
+  $("gate").hidden = false;
+  $("gateText").textContent = text;
+  $("gateError").textContent = error;
+  $("gateSignOut").hidden = !canSwitch;
+  $("googleButton").hidden = canSwitch;
+}
+
+function initGoogle() {
+  if (!window.google?.accounts?.id) { setTimeout(initGoogle, 200); return; }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: async ({ credential }) => {
+      $("gateError").textContent = "";
+      const { error } = await sb.auth.signInWithIdToken({ provider: "google", token: credential });
+      if (error) { $("gateError").textContent = `Couldn't sign in: ${error.message}`; return; }
+      load();
+    },
+  });
+  google.accounts.id.renderButton($("googleButton"), { theme: "outline", size: "large", shape: "pill", text: "signin_with" });
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  dash = null;
+  showGate("Sign in with the Google account that runs tAsikaso.");
+}
+$("signOut").addEventListener("click", signOut);
+$("gateSignOut").addEventListener("click", signOut);
+
+/** GET a /v1/admin route with the admin's Supabase token. */
+async function api(path) {
+  const { data } = await sb.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw Object.assign(new Error("Signed out"), { code: "signed_out" });
+  const r = await fetch(SERVER + path, { headers: { Authorization: `Bearer ${token}` } });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(body?.error?.message ?? `HTTP ${r.status}`), { code: body?.error?.code ?? String(r.status) });
+  return body;
+}
+
+async function load() {
+  const { data } = await sb.auth.getSession();
+  if (!data.session) { showGate("Sign in with the Google account that runs tAsikaso."); return; }
+  $("stamp").textContent = "Loading… (the server may take a minute to wake up)";
+  try {
+    dash = await api("/v1/admin/dashboard");
+  } catch (e) {
+    if (e.code === "not_admin") {
+      showGate(`${data.session.user.email ?? "This account"} isn't an admin of tAsikaso.`, "", true);
+    } else if (e.code === "signed_out" || e.code === "session_expired" || e.code === "sign_in_required") {
+      await sb.auth.signOut();
+      showGate("Your sign-in expired. Please sign in again.");
+    } else if (e.code === "not_found" || e.code === "404") {
+      showGate("The admin page isn't switched on yet: ADMIN_EMAILS isn't set on the study server.", "", true);
+    } else if (!dash) {
+      showGate("Couldn't load the dashboard.", e.message, true);
+    } else {
+      $("loadError").hidden = false;
+      $("loadError").textContent = `Couldn't refresh: ${e.message}`;
+    }
+    return;
+  }
+  $("loadError").hidden = true;
+  $("gate").hidden = true;
+  $("app").hidden = false;
+  tz = dash.timeZone || tz;
+  const meta = data.session.user.user_metadata ?? {};
+  $("hello").textContent = (meta.full_name || meta.name || dash.admin.email || "admin").split(" ")[0];
+  $("stamp").textContent = "Updated " + new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: tz }).format(new Date());
+  renderOverview();
+  renderChart();
+  renderPlans();
+  renderPayments();
+  renderCrashes();
+  loadUsers();
+}
+$("refresh").addEventListener("click", load);
+
+// ---- Overview ----------------------------------------------------------------
+
+function renderOverview() {
+  const o = dash.overview;
+  $("total").textContent = fmtNum(o.total);
+  $("google").textContent = `Google ${fmtNum(o.google)}`;
+  $("anonymous").textContent = `No account ${fmtNum(o.anonymous)}`;
+  $("week").textContent = fmtNum(o.newThisWeek);
+  $("month").textContent = fmtNum(o.newThisMonth);
+  $("year").textContent = fmtNum(o.newThisYear);
+  $("weekPrev").textContent = `Last week ${fmtNum(o.newLastWeek)}`;
+  $("monthPrev").textContent = `Last month ${fmtNum(o.newLastMonth)}`;
+  $("yearPrev").textContent = `Last year ${fmtNum(o.newLastYear)}`;
+  const today = new Date(`${o.today}T12:00:00Z`);
+  $("monthName").textContent = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(today);
+  $("yearName").textContent = String(today.getUTCFullYear());
+}
+
+/** A smooth line through [vals] (Catmull-Rom as Béziers), in a 600×200 box. */
+function curvePath(vals) {
+  const n = vals.length;
+  const max = Math.max(...vals, 1);
+  const pts = vals.map((v, i) => [n === 1 ? 300 : (i * 600) / (n - 1), 190 - (v / max) * 165]);
+  const f = (x) => Math.round(x * 10) / 10;
+  let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(n - 1, i + 2)];
+    d += ` C${f(p1[0] + (p2[0] - p0[0]) / 6)},${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)},${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])},${f(p2[1])}`;
+  }
+  return { d, lastY: pts[n - 1][1] };
+}
+
+function renderChart() {
+  const o = dash.overview;
+  let rows, labels, note, unit;
+  if (period === "year") {
+    rows = o.monthly.map((m) => m.count);
+    labels = o.monthly.filter((_, i) => i % 2 === 1 || i === o.monthly.length - 1)
+      .map((m) => new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${m.month}-15T00:00:00Z`)));
+    note = "Per month, last 12 months";
+    unit = "this month";
+  } else {
+    const days = period === "week" ? o.daily.slice(-7) : o.daily;
+    rows = days.map((d) => d.count);
+    const step = period === "week" ? 1 : 5;
+    labels = days.filter((_, i) => i % step === 0 || i === days.length - 1)
+      .map((d) => new Intl.DateTimeFormat("en-GB", period === "week" ? { weekday: "short", timeZone: "UTC" } : { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${d.day}T12:00:00Z`)));
+    note = period === "week" ? "Per day, last 7 days" : "Per day, last 30 days";
+    unit = "today";
+  }
+  const { d, lastY } = curvePath(rows);
+  $("curve").setAttribute("d", d);
+  $("area").setAttribute("d", `${d} L600,200 L0,200 Z`);
+  $("chart").setAttribute("aria-label", `Line chart of new users, ${note.toLowerCase()}; latest ${rows.at(-1)}, total ${rows.reduce((a, b) => a + b, 0)}`);
+  $("chartNote").textContent = note;
+  const chip = $("lastChip");
+  chip.textContent = `${fmtNum(rows.at(-1))} new ${unit}`;
+  chip.style.top = `${Math.max(0, Math.round((lastY * $("chart").clientHeight) / 200 - 34))}px`;
+  $("xlabels").replaceChildren(...labels.map((l) => el("div", {}, l)));
+  for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.period === period));
+}
+for (const b of document.querySelectorAll(".seg button")) {
+  b.addEventListener("click", () => { period = b.dataset.period; if (dash) renderChart(); });
+}
+
+// ---- Plans and payments ------------------------------------------------------
+
+function stripes(color, top) {
+  return `background:repeating-linear-gradient(135deg, ${color} 0 8px, rgba(255,255,255,${top ? ".14" : ".35"}) 8px 10px), ${color}`;
+}
+
+function renderPlans() {
+  const p = dash.overview.plans;
+  const items = [["Monthly", p.monthly], ["Semester", p.semester], ["Yearly", p.yearly]];
+  const max = Math.max(...items.map((i) => i[1]), 1);
+  const top = Math.max(...items.map((i) => i[1]));
+  $("planBars").replaceChildren(...items.map(([label, n]) => el("div", {},
+    el("span", { style: "font-size:13px;font-weight:700" }, fmtNum(n)),
+    el("div", { class: "bar", style: `height:${Math.max(16, Math.round((n / max) * 120))}px;${stripes(n === top && n > 0 ? "#1E3A6E" : "#9FCBF5", n === top && n > 0)}`, "aria-label": `${label}: ${n}`, role: "img" }),
+  )));
+  $("planLabels").replaceChildren(...items.map(([label]) => el("div", {}, label)));
+  const parts = [`${fmtNum(p.free)} on Free`];
+  if (p.test) parts.push(`${fmtNum(p.test)} switched on for free (test)`);
+  parts.push(`${fmtNum(p.endingIn7Days)} end in the next 7 days`);
+  $("planNote").textContent = parts.join(" · ");
+}
+
+function renderPayments() {
+  const pay = dash.payments;
+  $("demoPill").hidden = !pay.anyDemo;
+  $("payNote").textContent = pay.anyDemo ? "This month · pretend payments for the demo" : "This month";
+  const [whole, cents] = peso(pay.monthTotalPhp);
+  $("payTotal").replaceChildren(whole, el("span", { class: "cents" }, cents));
+  $("payCount").textContent = `${fmtNum(pay.monthCount)} paid`;
+  const list = pay.recent.map((r) => el("div", { class: "line" },
+    el("div", { class: "who" },
+      el("div", {}, r.email ?? "Deleted account"),
+      el("div", { class: "meta" }, el("span", { class: "dot", style: r.status === "paid" ? "" : "background:#A3A6AE" }), `${PLAN_TITLE[r.plan] ?? "—"} · ${fmtShort(r.createdAt)}${r.demo ? " · demo" : ""}`)),
+    el("strong", { style: "white-space:nowrap" }, peso(r.amountPhp).join("")),
+  ));
+  $("payList").replaceChildren(...(list.length ? list : [el("div", { class: "empty" }, "No payments yet. A pretend one is added each time someone switches a plan on in the app.")]));
+}
+
+// ---- Users -------------------------------------------------------------------
+
+async function loadUsers() {
+  const { q, page } = userState;
+  let res;
+  try {
+    res = await api(`/v1/admin/users?q=${encodeURIComponent(q)}&page=${page}`);
+  } catch (e) {
+    $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error" }, `Couldn't load users: ${e.message}`)));
+    return;
+  }
+  if (q !== userState.q || page !== userState.page) return; // a newer search is on its way
+  userState.total = res.total;
+  userState.pageSize = res.pageSize;
+  $("userNote").textContent = q ? `${fmtNum(res.total)} found` : `Newest first · ${fmtNum(res.total)} in total`;
+  const rows = res.rows.map((u) => {
+    const plan = u.plan ? `${u.test ? "Test · " : "tAsikaso+ "}${PLAN_TITLE[u.plan]}` : "Free";
+    return el("tr", {},
+      el("td", {},
+        el("div", { style: "font-weight:600" }, u.anonymous ? "No account" : (u.email ?? u.name ?? "Google account")),
+        el("div", { class: "meta" }, u.anonymous ? `id ${u.id.slice(0, 13)}` : (u.name || "Google"))),
+      el("td", {}, el("span", { class: `pill ${u.plan ? (u.test ? "test" : "plus") : ""}` }, plan)),
+      el("td", {}, u.plan ? fmtDate(u.planEndsAt) : "—"),
+      el("td", {}, fmtDate(u.createdAt)),
+    );
+  });
+  $("userRows").replaceChildren(...(rows.length ? rows : [el("tr", {}, el("td", { colspan: "4", class: "empty" }, q ? "No one matches that search." : "No users yet."))]));
+  const from = res.total ? (page - 1) * res.pageSize + 1 : 0;
+  const to = Math.min(page * res.pageSize, res.total);
+  $("pageNote").textContent = `Showing ${fmtNum(from)}–${fmtNum(to)} of ${fmtNum(res.total)}`;
+  $("prev").disabled = page <= 1;
+  $("next").disabled = to >= res.total;
+}
+let searchTimer;
+$("search").addEventListener("input", (e) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { userState.q = e.target.value.trim(); userState.page = 1; loadUsers(); }, 300);
+});
+$("prev").addEventListener("click", () => { if (userState.page > 1) { userState.page--; loadUsers(); } });
+$("next").addEventListener("click", () => { userState.page++; loadUsers(); });
+$("jumpSearch").addEventListener("click", () => setTimeout(() => $("search").focus(), 300));
+
+// ---- Crash reports -------------------------------------------------------------
+
+function renderCrashes() {
+  const c = dash.crashes;
+  if (!dash.crashReportsSaved && !c.total) {
+    $("crashTotal").textContent = "Not saved yet";
+    $("crashTotal").style.fontSize = "24px";
+    $("crashList").replaceChildren(el("div", { class: "note" },
+      "Crash reports only go to the study server's log for now. Set STORE_CRASH_REPORTS=1 on Render to keep them here for 90 days."));
+    return;
+  }
+  $("crashTotal").style.fontSize = "";
+  $("crashTotal").replaceChildren(fmtNum(c.total), " ", el("small", {}, `crash${c.total === 1 ? "" : "es"} · ${fmtNum(c.users)} user${c.users === 1 ? "" : "s"}`));
+  const groups = c.groups.map((g) => el("details", { class: "crash" },
+    el("summary", {},
+      el("div", { style: "min-width:0" }, el("div", { class: "msg" }, g.message), el("div", { class: "meta" }, `v${g.version} · ${g.platform} · ${fmtAgo(g.lastAt)}`)),
+      el("span", { class: "count" }, `${fmtNum(g.count)}×`)),
+    el("pre", {}, g.stack || "No stack trace was sent."),
+  ));
+  $("crashList").replaceChildren(...(groups.length ? groups : [el("div", { class: "empty" }, "No crashes in the last 7 days.")]));
+}
+
+// ---- Navigation highlight ------------------------------------------------------
+
+const navLinks = [...document.querySelectorAll("nav.pills a")];
+function markNav() {
+  const id = location.hash.slice(1) || "overview";
+  for (const a of navLinks) a.classList.toggle("on", a.getAttribute("href") === `#${id}`);
+}
+window.addEventListener("hashchange", markNav);
+markNav();
+
+initGoogle();
+load();
+</script>
+</body>
+</html>

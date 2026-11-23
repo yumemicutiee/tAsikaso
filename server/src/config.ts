@@ -40,6 +40,12 @@ export interface ServerConfig {
   testPurchases: boolean;
   /** Daily limits per tier for signed-in users: [anonymous, free, plus]. */
   tierLimits: TierLimits;
+  /** Google accounts (emails, lower case) that may open the admin page. Empty = admin page off. */
+  adminEmails: string[];
+  /** Keep the app's crash reports in Supabase (crash_reports, 90 days), not only in the log. */
+  storeCrashReports: boolean;
+  /** A plan switched on for free also writes a pretend payment (payments.demo) for the demo. */
+  demoPayments: boolean;
 }
 
 export const DEFAULTS = {
@@ -130,6 +136,18 @@ export function tierLimitFromEnv(
   return { anonymous, free, plus };
 }
 
+/** "a@x.com, b@y.com": a list of emails, lower case. */
+export function emailsFromEnv(env: Env, name: string): string[] {
+  const v = raw(env, name);
+  if (v === undefined) return [];
+  const emails = v.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const bad = emails.find((e) => !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(e));
+  if (bad !== undefined) {
+    throw new ConfigError(`${name} must be email addresses separated by commas (got "${bad}").`);
+  }
+  return [...new Set(emails)];
+}
+
 export function isValidTimeZone(timeZone: string): boolean {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone });
@@ -176,5 +194,8 @@ export function readConfig(env: Env = process.env): ServerConfig {
       study: tierLimitFromEnv(env, "STUDY_LIMITS", DEFAULT_TIER_LIMITS.study),
       check: tierLimitFromEnv(env, "CHECK_LIMITS", DEFAULT_TIER_LIMITS.check),
     },
+    adminEmails: emailsFromEnv(env, "ADMIN_EMAILS"),
+    storeCrashReports: boolFromEnv(env, "STORE_CRASH_REPORTS"),
+    demoPayments: boolFromEnvDefaultTrue(env, "DEMO_PAYMENTS"),
   };
 }

@@ -1,7 +1,14 @@
 tAsikaso - ADMIN PAGE PLAN
 ==========================
 Written 24 November 2026, after accounts (v0.8.0) went live.
-Status: PLAN ONLY. Nothing in sections 6-9 is built yet.
+Status (24 Nov 2026): a first, read-only version is built, following 6.1:
+  web/admin/index.html (layout "D": totals, new users per week/month/year,
+  plans, demo payments, users, crash reports), GET /v1/admin/dashboard and
+  /v1/admin/users on the server (ADMIN_EMAILS), and
+  supabase/migrations/0003_admin.sql (crash_reports, payments.demo,
+  admin_* functions). Not built yet: actions (5.3), costs, habits,
+  limits, health, request_log. Payments are pretend for the demo: no
+  payment method will be connected.
 
 Anyone (a person or Claude) asked to build "the admin page" starts HERE.
 Keys and access: KEYS.local.txt in this folder (on the owner's PC only,
