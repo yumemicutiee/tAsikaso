@@ -7,6 +7,7 @@ Web app: https://yumemicutiee.github.io/tAsikaso/
 Study server (Claude): https://tasikaso-study-server.onrender.com
 Privacy policy: https://yumemicutiee.github.io/tAsikaso/privacy.html
 Details for developers: Incomplete_Features.md (sections 0, 10, 12)
+Admin page (next): ADMIN_PAGE_PLAN.txt. Keys: KEYS.local.txt (this PC only)
 
 
 WHERE THE APP IS TODAY

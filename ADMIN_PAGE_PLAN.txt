@@ -1,0 +1,298 @@
+tAsikaso - ADMIN PAGE PLAN
+==========================
+Written 24 November 2026, after accounts (v0.8.0) went live.
+Status: PLAN ONLY. Nothing in sections 6-9 is built yet.
+
+Anyone (a person or Claude) asked to build "the admin page" starts HERE.
+Keys and access: KEYS.local.txt in this folder (on the owner's PC only,
+never committed). Background: PROGRESS.txt, Incomplete_Features.md,
+server/README.md, supabase/migrations/.
+
+
+0. IN ONE PARAGRAPH
+-------------------
+The admin page is a private web page for the owner to see how tAsikaso is
+used and what Claude costs, and to help individual students (give or end a
+test plan, reset a day's limit, delete an account on request). The owner
+decided there is NO banning. Its data comes from Supabase (accounts, plans,
+daily usage, each user's settings and Pomodoro statistics) and from the
+study server on Render (which already sees every Smart Study request). The
+page signs in with the owner's Google account and asks the study server,
+which checks that the account is an admin and reads Supabase with its
+secret key. The secret key never reaches the browser. Students' notes,
+photos and flashcards are not in the database and will never be shown.
+
+
+1. HOW THE PIECES CONNECT TODAY
+-------------------------------
+  Phone / website (Flutter app)
+    |-- signs in --------------------> Supabase Auth (anonymous or Google)
+    |-- reads/writes its OWN row ----> Supabase table user_data (row-level security)
+    |-- Smart Study + its token -----> Study server on Render (Node, Express)
+                                          |-- checks the token (Supabase public keys)
+                                          |-- plan + daily usage --> Supabase (secret key)
+                                          |-- Claude calls --------> Anthropic API (Opus 5.5)
+                                          '-- one JSON log line per request (Render logs)
+    '-- notes, flashcards, scan files --> stay on the phone; Google Drive (Backup & Sync)
+
+Code: app lib/services/accounts.dart, account_data.dart, plan_sync.dart,
+study_ai.dart; server server/src/app.ts, accounts.ts, ledger.ts;
+database supabase/migrations/0001_accounts.sql, 0002_user_data.sql.
+
+
+2. WHERE EACH PIECE OF INFORMATION LIVES (the sources of truth)
+---------------------------------------------------------------
+Source                    What it holds                                         Admin can use it for
+------------------------  ----------------------------------------------------  ---------------------------------
+Supabase auth.users       id, email + name (Google users), provider, created_at, user list, sign-ups per day,
+  (made by Supabase)      last_sign_in_at, is_anonymous                         anonymous vs Google, last seen
+public.profiles (0001)    plan (monthly/semester/yearly or null), started,      plans, expiring soon, test vs paid
+                          ends, test_purchase, display_name
+public.usage_daily (0001) per user, day (Asia/Manila) and kind (read = pages    usage and Claude COST per user,
+                          read by Claude, study = kits/quizzes, check = answer   per day, per kind, per tier
+                          checks): count + estimated cost_usd
+public.user_data (0002)   per user: prefs (name, theme, colours, timer/alarm/   study habits: Pomodoros, focus
+                          vibration choices, reminder, Smart Study switches),   minutes, streaks, popular hours,
+                          Pomodoro settings, tasks, sessions (each finished     settings people choose; app
+                          Pomodoro: end time, minutes, task), breaks, focusLog  version adoption
+                          (minutes per day), reviewLog (cards per day),
+                          suggestedLog, photo (base64), app_version, updated_at
+public.payments (0001)    empty until real payments (GCash/Maya or Play)       revenue (later)
+Render logs (not a DB)    one line per request: route, status, ms, model,      errors, slow requests, refusals,
+                          tokens, cost, fallback, user (12-char one-way code),  crash reports. Render keeps logs
+                          tier; "app crash" lines (message, stack, version)     only a limited time -> see 6.3
+Server memory (/v1/usage) today's totals and spend vs DAILY_BUDGET_USD; reset   live "spent today" (until 6.3
+                          on every restart/deploy                               moves it to the database)
+Phone only (never sent)   folders, notes, flashcards, quizzes, scan PDFs and    NOTHING: by design, the admin
+                          photos                                                never sees study materials
+
+Shape of user_data.data (AppStore.accountDataToJson in lib/data/app_store.dart):
+  { v:1, prefs:{name, palette, theme, alerts, alarm, vibrate, reminder,
+    reminderAt, ai, aiRead, ...}, settings:{focus, short, long, ...},
+    tasks:[{id,title,total,doneCount,minutes,done,createdAt}], currentTask,
+    sessions:[{end,min,task,title}], breaks:[{end,min,long}],
+    focusLog:{"2026-11-23":50,...}, reviewLog:{...}, suggestedLog:{"2026-11":12} }
+  Written by the app, so treat it as UNTRUSTED input (validate, cap sizes).
+
+
+3. WHAT EACH ACCOUNT KEEPS, AND WHAT LOG OUT RESETS (built in v0.8.0)
+-------------------------------------------------------------------
+                                   In the     Saved to   Cleared from  Back after
+                                   phone      Supabase   phone at      Continue with
+                                                         Log Out*      Google
+Name, profile photo                yes        yes        yes           yes
+Settings (theme, colours, timer,   yes        yes        yes           yes
+  alarm, vibration, reminder,
+  Smart Study switches)
+Pomodoro lengths                   yes        yes        yes           yes
+Pomodoro tasks, current task       yes        yes        yes           yes
+Statistics (Pomodoros, breaks,     yes        yes        yes           yes (joined with
+  focus minutes, cards reviewed)                                       what's on the phone)
+Monthly suggested-cards count      yes        yes        yes           yes
+Plan (tAsikaso+)                   copy       yes (truth) yes          yes
+Daily Smart Study usage            no         yes        n/a           n/a
+Running timer                      yes        no         yes (stopped) no
+Notes, flashcards, scan files      yes        NO         no (stay)     n/a (Drive backup)
+Study server address/token,        yes        no         no (phone's)  n/a
+  install id, notification asked
+* Log Out of a GOOGLE account. Without an account (anonymous) Log Out
+  clears only the name: there is no account to come back to.
+Saving: a few seconds after a change, when the app goes to the
+background, and before Log Out (asks first if it can't save).
+Open decision: Log Out could also remove notes/flashcards from the phone
+(privacy on shared phones) once study materials are backed up somewhere
+reliable for free users (Supabase Storage costs money past 1 GB).
+
+
+4. WHAT WE CAN RECORD, AND WHAT WE MUST NOT
+-------------------------------------------
+Already recorded: everything in section 2.
+Worth adding for the admin page (each needs a privacy-policy update):
+  a. request_log table: one row per Claude request (user_id, route, status,
+     error code, tokens in/out, cost, ms, model, fallback, at). Gives costs
+     and errors that survive restarts. Keep 90 days.
+  b. crash_reports table: today's "app crash" log lines, stored (message,
+     stack, source, version, platform, user_id if signed in, at). Keep 90 d.
+  c. daily_spend table (or view over request_log): server-wide spend per
+     day, so the $5/day cap survives restarts (today it is in memory).
+  d. app_events (optional, needs app changes): counts only, no content:
+     app_opened, scan_saved, pdf_imported, flashcards_made, quiz_finished,
+     pomodoro_finished, with version and platform. For "which features are
+     used". Keep 180 days.
+  e. feedback table (optional): an in-app "Send Feedback" box.
+  f. settings table: tier limits and daily budget, editable from the admin
+     page instead of Render env vars (server reads it, cached ~60 s).
+  g. admins + admin_actions tables: who is an admin; every admin action
+     (who, what, to whom, when) for accountability.
+Must NOT record: note text, scanned photos, flashcard or quiz content,
+typed answers, precise location, contacts, device identifiers beyond the
+random install id, IP addresses in the database. Never show students'
+profile photos on the admin page (decision: owner may change).
+
+
+5. WHAT THE ADMIN PAGE SHOWS (sections, and the data behind each)
+-----------------------------------------------------------------
+5.1 Overview (default: last 30 days, switch 7/30/90)
+    - Users: total; new per day; anonymous vs Google vs tAsikaso+
+      [auth.users, profiles]
+    - Active users per day (did a Smart Study request or synced data)
+      [usage_daily distinct users per day, user_data.updated_at]
+    - Claude spend: today vs DAILY_BUDGET_USD, per day chart, this month,
+      projected month [usage_daily.cost_usd; later request_log]
+    - Requests per day by kind; refused by limits [usage_daily; logs]
+5.2 Costs
+    - by kind (pages read / kits / checks), by tier, average per active
+      user, most expensive users (email for Google users, short id for
+      anonymous) [usage_daily joined with auth.users and profiles]
+5.3 Users (search by email, name or id; newest first; 25 per page)
+    - columns: email or "No account", tier, plan + end date, created, last
+      active, app version, today's usage vs limits, 30-day cost
+    - user detail: usage per day (30 days), Pomodoro summary from
+      user_data (Pomodoros, focus minutes per week, current streak, tasks),
+      settings in use
+    - ACTIONS (no ban): give / extend / end a test plan; reset today's
+      usage (a student hit a limit by mistake); delete the account on the
+      student's request (same as Delete Account in the app). Each action
+      is confirmed and written to admin_actions.
+5.4 Study habits (all users, aggregated, never per-student content)
+    - Pomodoros per day, total focus hours, most popular hours of the day,
+      average Pomodoro length, 25/5 vs custom, alarm vs vibration choices,
+      share with Smart Study / Read Photos with Claude on [user_data]
+5.5 Plans & payments
+    - counts by plan, test vs paid, expiring in 7 days; payments list later
+5.6 Limits & budget
+    - current tier limits (no account / Google / Plus) and daily budget;
+      edit them (needs settings table, 4f)
+5.7 Health
+    - study server up (GET /health), last deploy (Render API), error rate
+      and slowest routes (request_log), crash reports grouped by message
+      and app version (crash_reports), Supabase reachable
+
+
+6. ARCHITECTURE (recommended) AND THE ALTERNATIVES
+-------------------------------------------------
+6.1 Recommended: a small separate web page + admin routes on the server.
+    - Page: folder admin/ in this repo (plain HTML + JS, or React from a
+      CDN), deployed by the existing Pages workflow at
+      https://yumemicutiee.github.io/tAsikaso/admin/ (add admin/ to
+      .github/workflows/deploy-web.yml's output). Not inside the student
+      app, so students never download admin code.
+    - Sign-in: supabase-js with the SAME project URL + publishable key,
+      "Sign in with Google" (Supabase redirect flow: needs the Google web
+      client's secret pasted into Supabase's Google provider, and
+      https://yumemicutiee.github.io/tAsikaso/admin/ added to Supabase Auth
+      -> URL Configuration -> Redirect URLs, and to the Google client's
+      authorized origins).
+    - The page calls https://tasikaso-study-server.onrender.com/v1/admin/*
+      with the admin's Supabase access token (Authorization: Bearer).
+    - Server: middleware requireAdmin = verified Supabase token (already
+      done by authenticate() in server/src/app.ts) + not anonymous + email
+      in the admins table (or env ADMIN_EMAILS as a first step). It reads
+      Supabase with SUPABASE_SECRET_KEY (already on Render) and returns
+      aggregates. Row-level security for students stays exactly as is.
+6.2 Quick start, no code (the owner alone): Supabase dashboard -> Table
+    Editor / SQL Editor (queries in section 8), and Render dashboard ->
+    Logs. Good enough until the page exists.
+6.3 Not recommended: admin RLS policies so the page reads tables directly
+    with the admin's token. Works, but spreads cost math and limits over
+    two places and gives a browser token read access to every row.
+
+
+7. SERVER WORK (server/src, with tests in server/test like the existing)
+----------------------------------------------------------------------
+Routes (all need requireAdmin; JSON; paginated where lists):
+  GET    /v1/admin/overview?days=30
+  GET    /v1/admin/costs?days=30
+  GET    /v1/admin/users?q=&page=&sort=        (search email/name/id)
+  GET    /v1/admin/users/:id                   (detail incl. Pomodoro summary)
+  POST   /v1/admin/users/:id/plan   {plan: monthly|semester|yearly|null, months?}
+  POST   /v1/admin/users/:id/reset-usage {day?, kind?}
+  DELETE /v1/admin/users/:id                   (auth admin delete; cascades)
+  GET    /v1/admin/habits?days=30
+  GET    /v1/admin/settings  /  PUT /v1/admin/settings
+  GET    /v1/admin/crashes?days=7
+  GET    /v1/admin/health
+Also: write each Claude request to request_log and each crash report to
+crash_reports (fire-and-forget, never blocks the student); read the daily
+budget from daily_spend so it survives restarts; read limits from settings.
+Store: extend AccountStore (server/src/accounts.ts) with admin queries, or
+add AdminStore; keep MemoryStore in step for tests. Prefer SQL views/RPC
+functions (granted to service_role only) over many REST round trips.
+CORS: allow the Pages origin for /v1/admin/* (already "*" today).
+
+
+8. DATABASE WORK: supabase/migrations/0003_admin.sql (run with the
+   Management API, see KEYS.local.txt, after testing on PGlite like
+   server/test/migration*.test.ts)
+-------------------------------------------------------------------
+  admins (email text primary key, added_at)        -- owner's Google email(s)
+  admin_actions (id, admin_email, action, target_user, detail jsonb, at)
+  settings (key text primary key, value jsonb, updated_at)
+  request_log (id bigserial, user_id uuid null, route, status int, code,
+               input_tokens, output_tokens, cost_usd numeric, ms int, model,
+               fallback bool, at timestamptz default now())
+               + index on (at), (user_id, at)
+  crash_reports (id, user_id null, message, stack, source, version,
+                 platform, at)
+  views (service_role only): v_daily_usage (day, users, read, study, check,
+    cost), v_user_summary (id, email, is_anonymous, created_at,
+    last_sign_in_at, plan, plan_ends_at, last_active, app_version,
+    cost_30d), v_pomodoro_daily (day, pomodoros, minutes) from
+    jsonb_array_elements(user_data.data->'sessions')
+  All: row-level security ON, no policies, revoke from anon/authenticated
+  (only the server's secret key reads them).
+  Retention: Supabase pg_cron job deleting request_log and crash_reports
+  older than 90 days.
+Example queries for 6.2 today:
+  -- users by kind
+  select is_anonymous, count(*) from auth.users group by 1;
+  -- Claude spend per day
+  select day, sum(cost_usd) usd, sum(count) requests from usage_daily group by 1 order by 1 desc;
+  -- who costs most this month
+  select u.email, sum(d.cost_usd) usd from usage_daily d join auth.users u on u.id=d.user_id
+   where d.day >= date_trunc('month', now()) group by 1 order by 2 desc limit 20;
+  -- Pomodoros per day across users
+  select (s->>'end')::date day, count(*), sum((s->>'min')::int) minutes
+    from user_data, jsonb_array_elements(data->'sessions') s group by 1 order by 1 desc;
+
+
+9. STEPS, IN ORDER (each with tests before the next)
+----------------------------------------------------
+  1. Owner decides section 11. Add the owner's email(s) as admins.
+  2. 0003_admin.sql + PGlite tests; apply to Supabase; check grants live.
+  3. Server: requireAdmin, read-only routes (overview, costs, users,
+     habits, health) + tests with MemoryStore/fakes; deploy; check live with
+     the owner's token.
+  4. Server: request_log + crash_reports writes, daily_spend; deploy.
+  5. Admin page (admin/): sign-in, Overview, Users, Costs; then Habits,
+     Plans, Limits, Health. Check in a headless browser (tool/web_qa.py
+     shows how this project drives a browser).
+  6. Actions (plan, reset usage, delete) with confirmations + audit log.
+  7. Privacy policy (web/privacy.html): request_log, crash_reports,
+     app_events if added, who can see what. README + PROGRESS.txt.
+  8. Later: real payments write payments; Plans & payments section.
+
+
+10. KEYS AND ACCESS (details in KEYS.local.txt, never committed)
+----------------------------------------------------------------
+  Supabase personal access token: run SQL/migrations, read the secret key.
+  Render API key: env vars (ADMIN_EMAILS, settings), redeploys, logs.
+  SUPABASE_SECRET_KEY: only on Render (the server), never in the page.
+  Supabase URL + publishable key: public; the admin page uses them to sign in.
+  Google web client (public id; its secret is needed only in Supabase's
+  Google provider for the page's redirect sign-in).
+  Anthropic (Claude) key: only on Render; the admin page never needs it.
+
+
+11. DECISIONS FOR THE OWNER BEFORE BUILDING
+-------------------------------------------
+  1. Admin email(s): which Google account(s) may open the admin page?
+  2. Record request_log / crash_reports / app_events (section 4)? Each
+     means a privacy-policy update.
+  3. May admins see a student's Pomodoro details, or only totals?
+  4. Show students' emails on the page, or only short ids?
+  5. Edit limits and budget from the page (settings table), or keep them
+     as Render env vars?
+  6. Move Supabase to Pro ($25/month) before real classes (the free plan
+     pauses after a week without activity).
+  7. Log Out also removes notes from the phone? (section 3)

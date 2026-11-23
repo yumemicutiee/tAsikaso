@@ -14,3 +14,6 @@ android/upload-keystore.base64.txt
 
 # Results of tool/emulator_tests.sh
 emulator-results/
+
+# Local keys for Supabase and Render (see ADMIN_PAGE_PLAN.txt). Never commit.
+KEYS.local.txt

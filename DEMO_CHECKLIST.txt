@@ -1,0 +1,57 @@
+tAsikaso - CLASS DEMO CHECKLIST (v0.8.0)
+=======================================
+
+THE DAY BEFORE
+--------------
+[ ] Install v0.8.0 on the demo phone:
+    https://github.com/yumemicutiee/tAsikaso/releases/latest -> tAsikaso.apk
+    (installs over older versions and keeps data).
+[ ] Google sign-in is still in "Testing" in Google Cloud: only listed test
+    users can sign in. Use YOUR account for the demo, or add classmates'
+    Gmail addresses: console.cloud.google.com -> APIs & Services -> OAuth
+    consent screen -> Test users (project 308120396420).
+[ ] Charge the phone; allow notifications and "Alarms & reminders" for
+    tAsikaso when asked (the Pomodoro alarm needs them).
+[ ] Have 2-3 pages of handwritten notes ready to scan.
+
+15 MINUTES BEFORE
+-----------------
+[ ] Wake the study server (free hosting sleeps when unused; the first
+    request can take up to a minute): open
+    https://tasikaso-study-server.onrender.com/health in a browser until it
+    shows {"ok":true}.
+[ ] Internet on the phone (Smart Study and accounts need it; the timer,
+    statistics, flashcards and auto-crop work offline).
+
+A 10-MINUTE DEMO, IN ORDER
+--------------------------
+1. Open the app: the loading screen, the welcome, Continue with Google (or
+   No account), the slides.
+2. Pomodoro: Study tab -> pick a task -> START. Show Focus Mode. (Set
+   Settings -> Pomodoro -> Focus to 1 minute beforehand to hear the alarm
+   during the demo: Settings -> When Time Is Up -> Alarm Clock and
+   Vibration.)
+3. Statistics: Profile -> Pomodoro Analysis (day / week, productive hours,
+   streak).
+4. Scan: camera button -> photograph a handwritten page -> the corners are
+   found -> Next: the lines light up in blue, then Claude reads the page ->
+   pick a folder -> the note opens on its text.
+5. Make Flashcards from the note -> study the cards -> New Quiz (multiple
+   choice, true/false, typed answers judged by Claude).
+6. Settings -> Smart Study: today's use of Claude against the account's
+   limits.
+7. Accounts: Profile -> Log Out -> everything personal clears -> Continue
+   with Google -> name, photo, settings, tasks and statistics come back.
+8. The website: https://yumemicutiee.github.io/tAsikaso/ (same app in a
+   browser).
+
+IF SOMETHING GOES WRONG
+-----------------------
+- "Couldn't reach the study server": the server was asleep; wait a minute
+  and try again (see "15 minutes before").
+- Google sign-in fails for a classmate: they aren't a test user (see above).
+- A page reads badly offline: Claude needs internet; without it the phone's
+  own reader is used.
+- Daily limit reached: no account = 20 pages a day; Continue with Google
+  gives 50; a test tAsikaso+ plan (Profile -> See Plans, no money charged)
+  gives 200.

@@ -398,5 +398,16 @@ The roadmap to 1.0 and the open items are in `Incomplete_Features.md`
 API key, a real-phone run-through, Google sign-in out of Testing with a
 privacy policy, real payments, then launch.
 
+**Admin page:** planned, not built. Start from `ADMIN_PAGE_PLAN.txt`: what
+is recorded, where each piece of data lives (Supabase, the study server),
+how the page connects, the routes and SQL to write, and the steps.
+
+**Accounts (v0.8.0):** every user has a tAsikaso account in Supabase
+(anonymous, or their Google account). It keeps their plan, daily Smart
+Study usage, and their name, photo, settings, tasks and Pomodoro statistics
+(`supabase/migrations/`, `lib/services/account_data.dart`). Log Out of a
+Google account clears those from the phone; Continue with Google brings
+them back. Notes and flashcards stay on the phone (Backup & Sync for Drive).
+
 Fonts: Plus Jakarta Sans (Tokotype) and Inter (Rasmus Andersson), SIL Open Font License 1.1.
 Icons: Phosphor Icons, MIT License (assets/fonts/PHOSPHOR_LICENSE.txt).
