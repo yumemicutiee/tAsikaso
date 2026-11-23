@@ -57,6 +57,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
     // A copy of this account's data on Google Drive: offer to bring it back.
     if (_sync.remote != null) {
+      setState(() => _busy = false);
       final restore = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -76,6 +77,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         ),
       );
       if (restore == true) {
+        if (mounted) setState(() => _busy = true);
         final failed = await _sync.restoreFromDrive();
         if (!mounted) return;
         if (failed != null && failed.isNotEmpty) {

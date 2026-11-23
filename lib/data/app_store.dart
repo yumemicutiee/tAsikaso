@@ -227,11 +227,20 @@ class AppStore extends ChangeNotifier {
             )
           : _unreadable(kept: kept));
     }
+    // Saved at once with the flag, so the check runs only this once (a
+    // sample folder the user keeps must not go later, once emptied).
+    if (_checkedSamples) {
+      _checkedSamples = false;
+      _persist();
+    }
     await _loadThumbnails(storage);
     await _loadProfilePhoto(storage);
     if (checkPlan) checkPlanEnded();
     notifyListeners();
   }
+
+  /// The sample data of an older save file was just looked for.
+  bool _checkedSamples = false;
 
   StoreProblem _unreadable({required bool kept}) => (
         title: "Saved Data Couldn't Be Read",
@@ -497,7 +506,10 @@ class AppStore extends ChangeNotifier {
     _timer = timer;
     _thumbs.clear();
     // Save files from before 0.7.1 started with sample folders and tasks.
-    if (j['noSamples'] != true) _removeSamples();
+    if (j['noSamples'] != true) {
+      _removeSamples();
+      _checkedSamples = true;
+    }
     return skipped;
   }
 
