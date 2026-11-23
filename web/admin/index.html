@@ -48,7 +48,6 @@ nav.pills a.on{background:var(--card);color:var(--ink);font-weight:600;box-shado
 h1{margin:0;font-size:38px;font-weight:600;letter-spacing:-.5px}
 h1 span{color:var(--muted);font-weight:500}
 .stamp{background:var(--card);border-radius:999px;padding:6px 6px 6px 20px;font-size:14px;display:flex;align-items:center;gap:10px}
-.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
 .row{display:flex;flex-wrap:wrap;gap:20px}
 .card{background:var(--card);border-radius:24px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .card.accent{background:var(--accent);color:var(--accent-ink)}
@@ -70,11 +69,6 @@ h1 span{color:var(--muted);font-weight:500}
 .seg button{border:0;background:none;padding:8px 18px;border-radius:999px;color:#3A3D46;min-height:40px;cursor:pointer;font-size:14px}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
 .chart{position:relative;flex:1 1 auto;min-height:120px;margin-top:2px}
-.row.ov > .card, #plans > .card{gap:10px;padding:18px 22px}
-/* The chart card and the Plans card are as tall as each other; the chart
-   fills its card. */
-.row.ov{align-items:stretch}
-#plans > section{flex:1}
 /* % stats in place of badges: green up, red down, blue for a share. */
 .statline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .card.accent .statline{color:#D8E4F5}
@@ -92,18 +86,8 @@ h1 span{color:var(--muted);font-weight:500}
 .ctip span{color:#C9CCD4}
 .ctip[data-edge="right"]{transform:translate(calc(-100% + 12px),calc(-100% - 14px))}
 .ctip[data-edge="left"]{transform:translate(-12px,calc(-100% - 14px))}
-/* Plans: a headline number, then one bar per plan. */
-.plancount{text-align:right}
-.plancount .big{font-size:30px;line-height:1}
-.plancount .sub{margin:2px 0 0}
-.planbar{display:flex;gap:3px;height:12px;border-radius:999px;overflow:hidden;background:var(--well);margin-top:auto}
-.planbar span{min-width:6px}
-.planlegend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
-.planlegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
-.planlegend strong{color:var(--ink);margin-left:2px}
 .chart svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
 .chart .chip{position:absolute;right:0}
-.xlabels{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);text-transform:uppercase}
 .bars{display:flex;gap:12px;align-items:flex-end;height:150px}
 .bars > div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%}
 .bar{width:100%;max-width:56px;border-radius:18px;min-height:16px}
@@ -160,10 +144,10 @@ header.top .me{order:3}
 .me{display:flex;align-items:center;gap:10px;margin-left:auto}
 header.top .brand{order:1}
 header.top nav.pills{order:4}
-@media (max-width:899px){ header.top nav.pills{width:100%;flex-wrap:nowrap;overflow-x:auto} nav.pills a{white-space:nowrap} }
+@media (max-width:1099px){ header.top nav.pills{width:100%;flex-wrap:nowrap;overflow-x:auto} nav.pills a{white-space:nowrap} }
 @media (max-width:640px){ header.top{gap:8px} .brand{font-size:18px;gap:8px} .brand img{width:32px;height:32px} }
 /* Wider screens: a side menu. */
-@media (min-width:900px){
+@media (min-width:1100px){
   .wrap{max-width:1700px;margin:0;padding-left:304px}
   header.top{position:fixed;left:24px;top:24px;bottom:24px;width:248px;z-index:5;border-radius:28px;flex-direction:column;align-items:stretch;flex-wrap:nowrap;justify-content:flex-start;padding:22px 16px 16px;gap:0;box-shadow:0 1px 2px rgba(22,24,29,.04)}
   header.top .brand{order:1}
@@ -184,7 +168,82 @@ header.top nav.pills{order:4}
   .me-mail{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .me .round{width:38px;height:38px}
 }
-.grid4 .seg button{padding:6px 12px;min-height:34px;font-size:13px}
+/* ---- Layout (responsive) -------------------------------------------------
+   The cards sit in grids that follow the width of the content area (not the
+   window), so they fit next to the side menu too. */
+main.content{container-type:inline-size;display:flex;flex-direction:column;gap:24px;min-width:0}
+.kpis{display:grid;grid-template-columns:1fr;gap:20px}
+.kpis > .card{gap:10px}
+.charts{display:grid;grid-template-columns:1fr;gap:20px}
+@container (min-width:560px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpis > .card:first-child{grid-column:1 / -1}
+}
+@container (min-width:880px){
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kpis > .card:first-child{grid-column:auto}
+}
+@container (min-width:1000px){
+  .charts{grid-template-columns:minmax(0,2fr) minmax(300px,1fr)}
+}
+/* Accounts: Google vs no account. */
+.versus{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.versus .n{font-size:32px;font-weight:600;letter-spacing:-.8px;line-height:1.1}
+.versus .lbl{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.versus .lbl i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.versus .pct{font-size:12.5px;font-weight:700;color:var(--muted)}
+.splitbar{display:flex;gap:3px;height:10px;border-radius:999px;overflow:hidden;background:var(--well);margin-top:auto}
+.splitbar span{min-width:6px}
+/* The chart card: the period's number over the line. */
+.chartstat{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.chartstat .big{font-size:34px}
+.plot{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:8px}
+.ylabels{position:relative;font-size:11.5px;color:var(--faint);text-align:right;min-width:14px}
+.ylabels span{position:absolute;right:0;transform:translateY(-50%);line-height:1}
+.plot .chart{height:200px;flex:none;min-height:0;margin:0}
+.xlabels{position:relative;height:16px;grid-column:2;color:var(--muted);text-transform:uppercase}
+.xlabels span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap;font-size:11.5px}
+.xlabels span.first{transform:none}
+.xlabels span.last{transform:translateX(-100%)}
+/* Plans: one row per plan. */
+.planhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.planhead .big{font-size:34px}
+.planrows{display:flex;flex-direction:column;gap:14px}
+.planrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:6px}
+.planrow .tag{width:36px;height:36px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;grid-row:span 2}
+.planrow .name{font-size:14px;font-weight:600}
+.planrow .price{font-size:12.5px;color:var(--muted);font-weight:500;margin-left:6px}
+.planrow .count{font-size:15px;font-weight:700;text-align:right}
+.planrow .count small{font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}
+.planrow .track{grid-column:2 / 4;height:6px;border-radius:999px;background:var(--well);overflow:hidden}
+.planrow .track span{display:block;height:100%;border-radius:999px}
+.planfoot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin-top:auto}
+.planfoot strong{color:var(--ink)}
+.planempty{font-size:13px;color:var(--muted);background:var(--row);border-radius:12px;padding:10px 12px}
+/* Short menu labels on phones. */
+.short{display:none}
+@media (max-width:640px){
+  .long{display:none}.short{display:inline}
+  header.top nav.pills{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible}
+  header.top nav.pills a{justify-content:center;padding:10px 6px;gap:6px;font-size:14px}
+  .headline{flex-direction:column;align-items:flex-start}
+  .card{padding:18px;border-radius:20px}
+  .chartcard .cardhead{flex-direction:column;align-items:stretch}
+  .chartcard .seg button{flex:1}
+  .plot .chart{height:170px}
+  /* Users: each row a small card (user and plan on top, dates under). */
+  #users .cardhead label{width:100%}
+  #users .tablebox{overflow:visible}
+  #users table{border-spacing:0 8px}
+  #users thead{display:none}
+  #users tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;background:var(--row);border-radius:14px;padding:12px 14px}
+  #users tbody td{padding:0;background:none !important;border-radius:0 !important;white-space:normal;min-width:0}
+  #users tbody td:first-child div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #users tbody td:nth-child(3),#users tbody td:nth-child(4){grid-column:1 / -1;font-size:12.5px;color:var(--muted)}
+  #users tbody td[data-label]::before{content:attr(data-label) " "}
+  #users tbody td[colspan]{grid-column:1 / -1}
+  #users tbody td.noplan{display:none}
+}
 /* Views: the Overview shows the totals, chart, plans and payments; Users
    and Crash reports each show on their own, from their tab. */
 body[data-view="overview"] #users, body[data-view="overview"] #crashes,
@@ -215,6 +274,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     <symbol id="i-peso" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 17V7h3.2a2.8 2.8 0 0 1 0 5.6H9.5M8 9.3h8.5M8 11.3h8.5"/></symbol>
     <symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.4 3.3-5.5 6.5-5.5 1.6 0 3 .5 4.1 1.4"/><path d="M18 14v6M15 17h6"/></symbol>
     <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></symbol>
+    <symbol id="i-google" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/></symbol>
     <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 8l4 3.5L12 5l4 6.5L20 8l-1.8 10H5.8z"/><path d="M6 21h12"/></symbol>
   </svg>
 
@@ -224,7 +284,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     <nav class="pills" aria-label="Admin sections">
       <a href="#overview" class="on"><svg class="i"><use href="#i-grid"/></svg>Overview</a>
       <a href="#users"><svg class="i"><use href="#i-users"/></svg>Users</a>
-      <a href="#crashes"><svg class="i"><use href="#i-alert"/></svg>Crash reports</a>
+      <a href="#crashes"><svg class="i"><use href="#i-alert"/></svg><span class="long">Crash reports</span><span class="short">Crashes</span></a>
     </nav>
     <div class="me">
       <span class="avatar" id="meInitial" aria-hidden="true">A</span>
@@ -235,6 +295,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     </div>
   </header>
 
+  <main class="content">
   <div class="headline ov" id="overview">
     <h1>Welcome back, <span id="hello">admin</span></h1>
     <div class="stamp">
@@ -247,36 +308,29 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
   </div>
   <p id="loadError" class="error" role="alert" hidden></p>
 
-  <div class="grid4 ov">
+  <div class="kpis ov">
     <div class="card accent">
       <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><p class="ttl">Total users</p><p class="sub">Everyone who has opened the app</p></div></div>
       <div class="big" id="total">–</div>
       <div class="statline"><span class="delta" id="totalDelta">–</span><span>growth this month</span></div>
-      <div class="split"><span id="google">Google –</span><span id="anonymous">No account –</span></div>
     </div>
     <section class="card">
-      <div class="cardhead">
-        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments <span class="pill demo" id="demoPill" hidden>Demo</span></h2><p class="sub" id="payNote">This month</p></div></div>
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Accounts</h2><p class="sub">Google sign-in vs no account</p></div></div>
+      <div class="versus">
+        <div><div class="lbl"><i style="background:#1E3A6E"></i>Google</div><div class="n" id="google">–</div><div class="pct" id="googlePct"></div></div>
+        <div><div class="lbl"><i style="background:#9FCBF5"></i>No account</div><div class="n" id="anonymous">–</div><div class="pct" id="anonPct"></div></div>
       </div>
-      <div class="big" id="payTotal">–</div>
-      <div class="statline"><span class="delta flat" id="payShare">–</span><span id="payShareNote">of users paid this month</span></div>
+      <div class="splitbar" id="accountBar" role="img"></div>
     </section>
     <section class="card">
-      <div class="cardhead">
-        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-user-plus"/></svg></span><div><h2 class="ttl">New users</h2><p class="sub" id="newSub">This month</p></div></div>
-        <div class="seg" role="group" aria-label="New users period">
-          <button type="button" data-period="week" aria-pressed="false">Week</button>
-          <button type="button" data-period="month" aria-pressed="true">Month</button>
-          <button type="button" data-period="year" aria-pressed="false">Year</button>
-        </div>
-      </div>
-      <div class="big" id="newCount">–</div>
-      <div class="statline"><span class="delta" id="newDelta">–</span><span id="newPrev"></span></div>
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments <span class="pill demo" id="demoPill" hidden>Demo</span></h2><p class="sub" id="payNote">This month</p></div></div>
+      <div class="big" id="payTotal">–</div>
+      <div class="statline"><span class="delta flat" id="payShare">–</span><span>of users paid this month</span></div>
     </section>
   </div>
 
-  <div class="row ov">
-    <section class="card chartcard" style="flex:999 1 560px">
+  <div class="charts ov">
+    <section class="card chartcard">
       <div class="cardhead">
         <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-trend"/></svg></span><div><h2 class="ttl">New users</h2><p class="sub" id="chartNote"></p></div></div>
         <div class="seg" role="group" aria-label="Period">
@@ -285,37 +339,35 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
           <button type="button" data-period="year" aria-pressed="false">Year</button>
         </div>
       </div>
-      <div class="chart" id="chartBox">
-        <svg viewBox="0 0 600 200" preserveAspectRatio="none" role="img" id="chart">
-          <defs>
-            <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#1E3A6E" stop-opacity="0.30"/>
-              <stop offset="1" stop-color="#1E3A6E" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          <line x1="0" y1="40" x2="600" y2="40" stroke="#E3E5EA" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
-          <line x1="0" y1="90" x2="600" y2="90" stroke="#E3E5EA" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
-          <line x1="0" y1="140" x2="600" y2="140" stroke="#E3E5EA" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
-          <path id="area" fill="url(#fill)"/>
-          <path id="curve" fill="none" stroke="#1E3A6E" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-        </svg>
-        <div class="cguide" id="cguide" hidden></div>
-        <div class="cdot" id="cdot" hidden></div>
-        <div class="ctip" id="ctip" hidden></div>
+      <div class="chartstat"><span class="big" id="newCount">–</span><span class="delta" id="newDelta">–</span><span class="meta" id="newPrev"></span></div>
+      <div class="plot">
+        <div class="ylabels" id="ylabels" aria-hidden="true"></div>
+        <div class="chart" id="chartBox">
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" role="img" id="chart">
+            <defs>
+              <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#1E3A6E" stop-opacity="0.26"/>
+                <stop offset="1" stop-color="#1E3A6E" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g id="grid"></g>
+            <path id="area" fill="url(#fill)"/>
+            <path id="curve" fill="none" stroke="#1E3A6E" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="cguide" id="cguide" hidden></div>
+          <div class="cdot" id="cdot" hidden></div>
+          <div class="ctip" id="ctip" hidden></div>
+        </div>
+        <div class="xlabels" id="xlabels" aria-hidden="true"></div>
       </div>
-      <div class="xlabels" id="xlabels"></div>
     </section>
 
-    <div style="flex:1 1 340px;display:flex;flex-direction:column;gap:20px" id="plans">
-      <section class="card">
-        <div class="cardhead">
-          <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-crown"/></svg></span><div><h2 class="ttl">Plans</h2><p class="sub">tAsikaso+ right now</p></div></div>
-          <div class="plancount"><div class="big" id="planActive">–</div><div class="sub">active</div></div>
-        </div>
-        <div class="planbar" id="planBar" role="img"></div>
-        <div class="planlegend" id="planLegend"></div>
-      </section>
-    </div>
+    <section class="card" id="plans">
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-crown"/></svg></span><div><h2 class="ttl">tAsikaso+ plans <span class="pill demo" id="planDemo" hidden>Test</span></h2><p class="sub">Active right now</p></div></div>
+      <div class="planhead"><span class="big" id="planActive">–</span><span class="delta flat" id="planShare">–</span><span class="meta">of all users</span></div>
+      <div class="planrows" id="planRows"></div>
+      <div class="planfoot"><span>Ending in 7 days <strong id="planEnding">–</strong></span><span>On Free <strong id="planFree">–</strong></span></div>
+    </section>
   </div>
 
   <div class="row">
@@ -345,6 +397,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
       <div id="crashList" style="display:flex;flex-direction:column;gap:10px"></div>
     </section>
   </div>
+  </main>
 </div>
 
 <script>
@@ -502,38 +555,53 @@ const share = (part, whole) => `${whole > 0 ? (Math.round((part / whole) * 1000)
 function renderOverview() {
   const o = dash.overview;
   $("total").textContent = fmtNum(o.total);
-  $("google").textContent = `Google ${fmtNum(o.google)}`;
-  $("anonymous").textContent = `No account ${fmtNum(o.anonymous)}`;
   // Growth this month: everyone now, against everyone before the 1st.
   setDelta("totalDelta", change(o.total, o.total - o.newThisMonth));
+  // Accounts: Google vs no account, as numbers, shares and one split bar.
+  $("google").textContent = fmtNum(o.google);
+  $("anonymous").textContent = fmtNum(o.anonymous);
+  $("googlePct").textContent = `${share(o.google, o.total)} of users`;
+  $("anonPct").textContent = `${share(o.anonymous, o.total)} of users`;
+  $("accountBar").setAttribute("aria-label", `Google ${o.google}, no account ${o.anonymous}`);
+  $("accountBar").replaceChildren(...[[o.google, "#1E3A6E"], [o.anonymous, "#9FCBF5"]]
+    .filter(([n]) => n > 0).map(([n, color]) => el("span", { style: `flex:${n};background:${color}` })));
   renderNewUsers();
 }
 
-/** The New users card: this week, month or year, with the one before. */
+/** The chart card's number: new users this week, month or year, and the change. */
 function renderNewUsers() {
   const o = dash.overview;
-  const today = new Date(`${o.today}T12:00:00Z`);
-  const [count, prev, sub, prevName] = {
-    week: [o.newThisWeek, o.newLastWeek, "This week, since Monday", "Last week"],
-    month: [o.newThisMonth, o.newLastMonth, new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(today), "Last month"],
-    year: [o.newThisYear, o.newLastYear, `This year, ${today.getUTCFullYear()}`, "Last year"],
+  const [count, prev, prevName] = {
+    week: [o.newThisWeek, o.newLastWeek, "last week"],
+    month: [o.newThisMonth, o.newLastMonth, "last month"],
+    year: [o.newThisYear, o.newLastYear, "last year"],
   }[period];
   $("newCount").textContent = fmtNum(count);
-  $("newSub").textContent = sub;
   setDelta("newDelta", change(count, prev));
-  $("newPrev").textContent = `vs ${prevName.toLowerCase()} (${fmtNum(prev)})`;
+  $("newPrev").textContent = `vs ${prevName} (${fmtNum(prev)})`;
+}
+
+/** A round top for the y-axis: 1, 2, 4, 6, 8, 10, 20, 40, 50, 100… (even, so the middle line is whole). */
+function niceTop(max) {
+  if (max <= 1) return 1;
+  if (max <= 2) return 2;
+  const pow = 10 ** Math.floor(Math.log10(max));
+  for (const m of [1, 2, 4, 5, 6, 8, 10]) if (m * pow >= max && (m * pow) % 2 === 0) return m * pow;
+  return 10 * pow;
 }
 
 /**
- * The line through [vals] in a 600×200 box: a monotone cubic (Fritsch–
- * Carlson), smooth but never dipping below 0 or overshooting a peak.
+ * The line through [vals] in a 600×200 box, 0 at the bottom and [top] at the
+ * top: a monotone cubic (Fritsch–Carlson), smooth but never dipping below 0
+ * or overshooting a peak.
  */
-function chartGeom(vals) {
+const Y0 = 196, YTOP = 8;
+const yOf = (v, top) => Y0 - (v / top) * (Y0 - YTOP);
+function chartGeom(vals, top) {
   const n = vals.length;
-  const max = Math.max(...vals, 1);
-  const pts = vals.map((v, i) => [n === 1 ? 300 : (i * 600) / (n - 1), 188 - (v / max) * 168]);
+  const pts = vals.map((v, i) => [n === 1 ? 300 : (i * 600) / (n - 1), yOf(v, top)]);
   const f = (x) => Math.round(x * 10) / 10;
-  if (n < 2) return { d: `M0,${f(pts[0]?.[1] ?? 188)} L600,${f(pts[0]?.[1] ?? 188)}`, pts };
+  if (n < 2) return { d: `M0,${f(pts[0]?.[1] ?? Y0)} L600,${f(pts[0]?.[1] ?? Y0)}`, pts };
   const s = [];
   for (let i = 0; i < n - 1; i++) s.push((pts[i + 1][1] - pts[i][1]) / (pts[i + 1][0] - pts[i][0]));
   const m = [s[0]];
@@ -558,10 +626,10 @@ let chartPoints = [];
 function renderChart() {
   const o = dash.overview;
   const fmt = (day, opts) => new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
-  let items, labels, note;
+  let items, step, note;
   if (period === "year") {
     items = o.monthly.map((m) => ({ n: m.count, title: fmt(`${m.month}-15`, { month: "long", year: "numeric" }), short: fmt(`${m.month}-15`, { month: "short" }) }));
-    labels = items.filter((_, i) => i % 2 === 1 || i === items.length - 1).map((i) => i.short);
+    step = $("chartBox").clientWidth < 360 ? 3 : 2;
     note = "Per month, last 12 months";
   } else {
     const days = period === "week" ? o.daily.slice(-7) : o.daily;
@@ -570,19 +638,36 @@ function renderChart() {
       title: fmt(d.day, { weekday: "short", day: "numeric", month: "short" }),
       short: fmt(d.day, period === "week" ? { weekday: "short" } : { day: "numeric", month: "short" }),
     }));
-    const step = period === "week" ? 1 : 5;
-    labels = items.filter((_, i) => i % step === 0 || i === items.length - 1).map((i) => i.short);
+    // A label a week apart (two weeks on a narrow chart, so they never touch).
+    step = period === "week" ? 1 : $("chartBox").clientWidth < 420 ? 14 : 7;
     note = period === "week" ? "Per day, last 7 days" : "Per day, last 30 days";
   }
   const vals = items.map((i) => i.n);
+  const top = niceTop(Math.max(...vals, 0));
   const sum = vals.reduce((a, b) => a + b, 0);
-  const best = items.reduce((a, b) => (b.n > a.n ? b : a), items[0] ?? { n: 0, title: "" });
-  const { d, pts } = chartGeom(vals);
+  const { d, pts } = chartGeom(vals, top);
   $("curve").setAttribute("d", d);
-  $("area").setAttribute("d", `${d} L600,200 L0,200 Z`);
-  $("chart").setAttribute("aria-label", `Line chart of new users, ${note.toLowerCase()}; total ${sum}, best ${best.n}, latest ${vals.at(-1) ?? 0}`);
+  $("area").setAttribute("d", `${d} L600,${Y0} L0,${Y0} Z`);
+  // Grid lines and y labels at 0, half and the top: they match the line.
+  const ticks = top === 1 ? [0, 1] : [0, top / 2, top];
+  $("grid").replaceChildren(...ticks.map((t) => {
+    const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const y = yOf(t, top);
+    for (const [k, v] of Object.entries({ x1: 0, x2: 600, y1: y, y2: y, stroke: t === 0 ? "#D5D8DF" : "#E3E5EA", "vector-effect": "non-scaling-stroke" })) ln.setAttribute(k, v);
+    if (t !== 0) ln.setAttribute("stroke-dasharray", "4 5");
+    return ln;
+  }));
+  $("ylabels").replaceChildren(...ticks.map((t) => el("span", { style: `top:${(yOf(t, top) / 200) * 100}%` }, fmtNum(t))));
+  $("chart").setAttribute("aria-label", `Line chart of new users, ${note.toLowerCase()}; total ${sum}, latest ${vals.at(-1) ?? 0}`);
   $("chartNote").textContent = note;
-  $("xlabels").replaceChildren(...labels.map((l) => el("div", {}, l)));
+  // X labels sit under their own points, counted back from the latest.
+  const last = items.length - 1;
+  $("xlabels").replaceChildren(...items.flatMap((it, i) => {
+    if ((last - i) % step !== 0) return [];
+    const x = last === 0 ? 50 : (i / last) * 100;
+    const cls = i === last ? "last" : x < 4 ? "first" : "";
+    return [el("span", { class: cls, style: `left:${x}%` }, it.short)];
+  }));
   chartPoints = items.map((it, i) => ({ ...it, x: pts[i][0] / 600, y: pts[i][1] / 200 }));
   hideHover();
   for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.period === period));
@@ -606,6 +691,12 @@ function showHover(e) {
   tip.dataset.edge = p.x > 0.8 ? "right" : p.x < 0.2 ? "left" : "";
   for (const id of ["cguide", "cdot", "ctip"]) $(id).hidden = false;
 }
+// The labels depend on the chart's width: draw them again when it changes.
+let lastChartWidth = 0;
+new ResizeObserver(() => {
+  const w = $("chartBox").clientWidth;
+  if (dash && w && Math.abs(w - lastChartWidth) > 40) { lastChartWidth = w; renderChart(); }
+}).observe($("chartBox"));
 $("chartBox").addEventListener("pointermove", showHover);
 $("chartBox").addEventListener("pointerdown", showHover);
 $("chartBox").addEventListener("pointerleave", hideHover);
@@ -616,17 +707,32 @@ for (const b of document.querySelectorAll(".seg button")) {
 
 // ---- Plans and payments ------------------------------------------------------
 
+const PLAN_ROWS = [
+  ["monthly", "Monthly", "₱49 / month", "#1E3A6E", "#FFFFFF"],
+  ["semester", "Semester", "₱199 / 6 months", "#4C78BE", "#FFFFFF"],
+  ["yearly", "Yearly", "₱349 / year", "#9FCBF5", "#1E3A6E"],
+];
+
 function renderPlans() {
   const p = dash.overview.plans;
   const active = p.monthly + p.semester + p.yearly;
   $("planActive").textContent = fmtNum(active);
-  // One bar split by plan, and a one-line legend with the counts.
-  const rows = [["Monthly", p.monthly, "#1E3A6E"], ["Semester", p.semester, "#4C78BE"], ["Yearly", p.yearly, "#9FCBF5"]];
-  $("planBar").setAttribute("aria-label", rows.map(([label, n]) => `${label} ${n}`).join(", "));
-  $("planBar").replaceChildren(...rows.filter(([, n]) => n > 0).map(([, n, color]) =>
-    el("span", { style: `flex:${n};background:${color}` })));
-  $("planLegend").replaceChildren(...rows.map(([label, n, color]) =>
-    el("span", {}, el("i", { style: `background:${color}` }), `${label} `, el("strong", {}, fmtNum(n)))));
+  $("planShare").textContent = share(active, dash.overview.total);
+  $("planDemo").hidden = !(active > 0 && p.test === active);
+  $("planEnding").textContent = fmtNum(p.endingIn7Days);
+  $("planFree").textContent = fmtNum(p.free);
+  // One row per plan: its price, how many, and its share of the active plans.
+  const rows = PLAN_ROWS.map(([key, label, price, color, ink]) => {
+    const n = p[key] ?? 0;
+    const pct = active > 0 ? Math.round((n / active) * 100) : 0;
+    return el("div", { class: "planrow" },
+      el("span", { class: "tag", style: `background:${color};color:${ink}`, "aria-hidden": "true" }, label.charAt(0)),
+      el("div", {}, el("span", { class: "name" }, label), el("span", { class: "price" }, price)),
+      el("div", { class: "count" }, fmtNum(n), el("small", {}, `${pct}%`)),
+      el("div", { class: "track" }, el("span", { style: `width:${pct}%;background:${color}` })));
+  });
+  if (active === 0) rows.push(el("div", { class: "planempty" }, "No one is on tAsikaso+ yet. Plans switched on from the app show here."));
+  $("planRows").replaceChildren(...rows);
 }
 
 function renderPayments() {
@@ -637,7 +743,6 @@ function renderPayments() {
   $("payTotal").replaceChildren(whole, el("span", { class: "cents" }, cents));
   // Share of all users who paid this month (last month's total isn't sent, so no change in %).
   $("payShare").textContent = share(pay.monthCount, dash.overview.total);
-  $("payShareNote").textContent = `of users paid this month · ${fmtNum(pay.monthCount)} ${pay.monthCount === 1 ? "payment" : "payments"}`;
 }
 
 // ---- Users -------------------------------------------------------------------
@@ -662,8 +767,8 @@ async function loadUsers() {
         el("div", { style: "font-weight:600" }, u.anonymous ? "No account" : (u.email ?? u.name ?? "Google account")),
         el("div", { class: "meta" }, u.anonymous ? `id ${u.id.slice(0, 13)}` : (u.name || "Google"))),
       el("td", {}, el("span", { class: `pill ${u.plan ? (u.test ? "test" : "plus") : ""}` }, plan)),
-      el("td", {}, u.plan ? fmtDate(u.planEndsAt) : "—"),
-      el("td", {}, fmtDate(u.createdAt)),
+      el("td", u.plan ? { "data-label": "Plan ends" } : { class: "noplan" }, u.plan ? fmtDate(u.planEndsAt) : "—"),
+      el("td", { "data-label": "Joined" }, fmtDate(u.createdAt)),
     );
   });
   $("userRows").replaceChildren(...(rows.length ? rows : [el("tr", {}, el("td", { colspan: "4", class: "empty" }, q ? "No one matches that search." : "No users yet."))]));
