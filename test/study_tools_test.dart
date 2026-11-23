@@ -365,8 +365,9 @@ void main() {
       final folder = store.folder(note.folderId)!;
       await tester.pumpWidget(MaterialApp(home: FolderScreen(folderId: folder.id)));
       expect(find.text('Notebook'), findsOneWidget);
-      expect(find.textContaining('latest: Cells Lecture'), findsOneWidget);
-      expect(find.text('Cells Lecture'), findsNothing, reason: 'inside the Notebook');
+      // The Notebook card: how many notes, and the latest one's title.
+      expect(find.text('1 note'), findsOneWidget);
+      expect(find.text('Cells Lecture'), findsOneWidget);
 
       await tester.tap(find.text('Notebook'));
       await tester.pumpAndSettle();

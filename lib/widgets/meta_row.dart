@@ -17,7 +17,12 @@ class MetaItem {
 /// second line. Read out as one label ([label] when the text is short).
 class MetaRow extends StatelessWidget {
   const MetaRow(this.items,
-      {super.key, this.style, this.gap = 12, this.wrap = false, this.label});
+      {super.key,
+      this.style,
+      this.gap = 12,
+      this.wrap = false,
+      this.label,
+      this.lead});
 
   final List<MetaItem> items;
 
@@ -32,6 +37,9 @@ class MetaRow extends StatelessWidget {
 
   /// What's read out; the details' text, by default.
   final String? label;
+
+  /// Shown first, without an icon ("Today"), and read out first.
+  final String? lead;
 
   @override
   Widget build(BuildContext context) {
@@ -49,13 +57,19 @@ class MetaRow extends StatelessWidget {
           ],
         );
     return Semantics(
-      label: label ?? items.map((i) => i.text).join(', '),
+      label: label ??
+          [if (lead != null) lead!, for (final i in items) i.text].join(', '),
       excludeSemantics: true,
       child: wrap
           ? Wrap(
               spacing: gap,
               runSpacing: 2,
-              children: [for (final item in items) detail(item)],
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (lead case final lead?)
+                  Text(lead, style: text.copyWith(fontWeight: FontWeight.w700)),
+                for (final item in items) detail(item),
+              ],
             )
           : Row(
               mainAxisSize: MainAxisSize.min,

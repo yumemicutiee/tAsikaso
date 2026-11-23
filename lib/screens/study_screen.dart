@@ -412,28 +412,19 @@ class _TodayStrip extends StatelessWidget {
               Icon(AppIcons.chart, size: 18, color: AppColors.primaryDeep),
               const SizedBox(width: 8),
               Expanded(
-                // Two lines on a small phone, rather than cutting it short.
-                child: Row(
-                  children: [
-                    Text('Today',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.ink,
-                        )),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      // On a small phone, the minutes go under, whole.
-                      child: MetaRow(wrap: true, [
-                        MetaItem(AppIcons.timer, plural(pomodoros, 'Pomodoro')),
-                        MetaItem(AppIcons.clock, formatMinutes(minutes)),
-                      ], style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
-                      )),
-                    ),
+                // On a small phone the details go under, whole.
+                child: MetaRow(
+                  lead: 'Today',
+                  wrap: true,
+                  [
+                    MetaItem(AppIcons.timer, plural(pomodoros, 'Pomodoro')),
+                    MetaItem(AppIcons.clock, formatMinutes(minutes)),
                   ],
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
                 ),
               ),
               Text(
