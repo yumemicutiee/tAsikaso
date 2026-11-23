@@ -536,7 +536,7 @@ test("read-page: a page photo in, its text out, under its own daily limit", asyn
   assert.equal(third.status, 429);
   assert.equal(
     ((await third.json()) as ErrorBody).error.message,
-    "You've reached today's limit of 2 pages read by Claude. Try again tomorrow.",
+    "You've reached today's limit of 2 pages read by AI. Try again tomorrow.",
   );
   const you = ((await (await get("/v1/usage")).json()) as { you: Record<string, unknown> }).you;
   assert.equal(you.pagesRead, 2);
@@ -582,7 +582,7 @@ test("read-page errors speak of the page", async () => {
   });
   const res = await post("/v1/read-page", PHOTO);
   assert.equal(res.status, 422);
-  assert.equal(((await res.json()) as ErrorBody).error.message, "Claude couldn't work with this page.");
+  assert.equal(((await res.json()) as ErrorBody).error.message, "The AI couldn't work with this page.");
 });
 
 test("health shows the read effort with HEALTH_DETAILS", async () => {

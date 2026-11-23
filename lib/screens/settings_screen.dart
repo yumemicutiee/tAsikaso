@@ -267,7 +267,7 @@ class SettingsScreen extends StatelessWidget {
                 // Only meaningful with Smart Study on.
                 if (p.useAi)
                   _Switch(
-                    label: 'Read Photos with Claude',
+                    label: 'Read Photos with AI',
                     value: p.aiReading,
                     onChanged: (v) => prefs(p.copyWith(aiReading: v)),
                   ),
@@ -285,10 +285,10 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ]),
               _Note(StudyAi.hasServer
-                  ? '${p.useAi && p.aiReading ? 'Claude reads the text from '
+                  ? '${p.useAi && p.aiReading ? 'AI reads the text from '
                       'your scanned pages, handwriting too, then makes clean '
                       'notes, key concepts, flashcards and quizzes.' : 'When '
-                      'you save a scan, your study server asks Claude for '
+                      'you save a scan, your study server asks AI for '
                       'clean notes, key concepts, flashcards and a quiz.'} '
                       '$kSmartStudyPrivacy Needs internet.'
                   : 'Run the study server from the app\'s server folder '
@@ -995,11 +995,11 @@ class _AccountUsageState extends State<_AccountUsage> {
       future: _account,
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
-          return const _Note("Loading today's use of Claude…");
+          return const _Note("Loading today's use of AI…");
         }
         final a = snap.data;
         if (a == null) {
-          return const _Note("Today's use of Claude couldn't be loaded. "
+          return const _Note("Today's use of AI couldn't be loaded. "
               'Check your internet connection.');
         }
         final who = a.isPlus
@@ -1008,7 +1008,7 @@ class _AccountUsageState extends State<_AccountUsage> {
                 ? 'Your account: no account yet. Continue with Google '
                     '(Profile → Backup & Sync) for more each day.'
                 : 'Your account: signed in with Google.';
-        return _Note('$who Today with Claude: '
+        return _Note('$who Today with AI: '
             '${_use(a.pagesRead, 'page read', 'pages read')}, '
             '${_use(a.studyRequests, 'Smart Study request', 'Smart Study requests')}, '
             '${_use(a.answerChecks, 'answer check', 'answer checks')}.');

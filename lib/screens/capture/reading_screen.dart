@@ -225,8 +225,8 @@ class _ReadingScreenState extends State<ReadingScreen>
         ? (_count == 1 ? 'The page was' : 'The pages were')
         : '$_claudeFailed of $_count pages were';
     final how = _readsOnPhone
-        ? '$which read on your phone instead of by Claude.'
-        : "$which not read: Claude couldn't read ${_count == 1 ? 'it' : 'them'}.";
+        ? '$which read on your phone instead of by AI.'
+        : "$which not read: the AI couldn't read ${_count == 1 ? 'it' : 'them'}.";
     return _claudeProblem == null ? how : '$how $_claudeProblem';
   }
 
@@ -251,7 +251,7 @@ class _ReadingScreenState extends State<ReadingScreen>
     final title = _failed
         ? "Couldn't read the pages"
         : _waitingForClaude
-            ? 'Claude is reading your notes…'
+            ? 'AI is reading your notes…'
             : _readsText
                 ? 'Reading your notes…'
                 : 'Getting your pages ready…';
@@ -267,7 +267,7 @@ class _ReadingScreenState extends State<ReadingScreen>
     final footnote = words > 0
         ? '${plural(words, 'word')} found so far'
         : _byClaude
-            ? 'Claude reads your handwriting from the photos.'
+            ? 'AI reads your handwriting from the photos.'
             : 'Read on your phone. Nothing is uploaded.';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(

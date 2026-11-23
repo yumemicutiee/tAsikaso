@@ -823,7 +823,7 @@ void main() {
                 'error': {
                   'code': 'daily_limit',
                   'message': "You've reached today's limit of 100 pages read "
-                      'by Claude. Try again tomorrow.',
+                      'by AI. Try again tomorrow.',
                 },
               }),
               429,
@@ -832,7 +832,7 @@ void main() {
       expect(reads(), hasLength(1),
           reason: 'after a daily limit the other pages are not sent');
       expect(
-          find.textContaining('The pages were read on your phone instead of by Claude. '
+          find.textContaining('The pages were read on your phone instead of by AI. '
               "You've reached today's limit of 100 pages"),
           findsOneWidget);
       await save(tester);
