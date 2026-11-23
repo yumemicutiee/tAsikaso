@@ -14,6 +14,7 @@ import 'package:study_app/screens/analysis_screen.dart';
 import 'package:study_app/screens/backup_screen.dart';
 import 'package:study_app/screens/flashcards/set_screen.dart';
 import 'package:study_app/screens/note_viewer_screen.dart';
+import 'package:study_app/screens/checkout_screen.dart';
 import 'package:study_app/screens/plans_screen.dart';
 import 'package:study_app/services/drive_store.dart';
 import 'package:study_app/services/drive_sync.dart';
@@ -232,6 +233,37 @@ void main() {
   });
 
   group('Free plan vs tAsikaso+ on screen', () {
+    testWidgets('a declined test card starts nothing', (tester) async {
+      usePhoneSize(tester);
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => openCheckout(context, PlusPlan.monthly),
+            child: const Text('Buy'),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('Buy'));
+      await tester.pumpAndSettle();
+      await payWithCard(tester, '4000 0000 0000 0002', amount: '₱49.00');
+      expect(find.text('Payment Declined'), findsWidgets);
+      expect(store.isPlus, isFalse);
+
+      // A wrong card number is caught before paying.
+      await tester.tap(find.text('Try Another Way'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Credit or Debit Card'));
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, 'Name on card'), 'Budi');
+      await tester.enterText(find.widgetWithText(TextField, 'Card number'), '4242424242424241');
+      await tester.enterText(find.widgetWithText(TextField, 'Expiry'), '0899');
+      await tester.enterText(find.widgetWithText(TextField, 'CVC'), '123');
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining("doesn't look right"), findsOneWidget);
+    });
+
     testWidgets('a tester starts, switches and ends a plan', (tester) async {
       usePhoneSize(tester);
       await tester.pumpWidget(const MaterialApp(home: PlansScreen()));
@@ -250,6 +282,14 @@ void main() {
       await show('Start Semester Plan');
       await tester.tap(find.text('Start Semester Plan'));
       await tester.pumpAndSettle();
+      // The pretend checkout: a card.
+      expect(find.byType(CheckoutScreen), findsOneWidget);
+      expect(store.isPlus, isFalse);
+      await payWithCard(tester, '4242 4242 4242 4242', amount: '₱199.00');
+      expect(find.text('Payment Successful'), findsOneWidget);
+      expect(find.text('Visa •••• 4242'), findsOneWidget);
+      await tester.tap(find.text('Start Using tAsikaso+'));
+      await tester.pumpAndSettle();
       expect(store.plan, PlusPlan.semester);
       expect(find.text('This Is Your Plan'), findsOneWidget);
       expect(find.text('Current'), findsOneWidget);
@@ -259,6 +299,20 @@ void main() {
       await tester.pump();
       await show('Switch to Yearly');
       await tester.tap(find.text('Switch to Yearly'));
+      await tester.pumpAndSettle();
+      // GCash this time: number, code, pay.
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '9171234567');
+      await tester.tap(find.text('Send Code'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.tap(find.text('Verify'));
+      await tester.pumpAndSettle();
+      expect(find.text('GCash +63 9•• ••• 4567'), findsOneWidget);
+      await tester.tap(find.text('Pay ₱349.00'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start Using tAsikaso+'));
       await tester.pumpAndSettle();
       expect(store.plan, PlusPlan.yearly);
       expect(find.textContaining('Switched to tAsikaso+ Yearly'), findsOneWidget);
@@ -446,4 +500,22 @@ void main() {
       expect(drive.byName.keys, contains('profile__photo.jpg'));
     });
   });
+}
+
+/// Goes through the test checkout with a card, from its first step to the
+/// result (successful or declined).
+Future<void> payWithCard(WidgetTester tester, String number,
+    {required String amount}) async {
+  await tester.tap(find.text('Credit or Debit Card'));
+  await tester.pump();
+  await tester.tap(find.text('Continue'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.widgetWithText(TextField, 'Name on card'), 'Budi Santoso');
+  await tester.enterText(find.widgetWithText(TextField, 'Card number'), number);
+  await tester.enterText(find.widgetWithText(TextField, 'Expiry'), '0899');
+  await tester.enterText(find.widgetWithText(TextField, 'CVC'), '123');
+  await tester.tap(find.text('Continue'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Pay $amount'));
+  await tester.pumpAndSettle();
 }

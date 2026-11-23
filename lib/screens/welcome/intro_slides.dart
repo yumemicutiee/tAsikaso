@@ -179,10 +179,9 @@ class _IntroSlidesState extends State<IntroSlides> {
                           Text(_last ? 'Get Started' : 'Next',
                               style: const TextStyle(
                                   fontSize: 15, fontWeight: FontWeight.w700)),
-                          if (!_last) ...[
-                            const SizedBox(width: 8),
-                            const Icon(AppIcons.next, size: 18),
-                          ],
+                          const SizedBox(width: 8),
+                          Icon(_last ? AppIcons.doneCircle : AppIcons.nextCircle,
+                              size: 20),
                         ],
                       ),
                     ),

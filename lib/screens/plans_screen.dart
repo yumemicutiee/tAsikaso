@@ -11,6 +11,7 @@ import '../theme/brand.dart';
 import '../utils/format.dart';
 import '../widgets/app_header.dart';
 import '../widgets/dialogs.dart';
+import 'checkout_screen.dart';
 
 Future<void> openPlans(BuildContext context) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const PlansScreen()),
@@ -135,14 +136,16 @@ class _PlansScreenState extends State<PlansScreen> {
       ..showSnackBar(SnackBar(content: Text(text), showCloseIcon: true));
   }
 
-  void _start() {
+  Future<void> _start() async {
     if (!kTestPurchases) {
       _toast('Payments for $kPlusName are coming soon. Thanks for your '
           'interest!');
       return;
     }
     final switching = _store.isPlus;
-    _store.startPlan(_picked);
+    // The pretend checkout (GCash or a card) starts the plan when "paid".
+    final paid = await openCheckout(context, _picked, switching: switching);
+    if (!paid || !mounted || _store.subscription == null) return;
     final ends = formatNoteDate(_store.subscription!.endsAt!);
     _toast(switching
         ? 'Switched to $kPlusName ${_picked.title}, until $ends.'
@@ -237,7 +240,8 @@ class _PlansScreenState extends State<PlansScreen> {
               const SizedBox(height: 10),
               Text(
                 kTestPurchases
-                    ? 'No payment is taken. ${_picked.title} runs until '
+                    ? 'Test checkout with GCash or a card: no money is '
+                        'taken. ${_picked.title} runs until '
                         '${formatNoteDate(_picked.endFrom(clock.now()))}; '
                         'switch plans or go back to Free anytime.'
                     : 'Free for 7 days, then ${_picked.price} every '
@@ -310,9 +314,9 @@ class _TestModeNote extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Test mode: payments aren’t connected yet, so every plan is '
-              'free to try. Start one, switch between Monthly, Semester and '
-              'Yearly, or go back to Free whenever you like.',
+              'Test mode: payments aren’t connected yet. The checkout '
+              '(GCash or a card) is pretend and no money is taken, so try '
+              'any plan, switch between them, or go back to Free.',
               style: TextStyle(fontSize: 11.5, height: 1.4, color: AppColors.ink),
             ),
           ),

@@ -45,6 +45,14 @@ class AppIcons {
   static const IconData again = IconData(0xe096, fontFamily: _light); // arrowsCounterClockwise
   static const IconData photo = IconData(0xe2ca, fontFamily: _light); // image
   static const IconData next = IconData(0xe06c, fontFamily: _light); // arrowRight
+  /// The intro slides' Next and Get Started buttons.
+  static const IconData nextCircle = IconData(0xe122, fontFamily: _light); // caretCircleRight
+  static const IconData doneCircle = IconData(0xe184, fontFamily: _light); // checkCircle
+  // Checkout (test payments)
+  static const IconData wallet = IconData(0xe68a, fontFamily: _light); // wallet
+  static const IconData card = IconData(0xe1d2, fontFamily: _light); // creditCard
+  static const IconData phone = IconData(0xe1e0, fontFamily: _light); // deviceMobile
+  static const IconData failed = IconData(0xe4f8, fontFamily: _light); // xCircle
   static const IconData chevronLeft = IconData(0xe138, fontFamily: _light); // caretLeft
   static const IconData copy = IconData(0xe1ca, fontFamily: _light); // copy
   static const IconData calendar = IconData(0xe10a, fontFamily: _light); // calendarBlank
