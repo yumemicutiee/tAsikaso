@@ -96,6 +96,19 @@ void _writeProguardRules(File file) {
 -dontwarn com.google.mlkit.vision.text.japanese.**
 -dontwarn com.google.mlkit.vision.text.korean.**
 ''';
+  // ML Kit finds its parts (the text recogniser, its model loader) by name
+  // at run time. R8 renamed or removed them in release builds, so reading
+  // text failed on phones ("Object.getClass() on a null object reference")
+  // while debug builds worked. Checked by .github/workflows/release-check.yml.
+  const mlkit = '''
+
+# ML Kit looks its components up by name: keep them whole in release builds.
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_** { *; }
+-keep class com.google_mlkit_text_recognition.** { *; }
+-keep class com.google_mlkit_document_scanner.** { *; }
+-keep class com.google_mlkit_commons.** { *; }
+''';
   // ONNX Runtime (auto-crop's page model) is called from native code by name.
   const onnx = '''
 
@@ -106,6 +119,10 @@ void _writeProguardRules(File file) {
   var changed = false;
   if (!text.contains('mlkit.vision.text.chinese')) {
     text = '$text$rules';
+    changed = true;
+  }
+  if (!text.contains('-keep class com.google.mlkit.')) {
+    text = '$text$mlkit';
     changed = true;
   }
   if (!text.contains('ai.onnxruntime')) {
