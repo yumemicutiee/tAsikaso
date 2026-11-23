@@ -769,7 +769,7 @@ const daysIn = (ym) => new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).g
  * Sign-ups per day and per month. From byDay (0004_admin_history_filters.sql) when
  * the server sends it; otherwise only the last 30 days and 12 months.
  */
-function history() {
+function signups() {
   const o = dash.overview;
   if (o.byDay) {
     const months = {};
@@ -785,7 +785,7 @@ function history() {
 /** The period [off] steps from now: its points (null = still to come), labels and name. */
 function windowAt(off) {
   const today = dash.overview.today;
-  const h = history();
+  const h = signups();
   const fmt = (day, opts) => new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`)).replace(",", "").replace(/\bSept\b/, "Sep");
   if (period === "year") {
     const year = +today.slice(0, 4) + off;
@@ -813,7 +813,7 @@ function windowAt(off) {
   return { items, start: mon, end: sun, name };
 }
 
-const canGoBack = () => windowAt(offset - 1).end >= history().first;
+const canGoBack = () => windowAt(offset - 1).end >= signups().first;
 const canGoForward = () => offset < 0;
 
 /** The chart card's number: new users in the period shown, and the change from the one before. */
@@ -1059,8 +1059,18 @@ async function loadUsers() {
   try {
     res = await api(`/v1/admin/users?${params}`);
   } catch (e) {
-    const hint = filtersOn() ? " Filters need supabase/migrations/0004_admin_history_filters.sql to be run once." : "";
-    $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error" }, `Couldn't load users: ${e.message}.${hint}`)));
+    // With a filter on, the usual cause is the database step that adds the
+    // filters (0004) not having been run yet: the study server then only
+    // says it "can't check your account", which doesn't help.
+    if (filtersOn()) {
+      const clear = el("button", { type: "button", class: "linkbtn" }, "Clear filters");
+      clear.addEventListener("click", () => $("fClear").click());
+      $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error", style: "white-space:normal" },
+        "Filters aren't set up in the database yet. Run supabase/migrations/0004_admin_history_filters.sql once in Supabase (SQL Editor → New query → paste → Run), then try again. ",
+        clear, " to see everyone meanwhile.")));
+    } else {
+      $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error", style: "white-space:normal" }, `Couldn't load users: ${e.message}`)));
+    }
     return;
   }
   // A newer search or filter is on its way.
@@ -1128,7 +1138,9 @@ $("searchClear").addEventListener("click", () => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "/" && !/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName ?? "")) {
     e.preventDefault();
-    if (document.body.dataset.view !== "users") location.hash = "#users";
+    // Switch to Users first (at once, not on the next hashchange), so the box
+    // is showing when it takes the focus.
+    if (document.body.dataset.view !== "users") { history.replaceState(null, "", "#users"); markNav(); }
     $("search").focus();
   }
 });

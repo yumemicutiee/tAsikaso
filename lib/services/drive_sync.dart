@@ -143,7 +143,13 @@ class DriveSync extends ChangeNotifier {
         _onAuthEvent,
         onError: (Object e) => debugPrint('Google sign-in: $e'),
       );
-      final attempt = GoogleSignIn.instance.attemptLightweightAuthentication();
+      // On the web the quiet sign-in is Google's One Tap: for someone who
+      // never signed in with Google here it only pops up a prompt (or logs
+      // "accounts list is empty" errors), so it is tried only for a Google
+      // user coming back. Phones keep trying it every time (it is silent).
+      final attempt = !kIsWeb || _email != null
+          ? GoogleSignIn.instance.attemptLightweightAuthentication()
+          : null;
       final account = attempt == null ? null : await attempt;
       if (account != null) {
         await _signedIn(account.email, account);
