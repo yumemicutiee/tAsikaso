@@ -1,0 +1,18 @@
+# Temporary (QA): flutter analyze and flutter test for a fix before merging.
+name: QA flutter check
+on:
+  push:
+    branches: [qa/flutter-check]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test --reporter failures-only
