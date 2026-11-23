@@ -16,6 +16,7 @@ import 'package:study_app/data/storage/local_storage_idb.dart';
 import 'package:study_app/data/storage/local_storage_memory.dart';
 import 'package:study_app/models/models.dart';
 import 'package:study_app/screens/analysis_screen.dart';
+import 'package:study_app/screens/home_shell.dart';
 import 'package:study_app/screens/backup_screen.dart';
 import 'package:study_app/screens/capture/capture_screen.dart';
 import 'package:study_app/screens/capture/captured_page.dart';
@@ -982,25 +983,27 @@ Meeting at 10:30 today
       expect(find.text("1 photo couldn't be opened."), findsOneWidget);
     });
 
-    testWidgets('Notifications & Reminders opens Settings at that section',
-        (tester) async {
-      usePhoneSize(tester);
+    /// Settings opened at its notifications section (Profile's own row for
+    /// it is gone: it's all in Settings).
+    Future<void> openNotificationSettings(WidgetTester tester) async {
       await tester.pumpWidget(const StudyApp());
-      await tester.tap(find.byIcon(AppTab.profile.icon));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Notifications & Reminders'));
+      Navigator.of(tester.element(find.byType(HomeShell))).push(MaterialPageRoute<void>(
+          builder: (_) =>
+              const SettingsScreen(section: SettingsSection.notifications)));
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('Settings opens at the notifications section', (tester) async {
+      usePhoneSize(tester);
+      await openNotificationSettings(tester);
       expect(find.text('When Time Is Up').hitTestable(), findsOneWidget);
     });
 
     testWidgets('When Time Is Up offers the four choices and keeps the pick',
         (tester) async {
       usePhoneSize(tester);
-      await tester.pumpWidget(const StudyApp());
-      await tester.tap(find.byIcon(AppTab.profile.icon));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Notifications & Reminders'));
-      await tester.pumpAndSettle();
+      await openNotificationSettings(tester);
       // The default: the alarm sound and vibration.
       expect(find.text('Alarm Clock and Vibration'), findsOneWidget);
       await tester.tap(find.text('When Time Is Up'));

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../data/app_store.dart';
 import '../data/plans.dart';
+import '../services/drive_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -62,6 +63,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _cardNumber = TextEditingController();
   final _expiry = TextEditingController();
   final _cvc = TextEditingController();
+
+  /// Where the (pretend) receipt goes: the Google account's email when
+  /// signed in, else what the user types.
+  final _email = TextEditingController(
+      text: (DriveSync.instance.email ?? '').contains('@')
+          ? DriveSync.instance.email
+          : '');
   String? _error;
 
   /// Filled in when the payment goes through.
@@ -75,7 +83,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   void dispose() {
-    for (final c in [_mobile, _code, _cardName, _cardNumber, _expiry, _cvc]) {
+    for (final c in [_mobile, _code, _cardName, _cardNumber, _expiry, _cvc, _email]) {
       c.dispose();
     }
     super.dispose();
@@ -190,7 +198,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return '$_brand •••• ${d.length >= 4 ? d.substring(d.length - 4) : ''}';
   }
 
+  String get _receiptEmail => _email.text.trim();
+
   Future<void> _pay() async {
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(_receiptEmail)) {
+      setState(() => _error = 'Enter the email to send your receipt to.');
+      return;
+    }
+    FocusScope.of(context).unfocus();
     _go(_Step.processing);
     await Future<void>.delayed(CheckoutScreen.processing);
     if (!mounted) return;
@@ -489,6 +504,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         ),
         const SizedBox(height: 14),
+        TextField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          decoration: InputDecoration(
+            labelText: 'Email for your receipt',
+            hintText: 'you@example.com',
+            prefixIcon: Icon(AppIcons.email, size: 20, color: AppColors.textSecondary),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        _errorText(),
+        const SizedBox(height: 14),
         Text(
           'Your plan renews every ${_plan.per} at ${_plan.price} until you '
           'cancel. Test mode: no money is taken.',
@@ -551,7 +579,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
       ),
       const SizedBox(height: 12),
-      Text('Test payment: no money was taken.',
+      _Card(
+        child: Row(
+          children: [
+            Icon(AppIcons.email, size: 22, color: AppColors.primaryDeep),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Receipt sent', style: AppText.itemTitle),
+                  const SizedBox(height: 2),
+                  Text('A copy of this receipt was sent to $_receiptEmail.',
+                      style: AppText.statLabel.copyWith(height: 1.35)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Text('Test payment: no money was taken and no email was really sent.',
           textAlign: TextAlign.center,
           style: AppText.statLabel.copyWith(fontSize: 11.5)),
     ], bottom: [

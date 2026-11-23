@@ -14,7 +14,6 @@ import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../theme/brand.dart';
 import '../widgets/app_header.dart';
-import '../widgets/app_logo.dart';
 import '../widgets/color_picker_sheet.dart';
 import '../widgets/common.dart' show SheetTitle;
 import '../widgets/dialogs.dart';
@@ -334,17 +333,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const _TapRow(label: 'Version', value: kAppVersion),
               ]),
-              const SizedBox(height: 28),
-              // The logo, in the colors picked above.
-              Center(
-                child: Column(
-                  children: [
-                    const AppLogo(size: 56),
-                    const SizedBox(height: 8),
-                    Text(kAppName, style: AppText.sectionTitle),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 16),
             ],
           );
         },

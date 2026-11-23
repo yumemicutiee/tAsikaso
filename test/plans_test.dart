@@ -310,8 +310,15 @@ void main() {
       await tester.tap(find.text('Verify'));
       await tester.pumpAndSettle();
       expect(find.text('GCash +63 9•• ••• 4567'), findsOneWidget);
+      // The receipt needs an email (no Google account here).
+      await tester.tap(find.text('Pay ₱349.00'));
+      await tester.pump();
+      expect(find.textContaining('email to send your receipt'), findsOneWidget);
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Email for your receipt'), 'budi@example.com');
       await tester.tap(find.text('Pay ₱349.00'));
       await tester.pumpAndSettle();
+      expect(find.textContaining('sent to budi@example.com'), findsOneWidget);
       await tester.tap(find.text('Start Using tAsikaso+'));
       await tester.pumpAndSettle();
       expect(store.plan, PlusPlan.yearly);
@@ -516,6 +523,8 @@ Future<void> payWithCard(WidgetTester tester, String number,
   await tester.enterText(find.widgetWithText(TextField, 'CVC'), '123');
   await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
+  await tester.enterText(
+      find.widgetWithText(TextField, 'Email for your receipt'), 'budi@example.com');
   await tester.tap(find.text('Pay $amount'));
   await tester.pumpAndSettle();
 }

@@ -52,6 +52,7 @@ class AppIcons {
   static const IconData wallet = IconData(0xe68a, fontFamily: _light); // wallet
   static const IconData card = IconData(0xe1d2, fontFamily: _light); // creditCard
   static const IconData phone = IconData(0xe1e0, fontFamily: _light); // deviceMobile
+  static const IconData email = IconData(0xe214, fontFamily: _light); // envelope
   static const IconData failed = IconData(0xe4f8, fontFamily: _light); // xCircle
   static const IconData chevronLeft = IconData(0xe138, fontFamily: _light); // caretLeft
   static const IconData copy = IconData(0xe1ca, fontFamily: _light); // copy
