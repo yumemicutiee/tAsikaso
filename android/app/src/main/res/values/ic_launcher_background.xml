@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- White behind the logo: Android's adaptive icons can't be transparent.
+         The letters are Sky, the default palette's fill (Palette.navy). -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
