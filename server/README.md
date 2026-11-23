@@ -188,7 +188,8 @@ Errors look like `{"error": {"code": "…", "message": "…", "requestId": "…"
   can't make out, a short `[Diagram: …]` line for drawings; `""` for a blank
   page. Bodies up to 8 MB on this route only. Counted against
   `DAILY_READ_LIMIT`, not `DAILY_LIMIT`. About $0.02–0.04 a page at
-  `medium` (a photo is ~1,600 input tokens). The photo is never logged.
+  `medium`: live on 23 Nov 2026 a handwritten page took 3.7 s, ~4,700
+  tokens in and ~170 out, $0.022. The photo is never logged.
 - `GET /v1/usage` (token needed) → today's numbers:
   `{day, timeZone, resetsInSeconds, requests, byRoute, refused, tokens,
   spentUsd, budgetUsd, remainingUsd, you: {address, study, studyLimit, checks, checkLimit,

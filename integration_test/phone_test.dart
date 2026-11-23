@@ -501,6 +501,10 @@ void main() {
         StudyAi.makeStudyKit(text: notes),
         throwsA(isA<StudyAiException>().having((e) => e.code, 'code', 'offline')));
 
+    // Back to the real server.
+    useServer(url, 'emulator-token');
+    store.updatePrefs(store.prefs.copyWith(aiReading: true));
+
     // A page photo read by Claude (the stand-in answers only if it came as
     // an image).
     final printed = notesPhoto(['Mitochondria make ATP']);
@@ -512,8 +516,6 @@ void main() {
     // → lines found on the phone (ML Kit) → the photo read by Claude →
     // typed up by the server → saved as notes → Make Flashcards → cards
     // from the server.
-    useServer(url, 'emulator-token');
-    store.updatePrefs(store.prefs.copyWith(aiReading: true));
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/notes_for_ai.jpg');
     await file.writeAsBytes(notesPhoto([

@@ -64,11 +64,11 @@ export const MAX_TOKENS = {
 } as const;
 
 /**
- * Roughly what one page photo costs in input tokens (Claude scales a photo
- * to about 1.15 megapixels, ~1,600 tokens). Used only to estimate what an
- * abandoned call cost.
+ * Roughly what one page photo costs in input tokens: a 1500 × 2000 page
+ * came to ~4,700 tokens with the prompt on Opus 5.5 (live, 23 Nov 2026).
+ * Used only to estimate what an abandoned call cost.
  */
-const EST_IMAGE_TOKENS = 1_600;
+const EST_IMAGE_TOKENS = 4_500;
 
 /** Rough output speed, used only to estimate what an abandoned call cost. */
 const EST_OUTPUT_TOKENS_PER_SECOND = 50;
