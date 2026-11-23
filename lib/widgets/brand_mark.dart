@@ -74,9 +74,11 @@ class BrandMark extends StatelessWidget {
       height: 1,
       color: ink,
     );
+    // Everything on one centre line: the name (with its plus), the bar and
+    // the tagline (and, on the welcome screen, "Welcome to" above).
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // A logo: the same size whatever the phone's text size.
         MediaQuery.withNoTextScaling(
@@ -116,13 +118,13 @@ class BrandMark extends StatelessWidget {
           ),
         ),
         SizedBox(
-          width: 30 + barWidth,
+          width: barWidth,
           height: barOffset - wordHeight + 20,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                left: 30,
+                left: 0,
                 top: barOffset - wordHeight,
                 width: barWidth,
                 height: 4,
@@ -154,8 +156,8 @@ class BrandMark extends StatelessWidget {
               ),
               if (tagline > 0)
                 Positioned(
-                  left: 30,
-                  width: barWidth,
+                  left: -40,
+                  right: -40,
                   top: barOffset - wordHeight - 9,
                   child: Opacity(
                     opacity: tagline.clamp(0.0, 1.0),

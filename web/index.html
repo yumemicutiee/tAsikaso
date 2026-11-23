@@ -52,8 +52,9 @@
     }
     #loading.done { opacity: 0; pointer-events: none; }
     /* Placed as the app places it (lib/widgets/brand_mark.dart): the top
-       of the name 25px above the middle, the bar 26px under the name. */
-    #loading .mark { position: absolute; left: 50%; top: calc(50% - 25px); transform: translateX(-50%); }
+       of the name 25px above the middle, the bar 26px under the name, all
+       centred. */
+    #loading .mark { position: absolute; left: 50%; top: calc(50% - 25px); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
     #loading .word {
       display: flex; align-items: flex-start; height: 50px;
       font: 800 50px/1 "Plus Jakarta Sans", system-ui, sans-serif;
@@ -63,7 +64,7 @@
     #loading .word .cap { color: #4F80BF; }
     #loading .plus { width: 26px; height: 26px; margin-right: 4px; animation: pop .3s cubic-bezier(.2,.8,.2,1) both; }
     #loading .bar {
-      position: relative; margin: 26px 0 0 30px; width: 206px; height: 4px;
+      position: relative; margin-top: 26px; width: 206px; height: 4px;
       border-radius: 2px; overflow: hidden; background: #E7F2FD;
       animation: fade .25s .55s both;
     }
