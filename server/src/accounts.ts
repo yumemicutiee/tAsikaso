@@ -14,6 +14,8 @@ export interface Account {
   id: string;
   /** Signed in without an account ("Continue without an account"). */
   anonymous: boolean;
+  /** The account's email, as the token says (Google accounts); used for the admin check. */
+  email?: string;
 }
 
 /** Which limits apply. */
@@ -21,6 +23,9 @@ export type Tier = "anonymous" | "free" | "plus";
 
 export type PlanName = "monthly" | "semester" | "yearly";
 export const PLAN_NAMES: readonly PlanName[] = ["monthly", "semester", "yearly"];
+
+/** What one period of each plan costs, in pesos, as in the app (lib/data/plans.dart). */
+export const PLAN_PRICE_PHP: Record<PlanName, number> = { monthly: 49, semester: 199, yearly: 349 };
 
 /** How long one period of each plan lasts, as in the app (lib/data/plans.dart). */
 export const PLAN_MONTHS: Record<PlanName, number> = { monthly: 1, semester: 6, yearly: 12 };
@@ -129,7 +134,10 @@ export function supabaseVerifier(
         throw new BadTokenError("the token names no user");
       }
       if (payload.role !== "authenticated") throw new BadTokenError("not a user's token");
-      return { id, anonymous: payload.is_anonymous === true };
+      const email = typeof payload.email === "string" && payload.email.includes("@")
+        ? payload.email.trim().toLowerCase()
+        : undefined;
+      return { id, anonymous: payload.is_anonymous === true, ...(email ? { email } : {}) };
     },
   };
 }
@@ -145,6 +153,30 @@ export interface AccountStore {
   deleteUser(userId: string): Promise<void>;
 }
 
+/** A crash report from the app, as stored (see 0003_admin.sql). */
+export interface StoredCrash {
+  message: string;
+  stack?: string;
+  source?: string;
+  version: string;
+  platform: string;
+}
+
+/**
+ * What the admin page reads, and the rows behind it (0003_admin.sql). Each
+ * read returns the admin_* function's JSON as it is.
+ */
+export interface AdminStore {
+  overview(timeZone: string): Promise<unknown>;
+  users(query: string, limit: number, offset: number): Promise<unknown>;
+  payments(timeZone: string, limit: number): Promise<unknown>;
+  crashes(days: number): Promise<unknown>;
+  saveCrash(userId: string | null, crash: StoredCrash): Promise<void>;
+  pruneCrashes(): Promise<number>;
+  /** A pretend payment for the demo (no money moved), when a plan is switched on for free. */
+  recordDemoPayment(userId: string, plan: PlanName): Promise<void>;
+}
+
 type Fetch = typeof fetch;
 
 /**
@@ -152,7 +184,7 @@ type Fetch = typeof fetch;
  * project's secret key, which bypasses row-level security. Never sent to
  * the app.
  */
-export class SupabaseStore implements AccountStore {
+export class SupabaseStore implements AccountStore, AdminStore {
   private readonly base: string;
   private readonly headers: Record<string, string>;
 
@@ -254,6 +286,59 @@ export class SupabaseStore implements AccountStore {
 
   async deleteUser(userId: string): Promise<void> {
     await this.call("DELETE", `/auth/v1/admin/users/${encodeURIComponent(userId)}`);
+  }
+
+  overview(timeZone: string) {
+    return this.call("POST", "/rest/v1/rpc/admin_overview", { p_tz: timeZone });
+  }
+
+  users(query: string, limit: number, offset: number) {
+    return this.call("POST", "/rest/v1/rpc/admin_users", { p_query: query, p_limit: limit, p_offset: offset });
+  }
+
+  payments(timeZone: string, limit: number) {
+    return this.call("POST", "/rest/v1/rpc/admin_payments", { p_tz: timeZone, p_limit: limit });
+  }
+
+  crashes(days: number) {
+    return this.call("POST", "/rest/v1/rpc/admin_crashes", { p_days: days });
+  }
+
+  async saveCrash(userId: string | null, crash: StoredCrash): Promise<void> {
+    await this.call(
+      "POST",
+      "/rest/v1/crash_reports",
+      {
+        user_id: userId,
+        message: crash.message,
+        stack: crash.stack ?? null,
+        source: crash.source ?? null,
+        version: crash.version,
+        platform: crash.platform,
+      },
+      { Prefer: "return=minimal" },
+    );
+  }
+
+  async pruneCrashes(): Promise<number> {
+    const n = await this.call("POST", "/rest/v1/rpc/prune_crash_reports", {});
+    return typeof n === "number" ? n : 0;
+  }
+
+  async recordDemoPayment(userId: string, plan: PlanName): Promise<void> {
+    await this.call(
+      "POST",
+      "/rest/v1/payments",
+      {
+        user_id: userId,
+        provider: "demo",
+        plan,
+        amount_php: PLAN_PRICE_PHP[plan],
+        status: "paid",
+        demo: true,
+      },
+      { Prefer: "return=minimal" },
+    );
   }
 }
 

@@ -30,6 +30,8 @@ if (!config.appToken) {
   console.warn("APP_TOKEN is not set: anyone who finds this server can use it.");
 }
 
+const store = config.supabaseUrl ? new SupabaseStore(config.supabaseUrl, config.supabaseSecretKey) : undefined;
+
 const app = createApp({
   appToken: config.appToken,
   rateLimit: config.rateLimit,
@@ -42,13 +44,16 @@ const app = createApp({
   healthDetails: config.healthDetails,
   allowAppToken: config.allowAppToken,
   testPurchases: config.testPurchases,
-  accounts: config.supabaseUrl
+  accounts: store
     ? {
         verifier: supabaseVerifier(config.supabaseUrl),
-        store: new SupabaseStore(config.supabaseUrl, config.supabaseSecretKey),
+        store,
         limits: config.tierLimits,
       }
     : undefined,
+  admin: store ? { emails: config.adminEmails, store } : undefined,
+  storeCrashReports: config.storeCrashReports,
+  demoPayments: config.demoPayments,
 });
 
 const server = app.listen(config.port, () => {
@@ -65,6 +70,9 @@ const server = app.listen(config.port, () => {
     allowAppToken: config.allowAppToken,
     testPurchases: config.testPurchases,
     tierLimits: config.tierLimits,
+    adminPage: config.adminEmails.length > 0 ? `on (${config.adminEmails.length} admin)` : "off",
+    storeCrashReports: config.storeCrashReports,
+    demoPayments: config.demoPayments,
     dailyBudgetUsd: config.dailyBudgetUsd,
     timeZone: config.timeZone,
   });

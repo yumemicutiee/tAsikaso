@@ -115,6 +115,9 @@ than quietly switching a limit off.
 | `DAILY_BUDGET_USD` | `5` | Estimated Claude spend per day for the whole server, in US dollars. `0` = no cap. |
 | `DAY_TIME_ZONE` | `Asia/Manila` | Whose midnight starts a new day for the daily limits. |
 | `HEALTH_DETAILS` | off | `1` = `/health` also shows the model and effort. |
+| `ADMIN_EMAILS` | (none: admin page off) | Google accounts allowed into the admin page (`web/admin/`), separated by commas. Needs accounts (`SUPABASE_URL`) and `supabase/migrations/0003_admin.sql`. |
+| `STORE_CRASH_REPORTS` | off | `1` = also keep the app's crash reports in Supabase (`crash_reports`, 90 days) for the admin page. Update `web/privacy.html` before turning it on. |
+| `DEMO_PAYMENTS` | on | Switching a plan on for free (`POST /v1/plan/test`) also writes a pretend payment (`payments.demo = true`) for the admin page's demo. `0` = off. |
 
 ## What it costs, and the limits that protect the bill
 
@@ -190,6 +193,13 @@ Errors look like `{"error": {"code": "…", "message": "…", "requestId": "…"
   `DAILY_READ_LIMIT`, not `DAILY_LIMIT`. About $0.02–0.04 a page at
   `medium`: live on 23 Nov 2026 a handwritten page took 3.7 s, ~4,700
   tokens in and ~170 out, $0.022. The photo is never logged.
+- `GET /v1/admin/dashboard` (an admin's Supabase token: a Google account in
+  `ADMIN_EMAILS`) → `{admin, timeZone, crashReportsSaved, overview,
+  payments, crashes}`, read with the `admin_*` functions of
+  `0003_admin.sql`. Anyone else gets 403 `not_admin`; without
+  `ADMIN_EMAILS` the route doesn't exist (404).
+- `GET /v1/admin/users?q=&page=` (admin) → `{total, rows[], page,
+  pageSize}`: 25 users a page, newest first, searched by email, name or id.
 - `GET /v1/usage` (token needed) → today's numbers:
   `{day, timeZone, resetsInSeconds, requests, byRoute, refused, tokens,
   spentUsd, budgetUsd, remainingUsd, you: {address, study, studyLimit, checks, checkLimit,

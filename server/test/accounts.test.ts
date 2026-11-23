@@ -73,6 +73,13 @@ test("a Supabase token signed with the project's key names the user, anonymous o
     id: USER,
     anonymous: true,
   });
+  // The signed email (Google accounts), lower case, for the admin check.
+  assert.deepEqual(await verifier.verify(await token({ email: " Owner@Example.com " })), {
+    id: USER,
+    anonymous: false,
+    email: "owner@example.com",
+  });
+  assert.deepEqual(await verifier.verify(await token({ email: "" })), { id: USER, anonymous: false });
 });
 
 test("expired, foreign, forged or odd tokens are refused as bad tokens", async () => {

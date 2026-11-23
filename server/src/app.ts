@@ -28,6 +28,7 @@ import {
 import {
   type Account,
   type AccountStore,
+  type AdminStore,
   AccountsUnavailableError,
   addMonths,
   BadTokenError,
@@ -134,6 +135,16 @@ export interface AppOptions {
   allowAppToken?: boolean;
   /** POST /v1/plan/test may switch plans on for free. Default true. */
   testPurchases?: boolean;
+  /**
+   * The owner's admin page (needs accounts): the Google accounts allowed in,
+   * and where its data comes from. The /v1/admin routes exist only when at
+   * least one email is set.
+   */
+  admin?: { emails: string[]; store: AdminStore };
+  /** Keep crash reports in the admin store, not only in the log. Default false. */
+  storeCrashReports?: boolean;
+  /** A free plan switch-on also writes a pretend payment (demo). Default true. */
+  demoPayments?: boolean;
   generators?: Partial<Generators>;
   log?: Logger;
   /** For tests: the clock the daily limits use. */
@@ -180,6 +191,12 @@ export function createApp(options: AppOptions = {}) {
   const now = options.now ?? Date.now;
   const allowAppToken = options.allowAppToken ?? true;
   const testPurchases = options.testPurchases ?? true;
+  const timeZone = options.timeZone ?? DEFAULTS.timeZone;
+  // The admin store is used only with accounts on (it needs the secret key).
+  const reports = accounts ? options.admin?.store : undefined;
+  const adminEmails = new Set((options.admin?.emails ?? []).map((e) => e.trim().toLowerCase()).filter(Boolean));
+  const storeCrashReports = Boolean(reports) && (options.storeCrashReports ?? false);
+  const demoPayments = Boolean(reports) && (options.demoPayments ?? true);
 
   const app = express();
   app.disable("x-powered-by");
@@ -225,6 +242,52 @@ export function createApp(options: AppOptions = {}) {
   });
 
   app.use(authenticate(options.appToken ?? "", accounts?.verifier, allowAppToken));
+
+  // The owner's admin page (web/admin/): a Google account named in
+  // ADMIN_EMAILS. Its token is checked like any other; the email comes
+  // from the signed token, never from the request. Not rate limited per
+  // device: an admin page loads several of these at once.
+  if (reports && adminEmails.size > 0) {
+    const adminOf = (res: Response): Account => {
+      const auth = authOf(res);
+      if (auth.kind !== "user") {
+        throw new HttpError(401, "sign_in_required", "Sign in with Google to open the admin page.");
+      }
+      const { account } = auth;
+      if (account.anonymous || !account.email || !adminEmails.has(account.email)) {
+        throw new HttpError(403, "not_admin", "This Google account isn't an admin of tAsikaso.");
+      }
+      return account;
+    };
+
+    app.get("/v1/admin/dashboard", async (_req, res) => {
+      const account = adminOf(res);
+      const [overview, payments, crashes] = await Promise.all([
+        reports.overview(timeZone),
+        reports.payments(timeZone, 6),
+        reports.crashes(7),
+      ]);
+      res.setHeader("Cache-Control", "no-store");
+      res.json({
+        admin: { email: account.email },
+        timeZone,
+        crashReportsSaved: storeCrashReports,
+        overview,
+        payments,
+        crashes,
+      });
+    });
+
+    app.get("/v1/admin/users", async (req, res) => {
+      adminOf(res);
+      const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
+      const page = Math.min(Math.max(Number.parseInt(String(req.query.page ?? "1"), 10) || 1, 1), 10_000);
+      const pageSize = 25;
+      const result = (await reports.users(q, pageSize, (page - 1) * pageSize)) as Record<string, unknown> | null;
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ ...(result ?? { total: 0, rows: [] }), page, pageSize });
+    });
+  }
 
   app.get("/v1/usage", (req, res) => {
     const report = ledger.report(clientOf(req));
@@ -404,6 +467,14 @@ export function createApp(options: AppOptions = {}) {
           }
         : FREE_PLAN;
       const saved = await store.setPlan(account.id, plan);
+      if (name && demoPayments && reports) {
+        reports.recordDemoPayment(account.id, name).catch((e: unknown) =>
+          log("warn", "couldn't record a demo payment", {
+            requestId: ctxOf(res).id,
+            detail: e instanceof Error ? e.message : String(e),
+          }),
+        );
+      }
       res.json(describe(account, saved, await store.usage(account.id, ledger.today())));
     });
 
@@ -417,16 +488,32 @@ export function createApp(options: AppOptions = {}) {
     });
   }
 
-  // A crash report from the app: one log line, nothing stored. Behind the
+  // A crash report from the app: one log line, and with
+  // STORE_CRASH_REPORTS a row for the admin page (kept 90 days). Behind the
   // token and the per-client rate limit; doesn't count against the daily
   // study limits or the budget (Claude isn't called).
+  let prunedOn = "";
   app.post("/v1/crash", (req, res, next) => {
     const parsed = CrashReport.safeParse(req.body);
     if (!parsed.success) {
       next(new HttpError(400, "bad_request", "Not a crash report."));
       return;
     }
-    log("warn", "app crash", { requestId: ctxOf(res).id, ...parsed.data });
+    const ctx = ctxOf(res);
+    log("warn", "app crash", { requestId: ctx.id, ...parsed.data });
+    if (storeCrashReports && reports) {
+      const auth = authOf(res);
+      const userId = auth.kind === "user" ? auth.account.id : null;
+      const warn = (what: string) => (e: unknown) =>
+        log("warn", what, { requestId: ctx.id, detail: e instanceof Error ? e.message : String(e) });
+      reports.saveCrash(userId, parsed.data).catch(warn("couldn't store a crash report"));
+      // Old reports go once a day.
+      const today = ledger.today();
+      if (prunedOn !== today) {
+        prunedOn = today;
+        reports.pruneCrashes().catch(warn("couldn't prune crash reports"));
+      }
+    }
     res.status(204).end();
   });
 
