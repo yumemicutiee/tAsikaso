@@ -207,8 +207,8 @@ tasks those versions started with, unless they were used (a folder with
 notes or sets, a task with Pomodoros focused on it).
 
 Google sign-in on Android only works in an APK signed with the key whose
-SHA-1 is registered for the app's OAuth client, and while the OAuth consent
-screen is in Testing, only for the test users added there. The APK built by
+SHA-1 is registered for the app's OAuth client (the OAuth consent screen is
+"In production" since 24 Nov 2026, so any Google account can sign in). The APK built by
 GitHub Actions uses that key only when the `ANDROID_KEYSTORE_BASE64` and
 `ANDROID_KEYSTORE_PASSWORD` secrets are set; without them it is debug-signed
 and Google sign-in fails (Continue without an account still works).
@@ -395,7 +395,7 @@ server/                        the study server: Node.js + Claude (its own READM
 
 The roadmap to 1.0 and the open items are in `Incomplete_Features.md`
 (section 10). In short: robustness fixes, Smart Study live with a real
-API key, a real-phone run-through, Google sign-in out of Testing with a
+API key, a real-phone run-through, Google sign-in out of Testing (done) with a
 privacy policy, real payments, then launch.
 
 **Admin page:** planned, not built. Start from `ADMIN_PAGE_PLAN.txt`: what

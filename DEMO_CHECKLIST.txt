@@ -6,10 +6,10 @@ THE DAY BEFORE
 [ ] Install v0.8.0 on the demo phone:
     https://github.com/yumemicutiee/tAsikaso/releases/latest -> tAsikaso.apk
     (installs over older versions and keeps data).
-[ ] Google sign-in is still in "Testing" in Google Cloud: only listed test
-    users can sign in. Use YOUR account for the demo, or add classmates'
-    Gmail addresses: console.cloud.google.com -> APIs & Services -> OAuth
-    consent screen -> Test users (project 308120396420).
+[x] Google sign-in is published ("In production" since 24 Nov 2026): any
+    Google account can Continue with Google, no test-user list needed.
+    Google's screen says "continue to yumemicutiee.github.io" instead of
+    "tAsikaso" until brand verification (upload the logo after the demo).
 [ ] Charge the phone; allow notifications and "Alarms & reminders" for
     tAsikaso when asked (the Pomodoro alarm needs them).
 [ ] Have 2-3 pages of handwritten notes ready to scan.
@@ -49,7 +49,8 @@ IF SOMETHING GOES WRONG
 -----------------------
 - "Couldn't reach the study server": the server was asleep; wait a minute
   and try again (see "15 minutes before").
-- Google sign-in fails for a classmate: they aren't a test user (see above).
+- Google sign-in fails: check the phone's internet and the date/time; sign-in
+  is open to every Google account.
 - A page reads badly offline: Claude needs internet; without it the phone's
   own reader is used.
 - Daily limit reached: no account = 20 pages a day; Continue with Google

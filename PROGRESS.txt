@@ -89,10 +89,10 @@ MILESTONES
            with a switch in Settings
          - daily Smart Study limits per phone instead of per Wi-Fi network
          - unused fingerprint permissions removed
+         - Google sign-in published ("In production", 24 Nov): every
+           Google account can sign in, no 7-day sign-out. Left: brand
+           verification with the logo (shows "tAsikaso" on Google's screen)
        Left for the owner (a few clicks each):
-         - Google Cloud Console: take Google sign-in out of "Testing"
-           (today only listed testers can sign in, and they are signed out
-           after 7 days); the privacy policy URL above is ready for it
          - GitHub: add the signing secrets so the automatic test builds
            can install over releases
        Accounts (24 Nov, v0.8.0): every user has a tAsikaso account in
