@@ -186,6 +186,27 @@ main.content{container-type:inline-size;display:flex;flex-direction:column;gap:2
 @container (min-width:1000px){
   .charts{grid-template-columns:minmax(0,2fr) minmax(300px,1fr)}
 }
+/* The three cards on top share one layout: title, one big line, one stat line. */
+.card.stat{gap:12px}
+.card.stat .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.stat .ttlrow > div{min-width:0}
+.kv{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:8px;row-gap:2px}
+.kv .big{font-size:40px;line-height:1.1}
+.kv .vs{font-size:15px;font-weight:500;color:var(--muted);margin:0 2px}
+.card.stat .statline{margin-top:auto}
+/* Chart paging. */
+.pager-mini{display:flex;align-items:center;gap:6px;margin-left:auto}
+.pager-mini .round{width:36px;height:36px}
+.pager-mini .now{min-height:36px;padding:6px 14px;font-size:13px;font-weight:600}
+.chartcard .cardhead{flex-wrap:wrap;row-gap:12px}
+.chartcard .cardhead .seg{order:3}
+.hint{display:none;margin:-4px 0 0;font-size:12px;color:var(--faint)}
+@media (pointer:coarse){.hint{display:block}}
+.chart{cursor:grab;outline:none;border-radius:6px}
+.chart:focus-visible{box-shadow:0 0 0 3px var(--accent-tint)}
+.plot.dragging .chart{cursor:grabbing}
+.slide{transition:transform .22s ease,opacity .22s ease}
+.plot.dragging .slide,.slide.instant{transition:none}
 /* Accounts: Google vs no account. */
 .versus{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .versus .n{font-size:32px;font-weight:600;letter-spacing:-.8px;line-height:1.1}
@@ -228,7 +249,9 @@ main.content{container-type:inline-size;display:flex;flex-direction:column;gap:2
   header.top nav.pills a{justify-content:center;padding:10px 6px;gap:6px;font-size:14px}
   .headline{flex-direction:column;align-items:flex-start}
   .card{padding:18px;border-radius:20px}
-  .chartcard .cardhead{flex-direction:column;align-items:stretch}
+  .chartcard .cardhead{align-items:center}
+  .chartcard .cardhead .ttlrow{flex:1 1 0}
+  .chartcard .seg{width:100%}
   .chartcard .seg button{flex:1}
   .plot .chart{height:170px}
   /* Users: each row a small card (user and plan on top, dates under). */
@@ -309,22 +332,19 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
   <p id="loadError" class="error" role="alert" hidden></p>
 
   <div class="kpis ov">
-    <div class="card accent">
-      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><p class="ttl">Total users</p><p class="sub">Everyone who has opened the app</p></div></div>
-      <div class="big" id="total">–</div>
+    <section class="card stat accent">
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Total users</h2><p class="sub">Everyone who has opened the app</p></div></div>
+      <div class="kv"><span class="big" id="total">–</span></div>
       <div class="statline"><span class="delta" id="totalDelta">–</span><span>growth this month</span></div>
-    </div>
-    <section class="card">
-      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Accounts</h2><p class="sub">Google sign-in vs no account</p></div></div>
-      <div class="versus">
-        <div><div class="lbl"><i style="background:#1E3A6E"></i>Google</div><div class="n" id="google">–</div><div class="pct" id="googlePct"></div></div>
-        <div><div class="lbl"><i style="background:#9FCBF5"></i>No account</div><div class="n" id="anonymous">–</div><div class="pct" id="anonPct"></div></div>
-      </div>
-      <div class="splitbar" id="accountBar" role="img"></div>
     </section>
-    <section class="card">
-      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments <span class="pill demo" id="demoPill" hidden>Demo</span></h2><p class="sub" id="payNote">This month</p></div></div>
-      <div class="big" id="payTotal">–</div>
+    <section class="card stat">
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Accounts</h2><p class="sub">Google sign-in vs no account</p></div></div>
+      <div class="kv"><span class="big" id="google" title="Google">–</span><span class="vs">vs</span><span class="big" id="anonymous" title="No account">–</span></div>
+      <div class="statline"><span class="delta flat" id="googlePct">–</span><span>signed in with Google</span></div>
+    </section>
+    <section class="card stat">
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments</h2><p class="sub">This month</p></div></div>
+      <div class="kv"><span class="big" id="payTotal">–</span></div>
       <div class="statline"><span class="delta flat" id="payShare">–</span><span>of users paid this month</span></div>
     </section>
   </div>
@@ -333,17 +353,23 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     <section class="card chartcard">
       <div class="cardhead">
         <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-trend"/></svg></span><div><h2 class="ttl">New users</h2><p class="sub" id="chartNote"></p></div></div>
+        <div class="pager-mini">
+          <button class="round" type="button" id="chartPrev" aria-label="Earlier"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="round" type="button" id="chartNext" aria-label="Later"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button class="btn now" type="button" id="chartNow" hidden>Now</button>
+        </div>
         <div class="seg" role="group" aria-label="Period">
           <button type="button" data-period="week" aria-pressed="false">Week</button>
           <button type="button" data-period="month" aria-pressed="true">Month</button>
           <button type="button" data-period="year" aria-pressed="false">Year</button>
         </div>
       </div>
+      <p class="hint">Drag the chart sideways to see earlier periods.</p>
       <div class="chartstat"><span class="big" id="newCount">–</span><span class="delta" id="newDelta">–</span><span class="meta" id="newPrev"></span></div>
       <div class="plot">
         <div class="ylabels" id="ylabels" aria-hidden="true"></div>
-        <div class="chart" id="chartBox">
-          <svg viewBox="0 0 600 200" preserveAspectRatio="none" role="img" id="chart">
+        <div class="chart" id="chartBox" tabindex="0" aria-label="New users chart. Drag, or use the left and right arrow keys, to see earlier periods.">
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" role="img" id="chart" class="slide">
             <defs>
               <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stop-color="#1E3A6E" stop-opacity="0.26"/>
@@ -358,7 +384,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
           <div class="cdot" id="cdot" hidden></div>
           <div class="ctip" id="ctip" hidden></div>
         </div>
-        <div class="xlabels" id="xlabels" aria-hidden="true"></div>
+        <div class="xlabels slide" id="xlabels" aria-hidden="true"></div>
       </div>
     </section>
 
@@ -431,6 +457,8 @@ function el(tag, props = {}, ...children) {
 let tz = "Asia/Manila";
 let dash = null;
 let period = "month";
+/** 0: the week, month or year we are in; -1 the one before, and so on. */
+let offset = 0;
 const userState = { q: "", page: 1, total: 0, pageSize: 25 };
 
 const fmtNum = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -528,6 +556,7 @@ async function load() {
   $("stamp").textContent = "Updated " + new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: tz }).format(new Date());
   renderOverview();
   renderChart();
+  renderNewUsers();
   renderPlans();
   renderPayments();
   renderCrashes();
@@ -557,28 +586,79 @@ function renderOverview() {
   $("total").textContent = fmtNum(o.total);
   // Growth this month: everyone now, against everyone before the 1st.
   setDelta("totalDelta", change(o.total, o.total - o.newThisMonth));
-  // Accounts: Google vs no account, as numbers, shares and one split bar.
   $("google").textContent = fmtNum(o.google);
   $("anonymous").textContent = fmtNum(o.anonymous);
-  $("googlePct").textContent = `${share(o.google, o.total)} of users`;
-  $("anonPct").textContent = `${share(o.anonymous, o.total)} of users`;
-  $("accountBar").setAttribute("aria-label", `Google ${o.google}, no account ${o.anonymous}`);
-  $("accountBar").replaceChildren(...[[o.google, "#1E3A6E"], [o.anonymous, "#9FCBF5"]]
-    .filter(([n]) => n > 0).map(([n, color]) => el("span", { style: `flex:${n};background:${color}` })));
-  renderNewUsers();
+  $("googlePct").textContent = share(o.google, o.total);
 }
 
-/** The chart card's number: new users this week, month or year, and the change. */
-function renderNewUsers() {
+// ---- New users per week (Monday to Sunday), month or year -------------------
+// Days are "YYYY-MM-DD" in the server's time zone; the date maths runs in UTC
+// so it never shifts a day.
+
+const dayAdd = (day, n) => { const d = new Date(`${day}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const monthAdd = (ym, n) => { const d = new Date(`${ym}-01T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 7); };
+const mondayOf = (day) => dayAdd(day, -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7));
+const daysIn = (ym) => new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).getUTCDate();
+
+/**
+ * Sign-ups per day and per month. From byDay (0004_admin_history.sql) when
+ * the server sends it; otherwise only the last 30 days and 12 months.
+ */
+function history() {
   const o = dash.overview;
-  const [count, prev, prevName] = {
-    week: [o.newThisWeek, o.newLastWeek, "last week"],
-    month: [o.newThisMonth, o.newLastMonth, "last month"],
-    year: [o.newThisYear, o.newLastYear, "last year"],
-  }[period];
+  if (o.byDay) {
+    const months = {};
+    for (const [d, n] of Object.entries(o.byDay)) months[d.slice(0, 7)] = (months[d.slice(0, 7)] ?? 0) + n;
+    const first = Object.keys(o.byDay).sort()[0] ?? o.today;
+    return { day: (d) => o.byDay[d] ?? 0, month: (m) => months[m] ?? 0, first };
+  }
+  const days = Object.fromEntries(o.daily.map((d) => [d.day, d.count]));
+  const months = Object.fromEntries(o.monthly.map((m) => [m.month, m.count]));
+  return { day: (d) => days[d] ?? 0, month: (m) => months[m] ?? 0, first: period === "year" ? `${o.monthly[0].month}-01` : o.daily[0].day };
+}
+
+/** The period [off] steps from now: its points (null = still to come), labels and name. */
+function windowAt(off) {
+  const today = dash.overview.today;
+  const h = history();
+  const fmt = (day, opts) => new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`)).replace(",", "").replace(/\bSept\b/, "Sep");
+  if (period === "year") {
+    const year = +today.slice(0, 4) + off;
+    const items = Array.from({ length: 12 }, (_, i) => {
+      const ym = `${year}-${String(i + 1).padStart(2, "0")}`;
+      return { n: `${ym}-01` > today ? null : h.month(ym), title: fmt(`${ym}-15`, { month: "long", year: "numeric" }), short: fmt(`${ym}-15`, { month: "short" }) };
+    });
+    return { items, start: `${year}-01-01`, end: `${year}-12-31`, name: String(year) };
+  }
+  if (period === "month") {
+    const ym = monthAdd(today.slice(0, 7), off);
+    const items = Array.from({ length: daysIn(ym) }, (_, i) => {
+      const d = `${ym}-${String(i + 1).padStart(2, "0")}`;
+      return { n: d > today ? null : h.day(d), title: fmt(d, { weekday: "short", day: "numeric", month: "short" }), short: fmt(d, { day: "numeric", month: "short" }) };
+    });
+    return { items, start: `${ym}-01`, end: `${ym}-${daysIn(ym)}`, name: fmt(`${ym}-15`, { month: "long", year: "numeric" }) };
+  }
+  const mon = dayAdd(mondayOf(today), off * 7);
+  const items = Array.from({ length: 7 }, (_, i) => {
+    const d = dayAdd(mon, i);
+    return { n: d > today ? null : h.day(d), title: fmt(d, { weekday: "short", day: "numeric", month: "short" }), short: fmt(d, { weekday: "short" }) };
+  });
+  const sun = dayAdd(mon, 6);
+  const name = `${fmt(mon, { weekday: "short", day: "numeric", ...(mon.slice(5, 7) !== sun.slice(5, 7) ? { month: "short" } : {}) })} – ${fmt(sun, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`;
+  return { items, start: mon, end: sun, name };
+}
+
+const canGoBack = () => windowAt(offset - 1).end >= history().first;
+const canGoForward = () => offset < 0;
+
+/** The chart card's number: new users in the period shown, and the change from the one before. */
+function renderNewUsers() {
+  const sum = (w) => w.items.reduce((a, it) => a + (it.n ?? 0), 0);
+  const count = sum(windowAt(offset)), prev = sum(windowAt(offset - 1));
+  const unit = { week: "week", month: "month", year: "year" }[period];
   $("newCount").textContent = fmtNum(count);
   setDelta("newDelta", change(count, prev));
-  $("newPrev").textContent = `vs ${prevName} (${fmtNum(prev)})`;
+  $("newPrev").textContent = `vs ${offset === 0 ? `last ${unit}` : `the ${unit} before`} (${fmtNum(prev)})`;
 }
 
 /** A round top for the y-axis: 1, 2, 4, 6, 8, 10, 20, 40, 50, 100… (even, so the middle line is whole). */
@@ -592,16 +672,18 @@ function niceTop(max) {
 
 /**
  * The line through [vals] in a 600×200 box, 0 at the bottom and [top] at the
- * top: a monotone cubic (Fritsch–Carlson), smooth but never dipping below 0
- * or overshooting a peak.
+ * top, the points spread over [slots] places (the rest of the period is
+ * still to come): a monotone cubic (Fritsch–Carlson), smooth but never
+ * dipping below 0 or overshooting a peak.
  */
 const Y0 = 196, YTOP = 8;
 const yOf = (v, top) => Y0 - (v / top) * (Y0 - YTOP);
-function chartGeom(vals, top) {
+function chartGeom(vals, top, slots) {
   const n = vals.length;
-  const pts = vals.map((v, i) => [n === 1 ? 300 : (i * 600) / (n - 1), yOf(v, top)]);
+  const pts = vals.map((v, i) => [slots === 1 ? 300 : (i * 600) / (slots - 1), yOf(v, top)]);
   const f = (x) => Math.round(x * 10) / 10;
-  if (n < 2) return { d: `M0,${f(pts[0]?.[1] ?? Y0)} L600,${f(pts[0]?.[1] ?? Y0)}`, pts };
+  if (n === 0) return { d: "", pts };
+  if (n === 1) return { d: `M${f(pts[0][0])},${f(pts[0][1])} L${f(pts[0][0]) + 0.1},${f(pts[0][1])}`, pts };
   const s = [];
   for (let i = 0; i < n - 1; i++) s.push((pts[i + 1][1] - pts[i][1]) / (pts[i + 1][0] - pts[i][0]));
   const m = [s[0]];
@@ -622,32 +704,21 @@ function chartGeom(vals, top) {
 
 /** The chart's points, for the hover tooltip. */
 let chartPoints = [];
+let chartSlots = 1;
 
 function renderChart() {
-  const o = dash.overview;
-  const fmt = (day, opts) => new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
-  let items, step, note;
-  if (period === "year") {
-    items = o.monthly.map((m) => ({ n: m.count, title: fmt(`${m.month}-15`, { month: "long", year: "numeric" }), short: fmt(`${m.month}-15`, { month: "short" }) }));
-    step = $("chartBox").clientWidth < 360 ? 3 : 2;
-    note = "Per month, last 12 months";
-  } else {
-    const days = period === "week" ? o.daily.slice(-7) : o.daily;
-    items = days.map((d) => ({
-      n: d.count,
-      title: fmt(d.day, { weekday: "short", day: "numeric", month: "short" }),
-      short: fmt(d.day, period === "week" ? { weekday: "short" } : { day: "numeric", month: "short" }),
-    }));
-    // A label a week apart (two weeks on a narrow chart, so they never touch).
-    step = period === "week" ? 1 : $("chartBox").clientWidth < 420 ? 14 : 7;
-    note = period === "week" ? "Per day, last 7 days" : "Per day, last 30 days";
-  }
-  const vals = items.map((i) => i.n);
+  const w = windowAt(offset);
+  const items = w.items;
+  const narrow = $("chartBox").clientWidth < 420;
+  const step = period === "week" ? 1 : period === "month" ? (narrow ? 14 : 7) : (narrow ? 3 : 2);
+  const shown = items.filter((it) => it.n !== null);
+  const vals = shown.map((it) => it.n);
   const top = niceTop(Math.max(...vals, 0));
   const sum = vals.reduce((a, b) => a + b, 0);
-  const { d, pts } = chartGeom(vals, top);
+  const { d, pts } = chartGeom(vals, top, items.length);
+  const lastX = pts.length ? pts.at(-1)[0] : 0;
   $("curve").setAttribute("d", d);
-  $("area").setAttribute("d", `${d} L600,${Y0} L0,${Y0} Z`);
+  $("area").setAttribute("d", d ? `${d} L${lastX},${Y0} L0,${Y0} Z` : "");
   // Grid lines and y labels at 0, half and the top: they match the line.
   const ticks = top === 1 ? [0, 1] : [0, top / 2, top];
   $("grid").replaceChildren(...ticks.map((t) => {
@@ -658,17 +729,20 @@ function renderChart() {
     return ln;
   }));
   $("ylabels").replaceChildren(...ticks.map((t) => el("span", { style: `top:${(yOf(t, top) / 200) * 100}%` }, fmtNum(t))));
-  $("chart").setAttribute("aria-label", `Line chart of new users, ${note.toLowerCase()}; total ${sum}, latest ${vals.at(-1) ?? 0}`);
-  $("chartNote").textContent = note;
-  // X labels sit under their own points, counted back from the latest.
+  $("chart").setAttribute("aria-label", `Line chart of new users, ${w.name}; total ${sum}`);
+  $("chartNote").textContent = offset === 0 ? `This ${period} · ${w.name}` : w.name;
+  // X labels under their own points, from the first day (Monday, the 1st, January).
   const last = items.length - 1;
   $("xlabels").replaceChildren(...items.flatMap((it, i) => {
-    if ((last - i) % step !== 0) return [];
+    if (i % step !== 0) return [];
     const x = last === 0 ? 50 : (i / last) * 100;
-    const cls = i === last ? "last" : x < 4 ? "first" : "";
-    return [el("span", { class: cls, style: `left:${x}%` }, it.short)];
+    return [el("span", { class: i === 0 ? "first" : x > 96 ? "last" : "", style: `left:${x}%` }, it.short)];
   }));
-  chartPoints = items.map((it, i) => ({ ...it, x: pts[i][0] / 600, y: pts[i][1] / 200 }));
+  chartSlots = items.length;
+  chartPoints = shown.map((it, i) => ({ ...it, x: pts[i][0] / 600, y: pts[i][1] / 200 }));
+  $("chartPrev").disabled = !canGoBack();
+  $("chartNext").disabled = !canGoForward();
+  $("chartNow").hidden = offset === 0;
   hideHover();
   for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.period === period));
 }
@@ -681,7 +755,7 @@ function showHover(e) {
   if (!chartPoints.length) return;
   const r = $("chartBox").getBoundingClientRect();
   const f = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-  const p = chartPoints[Math.round(f * (chartPoints.length - 1))];
+  const p = chartPoints[Math.min(chartPoints.length - 1, Math.round(f * (chartSlots - 1)))];
   const left = `${p.x * 100}%`, top = `${p.y * 100}%`;
   $("cguide").style.left = left;
   Object.assign($("cdot").style, { left, top });
@@ -691,18 +765,76 @@ function showHover(e) {
   tip.dataset.edge = p.x > 0.8 ? "right" : p.x < 0.2 ? "left" : "";
   for (const id of ["cguide", "cdot", "ctip"]) $(id).hidden = false;
 }
+
+/** Moves to an earlier (-1) or later (+1) period, sliding the line across. */
+function go(dir) {
+  if (!dash || (dir < 0 && !canGoBack()) || (dir > 0 && !canGoForward())) { springBack(); return; }
+  offset += dir;
+  const slides = [$("chart"), $("xlabels")];
+  for (const e of slides) { e.classList.add("instant"); e.style.transform = `translateX(${dir < 0 ? -48 : 48}px)`; e.style.opacity = "0"; }
+  renderChart();
+  renderNewUsers();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const e of slides) { e.classList.remove("instant"); e.style.transform = ""; e.style.opacity = ""; }
+  }));
+}
+function springBack() {
+  for (const e of [$("chart"), $("xlabels")]) { e.style.transform = ""; e.style.opacity = ""; }
+}
+
+// Drag sideways: to the right for earlier, to the left for later.
+let drag = null;
+const plot = $("chartBox").closest(".plot");
+$("chartBox").addEventListener("pointerdown", (e) => {
+  drag = { x: e.clientX, y: e.clientY, dx: 0, moving: false };
+  showHover(e);
+});
+$("chartBox").addEventListener("pointermove", (e) => {
+  if (!drag) { if (e.pointerType === "mouse") showHover(e); return; }
+  drag.dx = e.clientX - drag.x;
+  if (!drag.moving && Math.abs(drag.dx) > 8 && Math.abs(drag.dx) > Math.abs(e.clientY - drag.y)) {
+    drag.moving = true;
+    $("chartBox").setPointerCapture(e.pointerId);
+    plot.classList.add("dragging");
+    hideHover();
+  }
+  if (drag.moving) {
+    // Resist past the ends (nothing earlier, or the future).
+    const blocked = (drag.dx > 0 && !canGoBack()) || (drag.dx < 0 && !canGoForward());
+    const dx = blocked ? drag.dx / 4 : drag.dx;
+    for (const el2 of [$("chart"), $("xlabels")]) el2.style.transform = `translateX(${dx}px)`;
+  } else {
+    showHover(e);
+  }
+});
+function endDrag() {
+  if (!drag) return;
+  const { dx, moving } = drag;
+  drag = null;
+  plot.classList.remove("dragging");
+  if (moving && Math.abs(dx) > 60) go(dx > 0 ? -1 : 1);
+  else springBack();
+}
+$("chartBox").addEventListener("pointerup", endDrag);
+$("chartBox").addEventListener("pointercancel", endDrag);
+$("chartBox").addEventListener("pointerleave", () => { if (!drag) hideHover(); });
+$("chartBox").addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+  if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+});
+$("chartPrev").addEventListener("click", () => go(-1));
+$("chartNext").addEventListener("click", () => go(1));
+$("chartNow").addEventListener("click", () => { offset = 0; renderChart(); renderNewUsers(); });
+
 // The labels depend on the chart's width: draw them again when it changes.
 let lastChartWidth = 0;
 new ResizeObserver(() => {
   const w = $("chartBox").clientWidth;
   if (dash && w && Math.abs(w - lastChartWidth) > 40) { lastChartWidth = w; renderChart(); }
 }).observe($("chartBox"));
-$("chartBox").addEventListener("pointermove", showHover);
-$("chartBox").addEventListener("pointerdown", showHover);
-$("chartBox").addEventListener("pointerleave", hideHover);
-// The New users card and the chart share one Week / Month / Year choice.
+// Week / Month / Year: back to the one we are in.
 for (const b of document.querySelectorAll(".seg button")) {
-  b.addEventListener("click", () => { period = b.dataset.period; if (dash) { renderChart(); renderNewUsers(); } });
+  b.addEventListener("click", () => { period = b.dataset.period; offset = 0; if (dash) { renderChart(); renderNewUsers(); } });
 }
 
 // ---- Plans and payments ------------------------------------------------------
@@ -737,11 +869,8 @@ function renderPlans() {
 
 function renderPayments() {
   const pay = dash.payments;
-  $("demoPill").hidden = !pay.anyDemo;
-  $("payNote").textContent = pay.anyDemo ? "This month · pretend payments for the demo" : "This month";
-  const [whole, cents] = peso(pay.monthTotalPhp);
-  $("payTotal").replaceChildren(whole, el("span", { class: "cents" }, cents));
-  // Share of all users who paid this month (last month's total isn't sent, so no change in %).
+  $("payTotal").textContent = `₱${Math.round(Number(pay.monthTotalPhp ?? 0)).toLocaleString("en-US")}`;
+  // Share of all users who paid this month.
   $("payShare").textContent = share(pay.monthCount, dash.overview.total);
 }
 

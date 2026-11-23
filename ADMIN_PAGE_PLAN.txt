@@ -5,7 +5,8 @@ Status (24 Nov 2026): a first, read-only version is built, following 6.1:
   web/admin/index.html (layout "D": totals, Google vs no account, new users per week/month/year,
   plans, demo payments, users, crash reports), GET /v1/admin/dashboard and
   /v1/admin/users on the server (ADMIN_EMAILS), and
-  supabase/migrations/0003_admin.sql (crash_reports, payments.demo,
+  supabase/migrations/0003_admin.sql and 0004_admin_history.sql (sign-ups
+  per day for the whole history, for paging the chart) (crash_reports, payments.demo,
   admin_* functions). Not built yet: actions (5.3), costs, habits,
   limits, health, request_log. Payments are pretend for the demo: no
   payment method will be connected.

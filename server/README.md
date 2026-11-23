@@ -115,7 +115,7 @@ than quietly switching a limit off.
 | `DAILY_BUDGET_USD` | `5` | Estimated Claude spend per day for the whole server, in US dollars. `0` = no cap. |
 | `DAY_TIME_ZONE` | `Asia/Manila` | Whose midnight starts a new day for the daily limits. |
 | `HEALTH_DETAILS` | off | `1` = `/health` also shows the model and effort. |
-| `ADMIN_EMAILS` | (none: admin page off) | Google accounts allowed into the admin page (`web/admin/`), separated by commas. Needs accounts (`SUPABASE_URL`) and `supabase/migrations/0003_admin.sql`. |
+| `ADMIN_EMAILS` | (none: admin page off) | Google accounts allowed into the admin page (`web/admin/`), separated by commas. Needs accounts (`SUPABASE_URL`) and `supabase/migrations/0003_admin.sql` (plus `0004_admin_history.sql` to page back through earlier weeks, months and years). |
 | `STORE_CRASH_REPORTS` | off | `1` = also keep the app's crash reports in Supabase (`crash_reports`, 90 days) for the admin page (`web/privacy.html` says so). |
 | `DEMO_PAYMENTS` | on | Switching a plan on for free (`POST /v1/plan/test`) also writes a pretend payment (`payments.demo = true`) for the admin page's demo. `0` = off. |
 

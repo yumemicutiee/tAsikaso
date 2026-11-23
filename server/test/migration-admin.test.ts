@@ -45,6 +45,7 @@ before(async () => {
   await db.exec(read("0001_accounts.sql"));
   await db.exec(read("0002_user_data.sql"));
   await db.exec(read("0003_admin.sql"));
+  await db.exec(read("0004_admin_history.sql"));
   await db.exec(`
     insert into auth.users (id, email, raw_user_meta_data) values
       ('${A}', 'kristine@example.com', '{"full_name": "Kristine Degamo"}'),
@@ -81,6 +82,7 @@ type Overview = {
   newLastYear: number;
   daily: { day: string; count: number }[];
   monthly: { month: string; count: number }[];
+  byDay: Record<string, number>;
   plans: Record<string, number>;
 };
 
@@ -96,6 +98,10 @@ test("the overview counts users, new users per period, and active plans", async 
   assert.equal(o.daily.at(-1)!.count, 3);
   assert.equal(o.monthly.length, 12);
   assert.equal(o.monthly.at(-1)!.count, 3);
+  // Every day with sign-ups, including OLD's from over a year ago.
+  assert.equal(Object.keys(o.byDay).length, 2);
+  assert.equal(o.byDay[o.daily.at(-1)!.day], 3);
+  assert.equal(Object.values(o.byDay).reduce((a, b) => a + b, 0), 4);
   // B's plan ended: only A's (a test plan) is active.
   assert.deepEqual(o.plans, { free: 3, monthly: 0, semester: 1, yearly: 0, test: 1, endingIn7Days: 0 });
 });
