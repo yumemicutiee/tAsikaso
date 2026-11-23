@@ -146,8 +146,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const _Header(),
-                      const SizedBox(height: 10),
-                      Center(child: _AppPeek(scale: scale)),
+                      // Out of the way while the name is typed.
+                      if (_step == _Step.choose) ...[
+                        const SizedBox(height: 10),
+                        Center(child: _AppPeek(scale: scale)),
+                      ],
                       const SizedBox(height: 10),
                       Text(LoadingScreen.tagline,
                           style: TextStyle(
@@ -460,10 +463,7 @@ class _AppPeek extends StatelessWidget {
                           line(0.92, lineBlue, top: 12),
                           line(0.78, lineBlue),
                           line(0.86, lineBlue),
-                          line(0.70, lineGrey, top: 16),
-                          line(0.90, lineGrey),
-                          line(0.60, lineGrey),
-                          const Spacer(),
+                          const SizedBox(height: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 9, vertical: 5),
@@ -482,6 +482,9 @@ class _AppPeek extends StatelessWidget {
                                       : const Color(0xFF2C6B4C),
                                 )),
                           ),
+                          line(0.70, lineGrey, top: 14),
+                          line(0.90, lineGrey),
+                          line(0.60, lineGrey),
                         ],
                       ),
                     ),
