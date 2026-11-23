@@ -220,9 +220,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     // While the name is typed the name stays in the middle: of the screen,
     // or, with the keyboard up, of the room left above the name box.
     final formTop = h - 20 - keyboard - 230;
-    final markTop = naming
-        ? math.min(centreTop, (formTop - 110) / 2).clamp(8.0, centreTop).toDouble()
-        : centreTop;
+    final fitsInMiddle = centreTop + 110 + 16 <= formTop;
+    final markTop = !naming || fitsInMiddle
+        ? centreTop
+        : ((formTop - 110) / 2).clamp(8.0, centreTop).toDouble();
 
     return Stack(
       children: [
