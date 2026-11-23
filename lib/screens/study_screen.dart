@@ -111,7 +111,6 @@ class _StudyScreenState extends State<StudyScreen> {
                   const SizedBox(height: 22),
                   _TodayStrip(
                     pomodoros: todayCount,
-                    minutes: _store.focusMinutesToday,
                     onAnalysis: () => openAnalysis(context),
                   ),
                   const SizedBox(height: 24),
@@ -385,16 +384,14 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
-/// "Today · 2 Pomodoros · 50 min        Analysis >"
+/// "Today  ⏱ 2 Pomodoros        Analysis >"
 class _TodayStrip extends StatelessWidget {
   const _TodayStrip({
     required this.pomodoros,
-    required this.minutes,
     required this.onAnalysis,
   });
 
   final int pomodoros;
-  final int minutes;
   final VoidCallback onAnalysis;
 
   @override
@@ -418,7 +415,6 @@ class _TodayStrip extends StatelessWidget {
                   wrap: true,
                   [
                     MetaItem(AppIcons.timer, plural(pomodoros, 'Pomodoro')),
-                    MetaItem(AppIcons.clock, formatMinutes(minutes)),
                   ],
                   style: TextStyle(
                     fontSize: 12.5,
