@@ -14,9 +14,9 @@ Future<void> openHelp(BuildContext context) => Navigator.of(context).push(
 
 /// Where Smart Study sends what, said the same way in Help and Settings.
 const kSmartStudyPrivacy = 'The photos of your pages (with Read Photos with '
-    'Claude on), the text read from them, your cards and your typed quiz '
-    'answers go to your study server and on to Anthropic, and are not kept '
-    'there. Turn Read Photos with Claude off to send text only.';
+    'AI on), the text read from them, your cards and your typed quiz '
+    'answers go to your study server and on to the AI service, and are not '
+    'kept there. Turn Read Photos with AI off to send text only.';
 
 /// Short answers to the questions students ask most.
 class HelpScreen extends StatelessWidget {
@@ -30,7 +30,7 @@ class HelpScreen extends StatelessWidget {
           'finds them too (see below), and you can drag the four corners if '
           "they're off. "
           'Scan several pages and tap Next: their text is read while you '
-          'watch (by Claude with Smart Study, else on your phone). Pick a folder and they are saved as notes '
+          'watch (by AI with Smart Study, else on your phone). Pick a folder and they are saved as notes '
           "in its Notebook, titled from their first line. From a note, tap "
           'Edit to fix a word or Make Flashcards to turn it into cards.',
     ),
@@ -46,9 +46,9 @@ class HelpScreen extends StatelessWidget {
     (
       'Can the app read the text in my photos?',
       'Yes. Your phone finds the lines of text first (they light up in '
-          'blue). With Smart Study on, Claude then reads each page from its '
+          'blue). With Smart Study on, AI then reads each page from its '
           'photo, which works much better on handwriting; without internet, '
-          'or with Settings → Smart Study → Read Photos with Claude off, the '
+          'or with Settings → Smart Study → Read Photos with AI off, the '
           'text is read on your phone only. The note opens on its text: tap '
           'Edit to fix a misread word, and Make Flashcards to turn it into '
           'cards. Your photos stay one tap away. Without Smart Study, '
@@ -59,7 +59,7 @@ class HelpScreen extends StatelessWidget {
       'Do I need an account?',
       "No. The first time you use Smart Study, the app makes a $kAppName "
           'account for you, without a name or email, with a daily allowance '
-          'of Claude: pages read, study kits and quizzes, answer checks. '
+          'of AI: pages read, study kits and quizzes, answer checks. '
           'Continue with Google (Profile → Backup & Sync) for more each day, '
           'and your name, photo, settings, tasks and Pomodoro statistics are '
           'kept in your account: Log Out clears them from the phone and '
@@ -86,8 +86,8 @@ class HelpScreen extends StatelessWidget {
     ),
     (
       'What is Smart Study?',
-      'With a study server set up in Settings → Smart Study, Claude (an AI '
-          'by Anthropic) types up your notes and writes a summary, key '
+      'With a study server set up in Settings → Smart Study, AI types up '
+          'your notes and writes a summary, key '
           'concepts, flashcards and quizzes. $kSmartStudyPrivacy It needs '
           'internet; without it, scanning, cards and quizzes still work on '
           'the phone.',

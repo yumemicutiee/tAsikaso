@@ -54,7 +54,7 @@ class IntroSlides extends StatefulWidget {
         const IntroSlide(
           title: 'Snap your notes into text',
           body: 'Take photos of your lecture notes. $kAppName crops the pages '
-              'and Claude reads the text, even handwriting.',
+              'and AI reads the text, even handwriting.',
           color: Color(0xFFA8DCC1),
           peek: IntroPeek.scan,
         ),
@@ -571,7 +571,7 @@ class _Peek extends StatelessWidget {
           Icon(AppIcons.suggest, size: 16, color: _deep),
           const SizedBox(width: 6),
           const Expanded(
-            child: Text('Claude is reading your notes…',
+            child: Text('AI is reading your notes…',
                 style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ]),

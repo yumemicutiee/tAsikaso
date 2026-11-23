@@ -35,9 +35,9 @@
 
   <div class="box">
     <strong>In short:</strong> your notes, scanned pages and flashcards are kept on your phone.
-    Only when you use <strong>Smart Study</strong> are the photos of the pages you scan (so Claude can read the text in them) and the
-    text from your notes sent to our study server and to Anthropic (the company that makes Claude) to write your study materials.
-    Neither keeps them for us. With <em>Read Photos with Claude</em> off, only text is sent; with Smart Study off, nothing is.
+    Only when you use <strong>Smart Study</strong> are the photos of the pages you scan (so AI can read the text in them) and the
+    text from your notes sent to our study server and to our AI provider, Anthropic, to write your study materials.
+    Neither keeps them for us. With <em>Read Photos with AI</em> off, only text is sent; with Smart Study off, nothing is.
     Your tAsikaso account, kept with Supabase, holds your name and photo, settings, tasks, Pomodoro statistics, plan and daily Smart Study
     use, so they come back when you sign in again; never your notes. If you sign in with Google, a copy of your data is kept in a private folder of <em>your own</em> Google Drive.
     We don't sell data, show ads, or track you.
@@ -51,18 +51,18 @@
   <ul>
     <li><strong>Finding the page edges</strong> (auto-crop) uses AI models built into the app (DocAligner). Your photos are not sent anywhere.</li>
     <li><strong>Finding the lines of text</strong> in your photos (the blue boxes while a page is read) uses Google's ML Kit text recognition,
-        which runs on the phone. Without Smart Study, or with <em>Read Photos with Claude</em> off, ML Kit also reads the text itself.</li>
+        which runs on the phone. Without Smart Study, or with <em>Read Photos with AI</em> off, ML Kit also reads the text itself.</li>
     <li><strong>Timer alerts and reminders</strong> are scheduled on the phone.</li>
   </ul>
   <p>On Android, the <em>Smart Scanner</em> button opens Google's document scanner, provided by Google Play services on your phone.
      Google's own terms apply to that screen.</p>
 
-  <h2>Smart Study (Claude)</h2>
+  <h2>Smart Study (AI)</h2>
   <p>When Smart Study is on and you scan pages, save a scan, ask for AI flashcards or a quiz, type up a note, or check a typed quiz answer,
      the app sends:</p>
   <ul>
-    <li>with <em>Read Photos with Claude</em> on (the default), the <strong>photo of each page you scan</strong>, cropped to the page,
-        so Claude can write out the text on it (it reads handwriting much better than the phone can),</li>
+    <li>with <em>Read Photos with AI</em> on (the default), the <strong>photo of each page you scan</strong>, cropped to the page,
+        so the AI can write out the text on it (it reads handwriting much better than the phone can),</li>
     <li>the <strong>text</strong> of your pages, the note's title, your flashcards, and your typed quiz answers,</li>
     <li>to our <strong>study server</strong> (hosted by Render, in Singapore), which passes them to <strong>Anthropic's Claude API</strong> and sends back
         the text on a page, typed-up notes, a summary, key concepts, flashcards, quiz questions or a verdict on your answer.</li>
@@ -71,10 +71,10 @@
      inputs and outputs only for a limited time (normally up to 30 days) for safety and abuse monitoring. See
      <a href="https://www.anthropic.com/legal/privacy">anthropic.com/legal/privacy</a>.</p>
   <p>Our study server keeps <strong>none of your photos or text</strong>. For each request it writes one log line: the time, which feature was used,
-     whether it worked, how long it took, how many tokens Claude used and what that cost, and a short one-way code made from your internet
+     whether it worked, how long it took, how many tokens the AI used and what that cost, and a short one-way code made from your internet
      address (not the address itself). Your internet address is kept only in the server's memory, to apply the daily limits, and is gone
      when the server restarts. Our host keeps these log lines for a limited time.</p>
-  <p>You can turn <em>Read Photos with Claude</em> off in <em>Settings → Smart Study</em>; then your photos aren't sent, only text read on the phone.
+  <p>You can turn <em>Read Photos with AI</em> off in <em>Settings → Smart Study</em>; then your photos aren't sent, only text read on the phone.
      You can turn Smart Study off there too; then nothing is sent and the app reads text, makes flashcards and quizzes on the phone instead.</p>
 
   <h2>Your tAsikaso account</h2>
@@ -90,7 +90,7 @@
         many minutes you focused and cards you reviewed each day,</li>
     <li>your <strong>plan</strong> (which one, from when, until when); while payments aren't connected, switching a plan on also saves a
         pretend payment record for our demo (the plan and its price; no money is involved and no payment details are asked for),</li>
-    <li>how many Smart Study requests, answer checks and pages read by Claude you used <strong>each day</strong>, and their estimated cost.</li>
+    <li>how many Smart Study requests, answer checks and pages read by AI you used <strong>each day</strong>, and their estimated cost.</li>
   </ul>
   <p>It is saved a few seconds after a change and before you log out. When you <em>Log Out</em> of a Google account, these are cleared from the
      phone and come back when you continue with Google again. Your notes, scanned pages and flashcards are <strong>not</strong> stored there.
