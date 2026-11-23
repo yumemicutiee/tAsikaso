@@ -278,39 +278,14 @@ class ProfileScreen extends StatelessWidget {
     final sync = DriveSync.instance;
     final navigator = Navigator.of(context, rootNavigator: true);
     final messenger = ScaffoldMessenger.of(context);
-    final choice = await showDialog<_NoAccountLogOut>(
+    final choice = await showModalBottomSheet<_NoAccountLogOut>(
       context: context,
-      builder: (context) => AlertDialog(
-        icon: const Icon(AppIcons.warning, size: 32, color: AppColors.streakRed),
-        title: Text("You Can't Log Back In", style: AppText.sectionTitle),
-        content: const Text(
-          "You're using $kAppName without an account, so there's nothing to "
-          'log back in to. Logging out deletes everything on this phone: '
-          'your notes, flashcards, tasks, Pomodoro statistics and settings.'
-          '\n\nSign in with Google to keep them in an account.',
-          style: TextStyle(height: 1.4),
-        ),
-        actionsOverflowDirection: VerticalDirection.up,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(_NoAccountLogOut.delete),
-            style: TextButton.styleFrom(foregroundColor: AppColors.streakRed),
-            child: const Text('Log Out and Delete'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(_NoAccountLogOut.google),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.onFill,
-            ),
-            child: const Text('Sign In with Google'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (_) => const _KeepProgressSheet(),
     );
     if (choice == null || !context.mounted) return;
 
@@ -551,3 +526,275 @@ class _Group extends StatelessWidget {
 
 /// What the user chose when logging out without an account.
 enum _NoAccountLogOut { google, delete }
+
+/// Log Out without an account: "Save your progress first?". A picture of
+/// what they would lose (a note, a flashcard, the streak), then Keep it
+/// with Google, Not now, and the small Log out and delete everything.
+class _KeepProgressSheet extends StatelessWidget {
+  const _KeepProgressSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppStore.instance;
+    final note = store.notes.isEmpty ? 'Your notes' : store.notes.first.title;
+    final card = store.sets
+        .expand((s) => s.cards)
+        .map((c) => c.front.trim())
+        .firstWhere((t) => t.isNotEmpty, orElse: () => 'Your flashcards');
+    final streak = store.streakDays;
+    final (big, small) = streak > 0
+        ? ('$streak', 'day streak')
+        : ('${store.notes.length}', store.notes.length == 1 ? 'note' : 'notes');
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // What would be lost, drawn from their own things.
+            ExcludeSemantics(
+              child: Container(
+                height: 190,
+                color: AppColors.tint(AppColors.primary, 0.45),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Positioned(
+                      top: 10,
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryDeep.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 250,
+                      height: 130,
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            left: 0,
+                            top: 26,
+                            child: Transform.rotate(
+                              angle: -0.12,
+                              child: _PeekCard(
+                                width: 110,
+                                color: AppColors.surface,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(note,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.ink)),
+                                    for (final w in const [1.0, 0.7, 0.85])
+                                      FractionallySizedBox(
+                                        widthFactor: w,
+                                        child: Container(
+                                          margin: const EdgeInsets.only(top: 6),
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.border,
+                                            borderRadius:
+                                                BorderRadius.circular(3),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            top: 30,
+                            child: Transform.rotate(
+                              angle: 0.1,
+                              child: _PeekCard(
+                                width: 104,
+                                color: const Color(0xFFF5B5C8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('FLASHCARD',
+                                        style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.6,
+                                            color: Color(0xFF8A2B48))),
+                                    const SizedBox(height: 6),
+                                    Text(card,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF3C1020))),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: 75,
+                            top: 0,
+                            child: Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E3A6E),
+                                borderRadius: BorderRadius.circular(26),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF1E3A6E)
+                                        .withValues(alpha: 0.3),
+                                    blurRadius: 22,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(big,
+                                      style: const TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white)),
+                                  Text(small,
+                                      style: const TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFCFE4FA))),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Save your progress first?',
+                      style: AppText.screenTitle.copyWith(fontSize: 23)),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Without an account you can't log back in, so logging "
+                    'out deletes your notes, flashcards, tasks and streak '
+                    'from this phone. Sign in with Google to keep them.',
+                    style: TextStyle(
+                        fontSize: 14.5,
+                        height: 1.5,
+                        color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 54,
+                    child: FilledButton(
+                      onPressed: () =>
+                          Navigator.of(context).pop(_NoAccountLogOut.google),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryDeep,
+                        foregroundColor: AppColors.onPrimaryDeep,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle),
+                            alignment: Alignment.center,
+                            child: Image.asset('assets/brand/google_g.png',
+                                width: 16, height: 16),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text('Keep it with Google',
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        minimumSize: const Size.fromHeight(44)),
+                    child: const Text('Not now',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(height: 6),
+                  Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: TextButton(
+                      onPressed: () =>
+                          Navigator.of(context).pop(_NoAccountLogOut.delete),
+                      style: TextButton.styleFrom(
+                          foregroundColor: AppColors.streakRed),
+                      child: const Text('Log out and delete everything',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppColors.streakRed)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A small tilted card in the sheet's picture.
+class _PeekCard extends StatelessWidget {
+  const _PeekCard(
+      {required this.width, required this.color, required this.child});
+
+  final double width;
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: width,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E3A6E).withValues(alpha: 0.15),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: child,
+      );
+}

@@ -303,15 +303,15 @@ void main() {
       expect(accounts.signOuts, 0);
     });
 
-    testWidgets("without an account: warns that you can't log back in; Cancel keeps everything",
+    testWidgets("without an account: asks to save progress first; Not now keeps everything",
         (tester) async {
       accounts.isAnonymous = true;
       useTheApp();
       await openProfile(tester);
       await tapLogOut(tester);
-      expect(find.text("You Can't Log Back In"), findsOneWidget);
-      expect(find.text('Sign In with Google'), findsOneWidget);
-      await tester.tap(find.text('Cancel'));
+      expect(find.text('Save your progress first?'), findsOneWidget);
+      expect(find.text('Keep it with Google'), findsOneWidget);
+      await tester.tap(find.text('Not now'));
       await tester.pumpAndSettle();
       expect(store.sessions, hasLength(2));
       expect(store.prefs.userName, 'Kristine');
@@ -324,7 +324,9 @@ void main() {
       useTheApp();
       await openProfile(tester);
       await tapLogOut(tester);
-      await tester.tap(find.text('Log Out and Delete'));
+      await tester.ensureVisible(find.text('Log out and delete everything'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Log out and delete everything'));
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
       await tester.pumpAndSettle();
       expect(store.sessions, isEmpty);
@@ -333,14 +335,14 @@ void main() {
       expect(find.byType(WelcomeScreen), findsOneWidget);
     });
 
-    testWidgets('without an account: Sign In with Google keeps everything',
+    testWidgets('without an account: Keep it with Google keeps everything',
         (tester) async {
       DriveSync.debugStore = MemoryDriveStore();
       accounts.isAnonymous = true;
       useTheApp();
       await openProfile(tester);
       await tapLogOut(tester);
-      await tester.tap(find.text('Sign In with Google'));
+      await tester.tap(find.text('Keep it with Google'));
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
       await tester.pumpAndSettle();
       expect(DriveSync.instance.isSignedIn, isTrue);
