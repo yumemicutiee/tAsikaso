@@ -248,11 +248,11 @@ main.content{container-type:inline-size;display:flex;flex-direction:column;gap:2
 .searchbox:focus-within kbd{display:none}
 .filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding-bottom:14px;border-bottom:1px solid var(--line)}
 .seg.small button{padding:6px 14px;min-height:34px;font-size:13px}
-.pick{display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 6px 0 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:13px;color:var(--muted);cursor:pointer}
+.pick{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 12px 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:13px;color:var(--muted);cursor:pointer}
 .pick:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
 .pick.on{border-color:var(--accent);background:var(--accent-tint)}
 .pick.on span{color:var(--accent)}
-.pick select{appearance:none;-webkit-appearance:none;border:0;outline:0;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2361646E' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;font:inherit;font-size:13px;font-weight:600;color:var(--ink);padding:0 28px 0 0;height:100%;cursor:pointer}
+.pick select{appearance:none;-webkit-appearance:none;border:0;outline:0;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2361646E' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0 center;font:inherit;font-size:13px;font-weight:600;color:var(--ink);padding:0 20px 0 0;height:100%;cursor:pointer}
 .linkbtn{border:0;background:none;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;padding:8px 6px;text-decoration:underline;text-underline-offset:3px}
 #users thead th{position:sticky;top:0;z-index:1;background:var(--card)}
 @media (min-width:641px){
@@ -273,12 +273,11 @@ main.content{container-type:inline-size;display:flex;flex-direction:column;gap:2
 .crashlist{display:flex;flex-direction:column;gap:10px}
 details.crash{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:0;overflow:hidden}
 details.crash[open]{border-color:#C9CEDA;box-shadow:0 4px 14px rgba(22,24,29,.06)}
-details.crash summary{display:grid;grid-template-columns:4px minmax(0,1fr) auto 20px;align-items:center;gap:14px;padding:14px 16px 14px 0;cursor:pointer;list-style:none}
+details.crash summary{display:grid;grid-template-columns:minmax(0,1fr) auto 20px;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;list-style:none}
 details.crash summary::-webkit-details-marker{display:none}
 details.crash summary:hover{background:var(--row)}
-details.crash .sev{align-self:stretch;border-radius:0 4px 4px 0;background:#C9CEDA}
-details.crash .sev.mid{background:#E9A23B}
-details.crash .sev.high{background:#D93A2F}
+details.crash .num.mid strong{color:#B26A00}
+details.crash .num.high strong{color:#C62828}
 details.crash .what{min-width:0;display:flex;flex-direction:column;gap:4px}
 details.crash .type{font-size:14px;font-weight:700;color:var(--ink)}
 details.crash .msg{font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:#3A3D46;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
@@ -289,7 +288,7 @@ details.crash .num strong{display:block;font-size:20px;font-weight:700;color:var
 details.crash .num span{font-size:12px;color:var(--muted)}
 details.crash .chev{width:18px;height:18px;color:var(--faint);transition:transform .15s}
 details.crash[open] .chev{transform:rotate(180deg)}
-details.crash .body{padding:0 16px 16px 18px;display:flex;flex-direction:column;gap:8px}
+details.crash .body{padding:0 16px 16px;display:flex;flex-direction:column;gap:8px}
 details.crash .bodyhead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 details.crash pre{margin:0;background:#16181D;color:#E6E8EE;border-radius:12px;padding:14px 16px;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;overflow:auto;max-height:280px}
 details.crash pre .ln{color:#6E7380;user-select:none;display:inline-block;min-width:2.2em}
@@ -308,11 +307,15 @@ details.crash pre .app{color:#9FCBF5}
   #crashes .crashlist{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -8px;padding:2px 8px 8px}
 }
 @media (max-width:900px){ .cstats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+#crashTools{gap:10px}
+#crashTools .searchbox{flex:1 1 260px;width:auto}
+#crashTools .pick{min-width:150px}
+#crashTools .pick select{flex:1}
 @media (max-width:640px){
   #crashes .cardhead .seg{width:100%}
   #crashes .cardhead .seg button{flex:1;padding:6px 4px}
-  #crashTools .searchbox{width:100%}
-  details.crash summary{grid-template-columns:4px minmax(0,1fr) auto;gap:10px}
+  #crashTools .pick{flex:1 1 0}
+  details.crash summary{grid-template-columns:minmax(0,1fr) auto;gap:10px}
   details.crash .chev{display:none}
 }
 /* Short menu labels on phones. */
@@ -482,7 +485,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
   <div class="row">
     <section class="card" id="users">
       <div class="cardhead">
-        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Users</h2><p class="sub" id="userNote">Newest first</p></div></div>
+        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Users</h2><p class="sub" id="userNote">&nbsp;</p></div></div>
         <div class="searchbox">
           <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
           <label class="sr" for="search">Search users</label>
@@ -1050,8 +1053,7 @@ async function loadUsers() {
   if (["q", "page", "account", "plan", "days", "sort"].some((k) => st[k] !== userState[k])) return;
   userState.total = res.total;
   userState.pageSize = res.pageSize;
-  const sortName = { newest: "Newest first", oldest: "Oldest first", ending: "Plan ending soonest" }[st.sort];
-  $("userNote").textContent = st.q || filtersOn() ? `${fmtNum(res.total)} found · ${sortName.toLowerCase()}` : `${sortName} · ${fmtNum(res.total)} in total`;
+  $("userNote").textContent = st.q || filtersOn() ? `${fmtNum(res.total)} found` : `${fmtNum(res.total)} ${res.total === 1 ? "user" : "users"}`;
   const rows = res.rows.map((u) => {
     const plan = u.plan ? `tAsikaso+ ${PLAN_TITLE[u.plan]}` : "Free";
     return el("tr", {},
@@ -1217,12 +1219,11 @@ function crashRow(g) {
   const users = g.users ?? 1;
   return el("details", { class: "crash" },
     el("summary", {},
-      el("span", { class: `sev ${sev}`, "aria-hidden": "true" }),
       el("div", { class: "what" },
         el("div", { class: "type" }, type),
         el("div", { class: "msg", title: g.message }, detail),
         el("div", { class: "tags" }, el("span", {}, `v${g.version}`), el("span", { title: g.platform }, systemName(g.platform)), el("span", {}, `Last ${fmtAgo(g.lastAt)}`))),
-      el("div", { class: "num" }, el("strong", {}, `${fmtNum(g.count)}×`), el("span", {}, `${fmtNum(users)} user${users === 1 ? "" : "s"}`)),
+      el("div", { class: `num ${sev}` }, el("strong", {}, `${fmtNum(g.count)}×`), el("span", {}, `${fmtNum(users)} user${users === 1 ? "" : "s"}`)),
       (() => { const c = icon("i-chev", 18); c.classList.add("chev"); return c; })()),
     el("div", { class: "body" },
       el("div", { class: "bodyhead" }, el("span", {}, "Where in the code"), copy),
