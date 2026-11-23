@@ -31,12 +31,13 @@
 <body>
 <main>
   <h1>tAsikaso Privacy Policy</h1>
-  <p class="muted">Last updated 18 November 2026 · applies to the tAsikaso app for Android and the web version at yumemicutiee.github.io/tAsikaso</p>
+  <p class="muted">Last updated 23 November 2026 · applies to the tAsikaso app for Android and the web version at yumemicutiee.github.io/tAsikaso</p>
 
   <div class="box">
-    <strong>In short:</strong> your notes, photos, flashcards, tasks and statistics stay on your phone.
-    Your photos never leave it. Only when you use <strong>Smart Study</strong> is the <em>text</em> read from your notes sent
-    to our study server and to Anthropic (the company that makes Claude) to write your study materials.
+    <strong>In short:</strong> your notes, photos, flashcards, tasks and statistics are kept on your phone.
+    Only when you use <strong>Smart Study</strong> are the photos of the pages you scan (so Claude can read the text in them) and the
+    text from your notes sent to our study server and to Anthropic (the company that makes Claude) to write your study materials.
+    Neither keeps them for us. With <em>Read Photos with Claude</em> off, only text is sent; with Smart Study off, nothing is.
     If you sign in with Google, a copy of your data is kept in a private folder of <em>your own</em> Google Drive.
     We don't sell data, show ads, or track you.
   </div>
@@ -48,28 +49,32 @@
   <p>These features work entirely on your phone, with no internet:</p>
   <ul>
     <li><strong>Finding the page edges</strong> (auto-crop) uses AI models built into the app (DocAligner). Your photos are not sent anywhere.</li>
-    <li><strong>Reading the text in your photos</strong> uses Google's ML Kit text recognition, which runs on the phone.</li>
+    <li><strong>Finding the lines of text</strong> in your photos (the blue boxes while a page is read) uses Google's ML Kit text recognition,
+        which runs on the phone. Without Smart Study, or with <em>Read Photos with Claude</em> off, ML Kit also reads the text itself.</li>
     <li><strong>Timer alerts and reminders</strong> are scheduled on the phone.</li>
   </ul>
   <p>On Android, the <em>Smart Scanner</em> button opens Google's document scanner, provided by Google Play services on your phone.
      Google's own terms apply to that screen.</p>
 
   <h2>Smart Study (Claude)</h2>
-  <p>When Smart Study is on and you save a scan, ask for AI flashcards or a quiz, type up a note, or check a typed quiz answer,
+  <p>When Smart Study is on and you scan pages, save a scan, ask for AI flashcards or a quiz, type up a note, or check a typed quiz answer,
      the app sends:</p>
   <ul>
-    <li>the <strong>text</strong> read from your pages (never the photos), the note's title, your flashcards, and your typed quiz answers,</li>
+    <li>with <em>Read Photos with Claude</em> on (the default), the <strong>photo of each page you scan</strong>, cropped to the page,
+        so Claude can write out the text on it (it reads handwriting much better than the phone can),</li>
+    <li>the <strong>text</strong> of your pages, the note's title, your flashcards, and your typed quiz answers,</li>
     <li>to our <strong>study server</strong> (hosted by Render, in Singapore), which passes them to <strong>Anthropic's Claude API</strong> and sends back
-        typed-up notes, a summary, key concepts, flashcards, quiz questions or a verdict on your answer.</li>
+        the text on a page, typed-up notes, a summary, key concepts, flashcards, quiz questions or a verdict on your answer.</li>
   </ul>
-  <p>Anthropic handles this text under its commercial terms and privacy policy: it doesn't use it to train its models, and it keeps API
+  <p>Anthropic handles these photos and this text under its commercial terms and privacy policy: it doesn't use it to train its models, and it keeps API
      inputs and outputs only for a limited time (normally up to 30 days) for safety and abuse monitoring. See
      <a href="https://www.anthropic.com/legal/privacy">anthropic.com/legal/privacy</a>.</p>
-  <p>Our study server keeps <strong>none of your text</strong>. For each request it writes one log line: the time, which feature was used,
+  <p>Our study server keeps <strong>none of your photos or text</strong>. For each request it writes one log line: the time, which feature was used,
      whether it worked, how long it took, how many tokens Claude used and what that cost, and a short one-way code made from your internet
      address (not the address itself). Your internet address is kept only in the server's memory, to apply the daily limits, and is gone
      when the server restarts. Our host keeps these log lines for a limited time.</p>
-  <p>You can turn Smart Study off any time in <em>Settings → Smart Study</em>; then nothing is sent and the app makes flashcards and quizzes on the phone instead.</p>
+  <p>You can turn <em>Read Photos with Claude</em> off in <em>Settings → Smart Study</em>; then your photos aren't sent, only text read on the phone.
+     You can turn Smart Study off there too; then nothing is sent and the app reads text, makes flashcards and quizzes on the phone instead.</p>
 
   <h2>Google sign-in and Drive sync</h2>
   <p>Signing in with Google is optional. If you do, the app receives your Google <strong>name, email address and profile photo</strong> (to show on

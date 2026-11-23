@@ -39,5 +39,9 @@ services:
         value: "60"
       - key: DAILY_CHECK_LIMIT
         value: "300"
+      - key: CLAUDE_READ_EFFORT
+        value: medium
+      - key: DAILY_READ_LIMIT
+        value: "100"
       - key: DAY_TIME_ZONE
         value: Asia/Manila

@@ -184,6 +184,28 @@ class StudyAi {
   /// Smart Study is switched on and a server address is known.
   static bool get isOn => _prefs.useAi && hasServer;
 
+  /// Scanned pages are read by Claude from their photos (Settings → Smart
+  /// Study → Read Photos with Claude, on with Smart Study).
+  static bool get readsPhotos => isOn && _prefs.aiReading;
+
+  /// How long one page may take to be read (Claude at medium effort takes
+  /// about 10–40 s; a sleeping free server adds up to a minute).
+  static const readTimeout = Duration(minutes: 2);
+
+  /// The text on one photographed page (a cropped JPEG), written out by
+  /// Claude: handwriting and print, in reading order. Empty when the page
+  /// has no writing.
+  static Future<String> readPage(Uint8List jpeg, {CancelToken? cancel}) async {
+    final j = await _post('/v1/read-page', {
+      'image': base64Encode(jpeg),
+      'mediaType': 'image/jpeg',
+    }, cancel: cancel, timeout: readTimeout);
+    final page = j['page'];
+    final text = page is Map ? page['text'] : null;
+    if (text is! String) throw _badReply;
+    return text;
+  }
+
   /// True if [url] looks like a server address the app can call.
   static bool isValidUrl(String url) {
     final uri = Uri.tryParse(url.trim());
@@ -301,7 +323,7 @@ class StudyAi {
       Uri.parse(base.trim().replaceFirst(RegExp(r'/+$'), '') + path);
 
   static Future<Json> _post(String path, Json body,
-      {CancelToken? cancel}) async {
+      {CancelToken? cancel, Duration timeout = StudyAi.timeout}) async {
     final base = serverUrl;
     if (!isValidUrl(base)) {
       throw const StudyAiException('not_set',

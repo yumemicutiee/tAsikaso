@@ -103,8 +103,13 @@ const fakes = (over: Partial<Generators> = {}): Partial<Generators> => ({
     data: { verdict: "correct", feedback: "Yes." },
     ms: 5,
   }),
+  readPage: async () => ({ ...usage(0.02), data: { text: PAGE_TEXT }, ms: 5 }),
   ...over,
 });
+
+const PAGE_TEXT = "Photosynthesis\n\n- happens in the chloroplast";
+/** A page photo as the app sends it (any base64 will do for the fakes). */
+const PHOTO = { image: Buffer.alloc(3000, 7).toString("base64"), mediaType: "image/jpeg" };
 
 type ErrorBody = { error: { code: string; message: string; requestId: string } };
 
@@ -473,6 +478,8 @@ test("behind a proxy each device is counted by its forwarded address, which it c
     studyLimit: 1,
     checks: 0,
     checkLimit: 300,
+    pagesRead: 0,
+    readLimit: 100,
   });
 });
 
@@ -481,6 +488,107 @@ test("the 10-minute rate limit kicks in after the allowance", async () => {
   const statuses: number[] = [];
   for (let i = 0; i < 3; i++) statuses.push((await post("/v1/check-answer", {})).status);
   assert.deepEqual(statuses, [400, 400, 429]);
+});
+
+test("the 10-minute rate limit counts per install, with a ceiling for one address", async () => {
+  const { post } = await start({ generators: fakes(), rateLimit: 2 });
+  const as = (install: string) => ({ headers: { "x-install-id": install } });
+  const status = async (install: string) =>
+    (await post("/v1/check-answer", {}, "secret", as(install))).status;
+  assert.equal(await status("aaaaaaaaaaaaaaaa1"), 400);
+  assert.equal(await status("aaaaaaaaaaaaaaaa1"), 400);
+  assert.equal(await status("aaaaaaaaaaaaaaaa1"), 429, "one phone's own allowance");
+  assert.equal(await status("bbbbbbbbbbbbbbbb2"), 400, "another phone on the same Wi-Fi");
+  // Made-up ids gain nothing past 10 phones' worth for one address (2 × 10 = 20).
+  const statuses: number[] = [];
+  for (let i = 0; i < 20; i++) statuses.push(await status(`cccccccccccccccc${String(i).padStart(2, "0")}`));
+  assert.equal(statuses.filter((s) => s === 429).length, 3, "20 allowed in all, 3 already used");
+});
+
+test("read-page: a page photo in, its text out, under its own daily limit", async () => {
+  let seen: unknown;
+  const { post, get, logFor } = await start({
+    generators: fakes({
+      readPage: async (input) => {
+        seen = input;
+        return { ...usage(0.02), data: { text: PAGE_TEXT }, ms: 5 };
+      },
+    }),
+    dailyLimit: 1,
+    dailyReadLimit: 2,
+  });
+  const res = await post("/v1/read-page", PHOTO);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), {
+    page: { text: PAGE_TEXT },
+    model: "claude-opus-5-5",
+    usage: { input: 2500, output: 12_000 },
+  });
+  assert.deepEqual(seen, PHOTO);
+  const line = await logFor(res.headers.get("x-request-id")!);
+  assert.equal(line.route, "/v1/read-page");
+  assert.ok(!JSON.stringify(line).includes(PHOTO.image.slice(0, 40)), "the photo isn't logged");
+
+  // Reading pages doesn't use up the Smart Study requests, and has its own limit.
+  assert.equal((await post("/v1/study-kit", { text: NOTES })).status, 200);
+  assert.equal((await post("/v1/read-page", PHOTO)).status, 200);
+  const third = await post("/v1/read-page", PHOTO);
+  assert.equal(third.status, 429);
+  assert.equal(
+    ((await third.json()) as ErrorBody).error.message,
+    "You've reached today's limit of 2 pages read by Claude. Try again tomorrow.",
+  );
+  const you = ((await (await get("/v1/usage")).json()) as { you: Record<string, unknown> }).you;
+  assert.equal(you.pagesRead, 2);
+  assert.equal(you.readLimit, 2);
+});
+
+test("read-page: the media type defaults to JPEG; a bad or missing photo is 400", async () => {
+  let seen: { mediaType?: string } | undefined;
+  const { post } = await start({
+    generators: fakes({
+      readPage: async (input) => {
+        seen = input;
+        return { ...usage(0.02), data: { text: "" }, ms: 5 };
+      },
+    }),
+  });
+  assert.equal((await post("/v1/read-page", { image: PHOTO.image })).status, 200);
+  assert.equal(seen?.mediaType, "image/jpeg");
+  for (const body of [{}, { image: "not base64 at all! ".repeat(10) }, { ...PHOTO, mediaType: "image/gif" }]) {
+    const res = await post("/v1/read-page", body);
+    assert.equal(res.status, 400, JSON.stringify(body).slice(0, 60));
+    assert.equal(((await res.json()) as ErrorBody).error.code, "bad_request");
+  }
+});
+
+test("read-page takes a photo of a few MB, which other routes refuse; a huge one is too_long", async () => {
+  const { post } = await start({ generators: fakes() });
+  const photo = { image: Buffer.alloc(3 * 1024 * 1024, 1).toString("base64") }; // 4 MB of base64
+  assert.equal((await post("/v1/read-page", photo)).status, 200);
+  assert.equal((await post("/v1/study-kit", { text: NOTES, pad: photo.image })).status, 413);
+  const huge = await post("/v1/read-page", { image: "A".repeat(9 * 1024 * 1024) });
+  assert.equal(huge.status, 413);
+  assert.equal(((await huge.json()) as ErrorBody).error.message, "This photo is too big to send.");
+});
+
+test("read-page errors speak of the page", async () => {
+  const { post } = await start({
+    generators: fakes({
+      readPage: async () => {
+        throw new RefusedError("no", usage());
+      },
+    }),
+  });
+  const res = await post("/v1/read-page", PHOTO);
+  assert.equal(res.status, 422);
+  assert.equal(((await res.json()) as ErrorBody).error.message, "Claude couldn't work with this page.");
+});
+
+test("health shows the read effort with HEALTH_DETAILS", async () => {
+  const { get } = await start({ generators: fakes(), healthDetails: true });
+  const json = (await (await get("/health", null)).json()) as Record<string, unknown>;
+  assert.equal(json.readEffort, "medium");
 });
 
 test("CORS lets the web app read the request id", async () => {

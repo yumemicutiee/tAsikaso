@@ -164,8 +164,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
     try {
       // Let the progress dialog appear before the work starts.
       await WidgetsBinding.instance.endOfFrame;
-      // Cropped and read on the reading screen (on the phone, no
-      // internet).
+      // Cropped and read on the reading screen (by Claude from the
+      // photos with Read Photos with Claude on, else on the phone).
       final jpegs = read.jpegs;
       final pages = read.pages;
       final text = read.text;
@@ -685,11 +685,16 @@ class _SaveSheetState extends State<SaveSheet> {
               subtitle: [
                 plural(widget.pageCount, 'page'),
                 if (read.text.trim().isEmpty)
-                  ScanService.canReadText
+                  ScanService.canReadText || StudyAi.readsPhotos
                       ? 'no text found'
                       : 'text is read in the phone app',
               ].join(', '),
             ),
+            // E.g. Claude couldn't read some pages, so the phone's text is used.
+            if (read.notice case final notice?) ...[
+              const SizedBox(height: 6),
+              Text(notice, style: AppText.itemMeta),
+            ],
             const SizedBox(height: 18),
             FolderField(
               folders: _folders,

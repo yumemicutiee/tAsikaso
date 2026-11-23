@@ -9,14 +9,18 @@ import {
   checkAnswerUser,
   QUIZ_SYSTEM,
   quizUser,
+  READ_PAGE_SYSTEM,
+  READ_PAGE_USER,
   STUDY_KIT_SYSTEM,
   studyKitUser,
 } from "./prompts.js";
 import {
   AnswerCheck,
   type CheckAnswerRequest,
+  PageText,
   Quiz,
   type QuizRequest,
+  type ReadPageRequest,
   StudyKit,
   type StudyKitRequest,
 } from "./schemas.js";
@@ -38,6 +42,11 @@ export const MODEL = process.env.CLAUDE_MODEL?.trim() || "claude-opus-5-5";
 export const EFFORT = effortFromEnv("CLAUDE_EFFORT", "high");
 /** Marking one typed answer is quick work and the student is waiting. */
 export const CHECK_EFFORT = effortFromEnv("CLAUDE_CHECK_EFFORT", "low");
+/**
+ * Reading a page photo: Opus 5.5 at medium effort, the owner's choice to
+ * keep the cost per page down (every scanned page is one call).
+ */
+export const READ_EFFORT = effortFromEnv("CLAUDE_READ_EFFORT", "medium");
 
 export const DEFAULT_MAX_CARDS = 30;
 export const DEFAULT_QUIZ_COUNT = 12;
@@ -50,7 +59,16 @@ export const MAX_TOKENS = {
   studyKit: 64_000,
   quiz: 16_000,
   checkAnswer: 4_000,
+  /** A dense page is about 1–2k tokens of text, plus thinking. */
+  readPage: 16_000,
 } as const;
+
+/**
+ * Roughly what one page photo costs in input tokens (Claude scales a photo
+ * to about 1.15 megapixels, ~1,600 tokens). Used only to estimate what an
+ * abandoned call cost.
+ */
+const EST_IMAGE_TOKENS = 1_600;
 
 /** Rough output speed, used only to estimate what an abandoned call cost. */
 const EST_OUTPUT_TOKENS_PER_SECOND = 50;
@@ -136,6 +154,31 @@ export class ClientGoneError extends ClaudeCallError {
 
 type Message = Anthropic.Beta.BetaMessage;
 
+/** The user turn: text, or content blocks (a page photo and words). */
+type UserTurn = string | Anthropic.Beta.BetaContentBlockParam[];
+
+interface GenerateOptions {
+  system: string;
+  user: UserTurn;
+  effort: Effort;
+  maxTokens: number;
+}
+
+/** About how many input tokens [opts] is, for estimating an abandoned call. */
+function estimateInputTokens(opts: { system: string; user: UserTurn }): number {
+  let chars = opts.system.length;
+  let images = 0;
+  if (typeof opts.user === "string") {
+    chars += opts.user.length;
+  } else {
+    for (const block of opts.user) {
+      if (block.type === "text") chars += block.text.length;
+      else if (block.type === "image") images++;
+    }
+  }
+  return Math.ceil(chars / 3) + images * EST_IMAGE_TOKENS;
+}
+
 const formats = new WeakMap<z.ZodType, { type: "json_schema"; schema: Record<string, unknown> }>();
 
 /**
@@ -161,7 +204,7 @@ function formatFor(schema: z.ZodType) {
  */
 async function generate<S extends z.ZodType>(
   schema: S,
-  opts: { system: string; user: string; effort: Effort; maxTokens: number },
+  opts: GenerateOptions,
   call: CallOptions = {},
 ): Promise<Generated<z.infer<S>>> {
   const started = Date.now();
@@ -299,13 +342,12 @@ export function usageOf(message: Pick<Message, "model" | "usage">): CallUsage {
  */
 function estimateAbandoned(
   snapshot: Message | undefined,
-  opts: { system: string; user: string; maxTokens: number },
+  opts: GenerateOptions,
   started: number,
 ): CallUsage {
   const seconds = (Date.now() - started) / 1000;
   const model = snapshot?.model ?? MODEL;
-  const inputTokens =
-    snapshot?.usage.input_tokens ?? Math.ceil((opts.system.length + opts.user.length) / 3);
+  const inputTokens = snapshot?.usage.input_tokens ?? estimateInputTokens(opts);
   const outputTokens = Math.max(
     snapshot?.usage.output_tokens ?? 0,
     Math.min(opts.maxTokens, Math.round(seconds * EST_OUTPUT_TOKENS_PER_SECOND)),
@@ -378,6 +420,44 @@ export async function generateQuiz(
       }),
     },
   };
+}
+
+/**
+ * Writes out the text in a photo of a page of notes (handwritten or
+ * printed): Claude reads the photo itself, in place of the phone's OCR.
+ */
+export async function readPage(
+  req: ReadPageRequest,
+  call?: CallOptions,
+): Promise<Generated<PageText>> {
+  const result = await generate(
+    PageText,
+    {
+      system: READ_PAGE_SYSTEM,
+      user: [
+        {
+          type: "image",
+          source: { type: "base64", media_type: req.mediaType, data: req.image },
+        },
+        { type: "text", text: READ_PAGE_USER },
+      ],
+      effort: READ_EFFORT,
+      maxTokens: MAX_TOKENS.readPage,
+    },
+    call,
+  );
+  return { ...result, data: { text: tidyPageText(result.data.text) } };
+}
+
+/** Trailing spaces off, at most one blank line in a row, no blank ends. */
+export function tidyPageText(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /** Marks a typed answer by meaning. */

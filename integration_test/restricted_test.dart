@@ -108,10 +108,13 @@ void main() {
 
     timer.start();
     final waited = Stopwatch()..start();
+    // Until the switch is off and the message has come (and the alert has
+    // been taken back, a moment later).
     while (waited.elapsed < const Duration(seconds: 20) &&
-        store.prefs.timerAlerts) {
+        (store.prefs.timerAlerts || said.isEmpty)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
+    await Future<void>.delayed(const Duration(seconds: 1));
     timer.pause();
     timer.reset();
 

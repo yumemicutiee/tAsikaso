@@ -262,6 +262,13 @@ class SettingsScreen extends StatelessWidget {
                   value: p.useAi,
                   onChanged: (v) => prefs(p.copyWith(useAi: v)),
                 ),
+                // Only meaningful with Smart Study on.
+                if (p.useAi)
+                  _Switch(
+                    label: 'Read Photos with Claude',
+                    value: p.aiReading,
+                    onChanged: (v) => prefs(p.copyWith(aiReading: v)),
+                  ),
                 _TapRow(
                   label: 'Study Server',
                   value: StudyAi.serverUrl.isEmpty
@@ -276,8 +283,11 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ]),
               _Note(StudyAi.hasServer
-                  ? 'When you save a scan, your study server asks Claude '
-                      'for clean notes, key concepts, flashcards and a quiz. '
+                  ? '${p.useAi && p.aiReading ? 'Claude reads the text from '
+                      'your scanned pages, handwriting too, then makes clean '
+                      'notes, key concepts, flashcards and quizzes.' : 'When '
+                      'you save a scan, your study server asks Claude for '
+                      'clean notes, key concepts, flashcards and a quiz.'} '
                       '$kSmartStudyPrivacy Needs internet.'
                   : 'Run the study server from the app\'s server folder '
                       '(see its README), then add its address here to get '

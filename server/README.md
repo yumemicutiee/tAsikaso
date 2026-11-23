@@ -107,9 +107,11 @@ than quietly switching a limit off.
 | `CLAUDE_MODEL` | `claude-opus-5-5` | The model. Prices for the cap are in `src/pricing.ts`. |
 | `CLAUDE_EFFORT` | `high` | `low`, `medium`, `high`, `xhigh` or `max`, for study kits and quizzes. |
 | `CLAUDE_CHECK_EFFORT` | `low` | Effort for marking one typed answer: a quick judgement while the student waits. |
-| `RATE_LIMIT` | `30` | Requests per device per 10 minutes (any route). |
+| `CLAUDE_READ_EFFORT` | `medium` | Effort for reading one page photo (`/v1/read-page`), kept at medium so a scan of many pages stays cheap. |
+| `RATE_LIMIT` | `30` | Requests per device per 10 minutes (any route). With the app's install id, per phone, and one address at most 10× that. |
 | `DAILY_LIMIT` | `60` | Study kits + quizzes per device per day. `0` = no daily limit. |
 | `DAILY_CHECK_LIMIT` | `300` | Answer checks per device per day. `0` = no daily limit. |
+| `DAILY_READ_LIMIT` | `100` | Page photos read by Claude per device per day. `0` = no daily limit. |
 | `DAILY_BUDGET_USD` | `5` | Estimated Claude spend per day for the whole server, in US dollars. `0` = no cap. |
 | `DAY_TIME_ZONE` | `Asia/Manila` | Whose midnight starts a new day for the daily limits. |
 | `HEALTH_DETAILS` | off | `1` = `/health` also shows the model and effort. |
@@ -178,9 +180,19 @@ Errors look like `{"error": {"code": "…", "message": "…", "requestId": "…"
   asked for come back.
 - `POST /v1/check-answer` `{question, answer, acceptable?, userAnswer}` →
   `{check: {verdict, feedback}, model, usage}` with verdict `correct`, `partly` or `wrong`.
+- `POST /v1/read-page` `{image, mediaType?}` → `{page: {text}, model, usage}`.
+  `image` is one cropped page photo in base64 (at most 5 MB of image;
+  `mediaType` `image/jpeg` (default), `image/png` or `image/webp`). Claude
+  reads the photo itself and writes out the text in reading order, the
+  student's own words and spelling, `- ` for bullets, `[?]` after a word it
+  can't make out, a short `[Diagram: …]` line for drawings; `""` for a blank
+  page. Bodies up to 8 MB on this route only. Counted against
+  `DAILY_READ_LIMIT`, not `DAILY_LIMIT`. About $0.02–0.04 a page at
+  `medium` (a photo is ~1,600 input tokens). The photo is never logged.
 - `GET /v1/usage` (token needed) → today's numbers:
   `{day, timeZone, resetsInSeconds, requests, byRoute, refused, tokens,
-  spentUsd, budgetUsd, remainingUsd, you: {address, study, studyLimit, checks, checkLimit}}`.
+  spentUsd, budgetUsd, remainingUsd, you: {address, study, studyLimit, checks, checkLimit,
+  pagesRead, readLimit}}`.
 
 `usage` in the POST replies is `{input, output}` tokens. A quiz question is
 `{type, prompt, options, answerIndex, answer, acceptable, explanation, cardIndex}`

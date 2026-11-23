@@ -13,9 +13,10 @@ Future<void> openHelp(BuildContext context) => Navigator.of(context).push(
     );
 
 /// Where Smart Study sends what, said the same way in Help and Settings.
-const kSmartStudyPrivacy = 'Only text leaves the phone, never your photos: '
-    'the text read from them, your cards and your typed quiz answers go to '
-    'your study server and on to Anthropic.';
+const kSmartStudyPrivacy = 'The photos of your pages (with Read Photos with '
+    'Claude on), the text read from them, your cards and your typed quiz '
+    'answers go to your study server and on to Anthropic, and are not kept '
+    'there. Turn Read Photos with Claude off to send text only.';
 
 /// Short answers to the questions students ask most.
 class HelpScreen extends StatelessWidget {
@@ -28,8 +29,8 @@ class HelpScreen extends StatelessWidget {
           "Smart Scanner finds the page edges for you; the app's own camera "
           'finds them too (see below), and you can drag the four corners if '
           "they're off. "
-          'Scan several pages and tap Next: their text is read on your '
-          'phone while you watch. Pick a folder and they are saved as notes '
+          'Scan several pages and tap Next: their text is read while you '
+          'watch (by Claude with Smart Study, else on your phone). Pick a folder and they are saved as notes '
           "in its Notebook, titled from their first line. From a note, tap "
           'Edit to fix a word or Make Flashcards to turn it into cards.',
     ),
@@ -44,10 +45,13 @@ class HelpScreen extends StatelessWidget {
     ),
     (
       'Can the app read the text in my photos?',
-      'Yes, on phones. When you save, the text is read on your phone (no '
-          'internet needed). Save as Text Notes and the note opens on its '
-          'text: tap Edit to fix a misread word, and Make Flashcards to turn '
-          'it into cards. Your photos stay one tap away. Without Smart Study, '
+      'Yes. Your phone finds the lines of text first (they light up in '
+          'blue). With Smart Study on, Claude then reads each page from its '
+          'photo, which works much better on handwriting; without internet, '
+          'or with Settings → Smart Study → Read Photos with Claude off, the '
+          'text is read on your phone only. The note opens on its text: tap '
+          'Edit to fix a misread word, and Make Flashcards to turn it into '
+          'cards. Your photos stay one tap away. Without Smart Study, '
           'cards are suggested from lines like "Term: definition" for you to '
           'add or skip.',
     ),

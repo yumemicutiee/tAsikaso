@@ -67,8 +67,15 @@ lecture-note capture → text notes → flashcards.
   wait has **Cancel**, which drops the request so the server stops the
   Claude call too. Needs internet; when the server can't be reached the app
   falls back to the offline behaviour and says so, and server errors end
-  with a short "Ref" code that finds the request in the server's log. Only
-  text leaves the phone — never the photos.
+  with a short "Ref" code that finds the request in the server's log.
+- **Read Photos with Claude** (on with Smart Study; Settings → Smart Study):
+  on the reading screen ML Kit still finds the lines (lit up in blue), then
+  each cropped page photo goes to the study server's `/v1/read-page` and
+  Claude Opus 5.5 (effort `medium`) writes out its text, handwriting
+  included, three pages at a time. That text is the note's text; ML Kit's
+  line boxes stay as the Scan PDF's hidden layer. A page Claude can't read
+  (offline, daily limit, …) keeps ML Kit's text and the save sheet says so.
+  Switched off, only text leaves the phone.
 - **Save Notes:** after reading, pick a folder (or tap **New** to create
   one right there). The pages are saved as **Text Notes** in its Notebook,
   titled from their first line (or by the study server): the text read

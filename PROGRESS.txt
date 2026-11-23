@@ -1,7 +1,7 @@
 tAsikaso - Milestones and progress
 ==================================
-Updated: 18 November 2026
-Latest version: 0.5.1 (Android APK, version code 12)
+Updated: 23 November 2026
+Latest version: 0.7.2 (Android APK, version code 17)
 Download: https://github.com/yumemicutiee/tAsikaso/releases
 Web app: https://yumemicutiee.github.io/tAsikaso/
 Study server (Claude): https://tasikaso-study-server.onrender.com
@@ -16,8 +16,10 @@ tAsikaso is a study app for Android (and the web) with:
 - "When Time Is Up": Alarm Clock (the phone's alarm sound), Vibration
   Only, Alarm Clock and Vibration, or Off; rings even when the app is closed
 - Scanning notes with auto-crop that finds the page on any phone (AI
-  models inside the app, no internet needed), text recognition, and PDFs
-  whose text can be selected and searched
+  models inside the app, no internet needed); the phone finds the lines of
+  text, then Claude Opus 5.5 reads each page photo (handwriting too) into
+  editable Text Notes in each folder's Notebook; Import PDF
+- A welcome screen (Google or no account), slides, a loading screen
 - Smart Study with Claude (Opus 5.5): typed-up notes, summaries, key
   concepts, flashcards, quizzes, and typed answers judged by meaning
 - Flashcards with smart review, quizzes, library and folders, search
@@ -48,8 +50,11 @@ MILESTONES
        detector found 60). About 0.5 s per photo on the Android emulator.
        Left: test on 10-20 real photos of real notes.
 
-[DONE] R. Release v0.5.0 (18 Nov) and v0.5.1 (18 Nov)
+[DONE] R. Release v0.5.0 (18 Nov), v0.5.1 (18 Nov), v0.7.2 (23 Nov)
        Signed with the upload key; install over older versions keeps data.
+       v0.5.0 and v0.5.1 could not read text (R8 stripped ML Kit in release
+       builds); fixed in v0.7.2, whose APK keeps ML Kit whole, and
+       release-check.yml now proves a release build reads text.
 
 [MOSTLY DONE] C. Verified without a phone (changed 18 Nov)
        A real-phone run-through wasn't possible, so every item of the phone
@@ -67,7 +72,7 @@ MILESTONES
            cards, quiz, answer check, wrong token, no server; about 6 s
          - a 12-page scan to one searchable PDF (about 1-1.5 min, memory flat)
          - the APK: only approved permissions, ready for Android 15+ phones
-       Unit and widget tests: 237 (app) and 63 (server), all passing.
+       Unit and widget tests: 288 (app) and 72 (server), all passing.
        Still being checked: the alarm channels of "When Time Is Up" on the
        emulator (sound, alarm volume, vibration), and timing on a slow,
        cheap-phone emulator profile.
@@ -114,12 +119,19 @@ HOUSEKEEPING FOR THE OWNER
 - Delete the Render API key that was shared in chat
   (Render -> Account Settings -> API Keys).
 - Set a monthly spend limit in the Claude Console.
-- Try v0.5.1 on a phone: a scan saved as Flashcards (Smart Study), the
-  auto-crop corners, and Settings -> When Time Is Up -> Alarm Clock.
+- Try v0.7.2 on a phone: the welcome screen, handwritten notes read by Claude,
+  Make Flashcards from the note (Smart Study), the auto-crop corners, and
+  Settings -> When Time Is Up -> Alarm Clock.
 
 
 VERSION HISTORY (recent)
 ------------------------
+0.7.2  23 Nov  Read Photos with Claude: Claude Opus 5.5 (effort medium) reads each
+               scanned page from its photo, handwriting too; the phone's ML Kit
+               still finds the lines (lit up in blue) and is the fallback.
+               New server route /v1/read-page, its own daily limit (100 pages),
+               the 10-minute limit counted per phone. Privacy policy updated.
+               Includes everything below from 0.7.1 (never published alone).
 0.7.1  23 Nov  Fixed: text was never read in the APK (R8 broke ML Kit in release
                builds only); ML Kit kept whole, checked by release-check.yml.
                Next on the crop screen opens the reading screen (text read page by

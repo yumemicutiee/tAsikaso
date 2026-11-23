@@ -938,6 +938,7 @@ class AppPrefs {
     this.subscription,
     this.lastBackupAt,
     this.useAi = true,
+    this.aiReading = true,
     this.aiServerUrl = '',
     this.aiToken = '',
     this.profilePhotoUrl = '',
@@ -997,6 +998,11 @@ class AppPrefs {
   /// Ask the study server (Claude) for clean notes, key concepts, flashcards
   /// and quizzes when notes are saved.
   final bool useAi;
+
+  /// With Smart Study on, a scanned page's photo goes to the study server
+  /// for Claude to write out its text (much better than the phone's OCR on
+  /// handwriting). Off: the text is read on the phone only.
+  final bool aiReading;
 
   /// The study server's address and app token typed in Settings. Empty
   /// means the ones built into the app (`--dart-define`), if any.
@@ -1071,6 +1077,7 @@ class AppPrefs {
     bool clearSubscription = false,
     DateTime? lastBackupAt,
     bool? useAi,
+    bool? aiReading,
     String? aiServerUrl,
     String? aiToken,
     String? profilePhotoUrl,
@@ -1098,6 +1105,7 @@ class AppPrefs {
             clearSubscription ? null : (subscription ?? this.subscription),
         lastBackupAt: lastBackupAt ?? this.lastBackupAt,
         useAi: useAi ?? this.useAi,
+        aiReading: aiReading ?? this.aiReading,
         aiServerUrl: aiServerUrl ?? this.aiServerUrl,
         aiToken: aiToken ?? this.aiToken,
         profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
@@ -1125,6 +1133,7 @@ class AppPrefs {
         if (subscription case final s?) 'plan': s.toJson(),
         if (lastBackupAt case final t?) 'backupAt': t.toIso8601String(),
         'ai': useAi,
+        'aiRead': aiReading,
         if (aiServerUrl.isNotEmpty) 'aiUrl': aiServerUrl,
         if (aiToken.isNotEmpty) 'aiToken': aiToken,
         if (profilePhotoUrl.isNotEmpty) 'photoUrl': profilePhotoUrl,
@@ -1162,6 +1171,7 @@ class AppPrefs {
             ? DateTime.tryParse(j['backupAt'] as String)
             : null,
         useAi: j['ai'] != false,
+        aiReading: j['aiRead'] != false,
         aiServerUrl: j['aiUrl'] as String? ?? '',
         aiToken: j['aiToken'] as String? ?? '',
         profilePhotoUrl: j['photoUrl'] as String? ?? '',

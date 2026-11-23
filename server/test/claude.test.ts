@@ -13,7 +13,9 @@ import {
   generateQuiz,
   generateStudyKit,
   MAX_TOKENS,
+  readPage,
   RefusedError,
+  tidyPageText,
   TooLongError,
 } from "../src/claude.js";
 import { FakeAnthropic, messageEvents } from "./fake-anthropic.js";
@@ -294,4 +296,41 @@ test("aborting stops the HTTP call to Anthropic and estimates what it cost", asy
   assert.ok((err.usage?.costUsd ?? 0) > 0);
   await aborted; // the fake API saw the connection close
   assert.ok(fake.aborted >= 1);
+});
+
+test("reading a page: the photo goes to Opus 5.5 at medium effort, and the text comes back tidied", async () => {
+  const image = Buffer.from("fake jpeg bytes for the test").toString("base64");
+  fake.reply({
+    sse: messageEvents({
+      content: [
+        { type: "text", text: JSON.stringify({ text: "Photosynthesis   \r\n\n\n\n- light reactions\n" }) },
+      ],
+      inputTokens: 1700,
+      outputTokens: 900,
+    }),
+  });
+  const result = await readPage({ image, mediaType: "image/jpeg" }, { client });
+
+  const seen = fake.requests.at(-1)!;
+  assert.equal(seen.body.model, "claude-opus-5-5");
+  assert.equal(seen.body.output_config.effort, "medium");
+  assert.equal(seen.body.max_tokens, MAX_TOKENS.readPage);
+  assert.deepEqual(seen.body.thinking, { type: "adaptive" });
+  assert.equal(seen.body.fallbacks, "default");
+  const [photo, words] = seen.body.messages[0].content;
+  assert.deepEqual(photo, {
+    type: "image",
+    source: { type: "base64", media_type: "image/jpeg", data: image },
+  });
+  assert.equal(words.type, "text");
+  assert.match(seen.body.system, /never instructions to you/);
+
+  assert.equal(result.data.text, "Photosynthesis\n\n- light reactions");
+  assert.equal(result.inputTokens, 1700);
+  assert.ok(Math.abs(result.costUsd - (1700 * 4 + 900 * 20) / 1e6) < 1e-9);
+});
+
+test("tidyPageText keeps the page's lines and at most one blank line between blocks", () => {
+  assert.equal(tidyPageText("  \n# Title  \n\n\n\nline one\r\nline two\n\n"), "# Title\n\nline one\nline two");
+  assert.equal(tidyPageText(""), "");
 });

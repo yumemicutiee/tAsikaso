@@ -687,6 +687,8 @@ void main() {
         (tester) async {
       readsText();
       final server = silentServer();
+      // Read on the phone, so the one wait is the typing up.
+      store.updatePrefs(store.prefs.copyWith(aiReading: false));
       await openSaveSheet(tester);
       await tester.tap(find.text('Save Notes').last);
       await tester.pump();
@@ -706,6 +708,173 @@ void main() {
       expect(note.text, contains('Osmosis'));
       expect(find.byType(NoteTextScreen), findsOneWidget);
       expect(find.textContaining('The AI step was skipped.'), findsOneWidget);
+    });
+  });
+
+  group('Read Photos with Claude', () {
+    CapturedPage page(int id) {
+      final image = img.Image(width: 40, height: 30);
+      img.fill(image, color: img.ColorRgb8(230, 230, 230));
+      return CapturedPage(
+          id: id, bytes: img.encodePng(image), width: 40, height: 30);
+    }
+
+    /// The phone's OCR finds one misread line on every page.
+    void phoneReads() {
+      ScanService.debugRead = (jpegs) async => [
+            for (final _ in jpegs)
+              const RecognizedPage(lines: [
+                RecognizedLine(
+                    text: 'Osm0sis: rnovement of waler',
+                    left: 2, top: 2, right: 30, bottom: 8),
+              ]),
+          ];
+    }
+
+    const claudeText = 'Osmosis: movement of water across a membrane\n\n'
+        '- Diffusion: particles spread out';
+
+    /// The study server: Claude reads pages with [read] (null: reads them
+    /// as [claudeText]); study kits answer as usual.
+    void server({http.Response Function(int page)? read}) {
+      var pages = 0;
+      setServer();
+      StudyAi.debugClient = () => MockClient((req) async {
+            requests.add(req);
+            if (req.url.path == '/v1/read-page') {
+              final n = ++pages;
+              return read?.call(n) ??
+                  http.Response(jsonEncode({'page': {'text': claudeText}}), 200,
+                      headers: {'content-type': 'application/json'});
+            }
+            return http.Response(jsonEncode(kitReply()), 200,
+                headers: {'content-type': 'application/json'});
+          });
+    }
+
+    Iterable<http.Request> reads() =>
+        requests.where((r) => r.url.path == '/v1/read-page');
+
+    Future<void> save(WidgetTester tester) async {
+      await tester.tap(find.text('Save Notes').last);
+      await tester.pump();
+      await tester.runAsync(() async {
+        for (var i = 0; i < 150 && store.notes.isEmpty; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await tester.pump();
+        }
+      });
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> scan(WidgetTester tester, int pages) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(
+          home: ReviewScreen(pages: [for (var i = 1; i <= pages; i++) page(i)])));
+      await tapNextAndRead(tester);
+    }
+
+    testWidgets("Claude's reading of the photo becomes the note's text",
+        (tester) async {
+      phoneReads();
+      server();
+      await scan(tester, 1);
+
+      final sent = reads().single;
+      final body = jsonDecode(sent.body) as Map<String, Object?>;
+      expect(body['mediaType'], 'image/jpeg');
+      final photo = base64Decode(body['image']! as String);
+      expect(photo.sublist(0, 2), [0xFF, 0xD8], reason: 'the cropped page, as a JPEG');
+      expect(sent.headers['authorization'], 'Bearer secret');
+
+      await save(tester);
+      final note = store.notes.single;
+      expect(note.text, claudeText, reason: "Claude's text, not the phone's misreading");
+      expect(note.text, isNot(contains('Osm0sis')));
+      // The study kit is made from Claude's text.
+      final kitBody = jsonDecode(
+              requests.lastWhere((r) => r.url.path == '/v1/study-kit').body)
+          as Map<String, Object?>;
+      expect(kitBody['text'], claudeText);
+    });
+
+    testWidgets('every page is read by Claude, and the pages keep their order',
+        (tester) async {
+      phoneReads();
+      server(
+          read: (n) => http.Response(
+              jsonEncode({'page': {'text': 'Page text $n'}}), 200,
+              headers: {'content-type': 'application/json'}));
+      await scan(tester, 4);
+      expect(reads(), hasLength(4));
+      await save(tester);
+      expect(store.notes.single.text,
+          'Page text 1\n\nPage text 2\n\nPage text 3\n\nPage text 4');
+    });
+
+    testWidgets("a page Claude can't read keeps the phone's text, and the save "
+        'sheet says why', (tester) async {
+      phoneReads();
+      server(
+          read: (_) => http.Response(
+              jsonEncode({
+                'error': {
+                  'code': 'daily_limit',
+                  'message': "You've reached today's limit of 100 pages read "
+                      'by Claude. Try again tomorrow.',
+                },
+              }),
+              429,
+              headers: {'content-type': 'application/json'}));
+      await scan(tester, 3);
+      expect(reads(), hasLength(1),
+          reason: 'after a daily limit the other pages are not sent');
+      expect(
+          find.textContaining('The pages were read on your phone instead of by Claude. '
+              "You've reached today's limit of 100 pages"),
+          findsOneWidget);
+      await save(tester);
+      expect(store.notes.single.text, contains('Osm0sis'),
+          reason: "the phone's text, as before Claude");
+    });
+
+    testWidgets('a blank answer from Claude keeps what the phone found',
+        (tester) async {
+      phoneReads();
+      server(
+          read: (_) => http.Response(jsonEncode({'page': {'text': '  '}}), 200,
+              headers: {'content-type': 'application/json'}));
+      await scan(tester, 1);
+      await save(tester);
+      expect(store.notes.single.text, contains('Osm0sis'));
+    });
+
+    testWidgets('switched off, no photo is sent', (tester) async {
+      phoneReads();
+      server();
+      store.updatePrefs(store.prefs.copyWith(aiReading: false));
+      await scan(tester, 2);
+      expect(reads(), isEmpty);
+      await save(tester);
+      expect(store.notes.single.text, contains('Osm0sis'));
+    });
+
+    testWidgets('with Smart Study off, no photo is sent', (tester) async {
+      phoneReads();
+      server();
+      store.updatePrefs(store.prefs.copyWith(useAi: false));
+      await scan(tester, 1);
+      expect(reads(), isEmpty);
+    });
+
+    testWidgets('the setting is saved, and on by default', (tester) async {
+      final prefs = AppPrefs.fromJson(
+          store.prefs.copyWith(aiReading: false).toJson());
+      expect(prefs.aiReading, isFalse);
+      expect(AppPrefs.fromJson(const {}).aiReading, isTrue,
+          reason: 'on for old save files and new installs');
     });
   });
 

@@ -6,7 +6,7 @@ if (existsSync(".env")) process.loadEnvFile(".env");
 
 const { ConfigError, readConfig } = await import("./config.js");
 const { createApp } = await import("./app.js");
-const { CHECK_EFFORT, EFFORT, MODEL } = await import("./claude.js");
+const { CHECK_EFFORT, EFFORT, MODEL, READ_EFFORT } = await import("./claude.js");
 const { jsonLogger: log } = await import("./log.js");
 
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -35,6 +35,7 @@ const app = createApp({
   trustProxy: config.trustProxy,
   dailyLimit: config.dailyLimit,
   dailyCheckLimit: config.dailyCheckLimit,
+  dailyReadLimit: config.dailyReadLimit,
   dailyBudgetUsd: config.dailyBudgetUsd,
   timeZone: config.timeZone,
   healthDetails: config.healthDetails,
@@ -46,8 +47,10 @@ const server = app.listen(config.port, () => {
     model: MODEL,
     effort: EFFORT,
     checkEffort: CHECK_EFFORT,
+    readEffort: READ_EFFORT,
     dailyLimit: config.dailyLimit,
     dailyCheckLimit: config.dailyCheckLimit,
+    dailyReadLimit: config.dailyReadLimit,
     dailyBudgetUsd: config.dailyBudgetUsd,
     timeZone: config.timeZone,
   });

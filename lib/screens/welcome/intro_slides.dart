@@ -60,7 +60,7 @@ class IntroSlides extends StatefulWidget {
         const IntroSlide(
           title: 'Snap your notes into text',
           body: 'Take photos of your lecture notes. $kAppName crops the pages '
-              'and reads the text right on your phone.',
+              'and Claude reads the text, even handwriting.',
           color: Color(0xFFA8DCC1),
           icon: AppIcons.capture,
           chips: [(AppIcons.pages, '3 pages'), (AppIcons.text, 'Text found')],

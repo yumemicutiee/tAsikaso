@@ -21,6 +21,15 @@ function events(json, model = "claude-opus-5-5") {
 function answerFor(body) {
   const props = body?.output_config?.format?.schema?.properties ?? {};
   const user = JSON.stringify(body.messages ?? []);
+  if ("text" in props && !("title" in props)) {
+    // Reading a page photo: it must have come as an image.
+    const sawImage = (body.messages?.[0]?.content ?? []).some?.((b) => b?.type === "image");
+    return {
+      text: sawImage
+        ? "E2E read by Claude\n\n- Mitochondria make ATP.\n- Ribosomes make proteins."
+        : "",
+    };
+  }
   if ("verdict" in props) {
     return { verdict: "partly", feedback: "E2E feedback: close, but the key word is mitochondria." };
   }

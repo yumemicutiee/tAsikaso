@@ -20,21 +20,35 @@ import {
   generateStudyKit,
   type Generated,
   MODEL,
+  READ_EFFORT,
+  readPage,
   RefusedError,
   TooLongError,
 } from "./claude.js";
 import { DEFAULTS } from "./config.js";
-import { type Admission, type Client, DailyLedger, type RequestKind } from "./ledger.js";
+import {
+  type Admission,
+  type Client,
+  DailyLedger,
+  type RequestKind,
+  SHARED_ADDRESS_FACTOR,
+} from "./ledger.js";
 import { jsonLogger, type Logger } from "./log.js";
 import {
   type AnswerCheck,
   CheckAnswerRequest,
   CrashReport,
+  type PageText,
   type Quiz,
   QuizRequest,
+  READ_PAGE_BODY_LIMIT,
+  ReadPageRequest,
   type StudyKit,
   StudyKitRequest,
 } from "./schemas.js";
+
+/** The route that takes a page photo (a bigger body than the others). */
+const READ_PAGE_ROUTE = "/v1/read-page";
 
 /** An error with the HTTP status and a short code the app can switch on. */
 export class HttpError extends Error {
@@ -51,11 +65,12 @@ export class HttpError extends Error {
 
 type Work<I, O> = (input: I, call: CallOptions) => Promise<Generated<O>>;
 
-/** The Claude calls behind the three POST routes; tests swap in fakes. */
+/** The Claude calls behind the four POST routes; tests swap in fakes. */
 export interface Generators {
   studyKit: Work<StudyKitRequest, StudyKit>;
   quiz: Work<QuizRequest, Quiz>;
   checkAnswer: Work<CheckAnswerRequest, AnswerCheck>;
+  readPage: Work<ReadPageRequest, PageText>;
 }
 
 export interface AppOptions {
@@ -72,6 +87,8 @@ export interface AppOptions {
   dailyLimit?: number;
   /** Answer checks per client per day (0 = no limit). */
   dailyCheckLimit?: number;
+  /** Page photos read per client per day (0 = no limit). */
+  dailyReadLimit?: number;
   /** Estimated Claude spend per day for the whole server, in dollars (0 = no cap). */
   dailyBudgetUsd?: number;
   /** Where the day starts for the daily limits. */
@@ -105,6 +122,7 @@ export function createApp(options: AppOptions = {}) {
     timeZone: options.timeZone ?? DEFAULTS.timeZone,
     dailyLimit: options.dailyLimit ?? DEFAULTS.dailyLimit,
     dailyCheckLimit: options.dailyCheckLimit ?? DEFAULTS.dailyCheckLimit,
+    dailyReadLimit: options.dailyReadLimit ?? DEFAULTS.dailyReadLimit,
     budgetUsd: options.dailyBudgetUsd ?? DEFAULTS.dailyBudgetUsd,
     now: options.now,
   });
@@ -112,6 +130,7 @@ export function createApp(options: AppOptions = {}) {
     studyKit: generateStudyKit,
     quiz: generateQuiz,
     checkAnswer,
+    readPage,
     ...options.generators,
   };
 
@@ -137,12 +156,23 @@ export function createApp(options: AppOptions = {}) {
     next();
   });
 
-  app.use(express.json({ limit: "2mb" }));
+  // A page photo needs a bigger body than text does.
+  const smallJson = express.json({ limit: "2mb" });
+  const photoJson = express.json({ limit: READ_PAGE_BODY_LIMIT });
+  app.use((req, res, next) =>
+    (req.path === READ_PAGE_ROUTE ? photoJson : smallJson)(req, res, next),
+  );
 
   app.get("/health", (_req, res) => {
     res.json(
       options.healthDetails
-        ? { ok: true, model: MODEL, effort: EFFORT, checkEffort: CHECK_EFFORT }
+        ? {
+            ok: true,
+            model: MODEL,
+            effort: EFFORT,
+            checkEffort: CHECK_EFFORT,
+            readEffort: READ_EFFORT,
+          }
         : { ok: true },
     );
   });
@@ -227,6 +257,8 @@ export function createApp(options: AppOptions = {}) {
   app.post("/v1/study-kit", handle(StudyKitRequest, generators.studyKit, "kit", "study"));
   app.post("/v1/quiz", handle(QuizRequest, generators.quiz, "quiz", "study"));
   app.post("/v1/check-answer", handle(CheckAnswerRequest, generators.checkAnswer, "check", "check"));
+  // One photographed page in, its text out (Claude reads the photo).
+  app.post(READ_PAGE_ROUTE, handle(ReadPageRequest, generators.readPage, "page", "read"));
 
   // A crash report from the app: one log line, nothing stored. Behind the
   // token and the per-client rate limit; doesn't count against the daily
@@ -348,17 +380,33 @@ function requireToken(token: string) {
   };
 }
 
-/** A small in-memory limiter: fine for one server; use a shared store for several. */
+/**
+ * A small in-memory limiter: fine for one server; use a shared store for
+ * several. Like the daily limits, it counts per install when the app sends
+ * its install id (a scan of many pages is one request per page, and a
+ * school's students share one address), with their address together
+ * allowed SHARED_ADDRESS_FACTOR times as many; else per address.
+ */
 function rateLimiter(limit: number) {
   const windowMs = 10 * 60 * 1000;
   const hits = new Map<string, number[]>();
   return (req: Request, _res: Response, next: NextFunction) => {
     const now = Date.now();
-    const key = clientKey(req);
-    const recent = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
-    if (recent.length >= limit) {
-      hits.set(key, recent);
-      const wait = Math.max(1, Math.ceil((windowMs - (now - recent[0]!)) / 1000));
+    const client = clientOf(req);
+    const counters: [string, number][] = client.install
+      ? [
+          [`install:${client.install}`, limit],
+          [`shared:${client.address}`, limit * SHARED_ADDRESS_FACTOR],
+        ]
+      : [[client.address, limit]];
+    const recents = counters.map(
+      ([key]) => (hits.get(key) ?? []).filter((t) => now - t < windowMs),
+    );
+    const full = counters.findIndex(([, max], i) => recents[i]!.length >= max);
+    if (full >= 0) {
+      counters.forEach(([key], i) => hits.set(key, recents[i]!));
+      const oldest = recents[full]![0]!;
+      const wait = Math.max(1, Math.ceil((windowMs - (now - oldest)) / 1000));
       next(
         new HttpError(
           429,
@@ -369,8 +417,10 @@ function rateLimiter(limit: number) {
       );
       return;
     }
-    recent.push(now);
-    hits.set(key, recent);
+    counters.forEach(([key], i) => {
+      recents[i]!.push(now);
+      hits.set(key, recents[i]!);
+    });
     if (hits.size > 10_000) {
       // Forget quiet clients so the map can't grow forever.
       for (const [k, v] of hits) {
@@ -392,11 +442,14 @@ function refusal(a: Exclude<Admission, { ok: true }>, secondsToMidnight: number)
     );
   }
   const what =
-    (a.kind === "study" ? "Smart Study request" : "answer check") + (a.limit === 1 ? "" : "s");
+    (a.kind === "study" ? "Smart Study request" : a.kind === "read" ? "page" : "answer check") +
+    (a.limit === 1 ? "" : "s");
   return new HttpError(
     429,
     "daily_limit",
-    `You've reached today's limit of ${a.limit} ${what}. Try again tomorrow.`,
+    a.kind === "read"
+      ? `You've reached today's limit of ${a.limit} ${what} read by Claude. Try again tomorrow.`
+      : `You've reached today's limit of ${a.limit} ${what}. Try again tomorrow.`,
     headers,
   );
 }
@@ -414,7 +467,13 @@ export function describeError(
   const fail = (status: number, code: string, message: string, headers?: Record<string, string>) =>
     new HttpError(status, code, message, headers);
   const what =
-    route === "/v1/quiz" ? "these cards" : route === "/v1/check-answer" ? "this answer" : "these notes";
+    route === "/v1/quiz"
+      ? "these cards"
+      : route === "/v1/check-answer"
+        ? "this answer"
+        : route === READ_PAGE_ROUTE
+          ? "this page"
+          : "these notes";
 
   if (err instanceof HttpError) return { error: err };
   if (err instanceof RefusedError) {
@@ -429,7 +488,9 @@ export function describeError(
         ? "That quiz is too big to make in one go. Try fewer questions or cards."
         : route === "/v1/check-answer"
           ? "That answer is too long to check."
-          : "These notes are too long for one go. Try fewer pages.";
+          : route === READ_PAGE_ROUTE
+            ? "This page has too much text to read in one go."
+            : "These notes are too long for one go. Try fewer pages.";
     return { error: fail(413, "too_long", message) };
   }
   if (err instanceof BadOutputError) {
@@ -449,7 +510,15 @@ export function describeError(
   const bodyType =
     err instanceof Anthropic.AnthropicError ? undefined : (err as { type?: unknown } | null)?.type;
   if (bodyType === "entity.too.large") {
-    return { error: fail(413, "too_long", "These notes are too long for one go. Try fewer pages.") };
+    return {
+      error: fail(
+        413,
+        "too_long",
+        route === READ_PAGE_ROUTE
+          ? "This photo is too big to send."
+          : "These notes are too long for one go. Try fewer pages.",
+      ),
+    };
   }
   if (bodyType === "entity.parse.failed") {
     return { error: fail(400, "bad_request", "The request body isn't valid JSON.") };

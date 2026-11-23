@@ -18,6 +18,8 @@ export interface ServerConfig {
   dailyLimit: number;
   /** Answer checks per client per day. 0 = no daily limit. */
   dailyCheckLimit: number;
+  /** Page photos read by Claude per client per day. 0 = no daily limit. */
+  dailyReadLimit: number;
   /** Estimated Claude spend per day for the whole server, in US dollars. 0 = no cap. */
   dailyBudgetUsd: number;
   /** Where "today" starts and ends for the limits above. */
@@ -31,6 +33,7 @@ export const DEFAULTS = {
   rateLimit: 30,
   dailyLimit: 60,
   dailyCheckLimit: 300,
+  dailyReadLimit: 100,
   dailyBudgetUsd: 5,
   timeZone: "Asia/Manila",
 } as const;
@@ -111,6 +114,7 @@ export function readConfig(env: Env = process.env): ServerConfig {
     rateLimit: intFromEnv(env, "RATE_LIMIT", DEFAULTS.rateLimit, 1),
     dailyLimit: intFromEnv(env, "DAILY_LIMIT", DEFAULTS.dailyLimit),
     dailyCheckLimit: intFromEnv(env, "DAILY_CHECK_LIMIT", DEFAULTS.dailyCheckLimit),
+    dailyReadLimit: intFromEnv(env, "DAILY_READ_LIMIT", DEFAULTS.dailyReadLimit),
     dailyBudgetUsd: numberFromEnv(env, "DAILY_BUDGET_USD", DEFAULTS.dailyBudgetUsd),
     timeZone,
     healthDetails: boolFromEnv(env, "HEALTH_DETAILS"),

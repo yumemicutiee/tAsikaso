@@ -64,6 +64,12 @@ export const AnswerCheck = z.object({
 });
 export type AnswerCheck = z.infer<typeof AnswerCheck>;
 
+export const PageText = z.object({
+  /** Everything written on the page, in reading order; "" for a blank page. */
+  text: z.string(),
+});
+export type PageText = z.infer<typeof PageText>;
+
 // What the app sends. Every text has a cap: input tokens are billed, so the
 // size of a request is the size of its bill.
 
@@ -114,6 +120,27 @@ export const CheckAnswerRequest = z.object({
   userAnswer: z.string().trim().min(1).max(2000),
 });
 export type CheckAnswerRequest = z.infer<typeof CheckAnswerRequest>;
+
+/**
+ * The biggest page photo one request may send, in base64 characters: 5 MB
+ * of image, Claude's own limit for one image. The app sends a cropped page
+ * of at most 2000 px, usually well under 1 MB.
+ */
+export const MAX_IMAGE_BASE64 = Math.ceil((5 * 1024 * 1024 * 4) / 3);
+
+/** The body limit for /v1/read-page (the image plus JSON around it). */
+export const READ_PAGE_BODY_LIMIT = "8mb";
+
+/** One photographed page, for Claude to write out its text. */
+export const ReadPageRequest = z.object({
+  image: z
+    .string()
+    .min(100, "image: a page photo is required")
+    .max(MAX_IMAGE_BASE64, "image: the photo is too big")
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/, "image: not base64"),
+  mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]).default("image/jpeg"),
+});
+export type ReadPageRequest = z.infer<typeof ReadPageRequest>;
 
 /**
  * A crash report from the app. Only these fields are kept (zod drops any

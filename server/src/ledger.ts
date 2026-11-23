@@ -3,8 +3,11 @@
 // a free host waking up), and several instances don't share it; that would
 // need a shared store such as Redis or a database.
 
-/** Study kits and quizzes count as "study"; marking a typed answer is a "check". */
-export type RequestKind = "study" | "check";
+/**
+ * Study kits and quizzes count as "study"; marking a typed answer is a
+ * "check"; reading one page photo is a "read".
+ */
+export type RequestKind = "study" | "check" | "read";
 
 export interface LedgerOptions {
   timeZone: string;
@@ -12,6 +15,8 @@ export interface LedgerOptions {
   dailyLimit: number;
   /** Answer checks per client per day; 0 = unlimited. */
   dailyCheckLimit: number;
+  /** Page photos read per client per day; 0 = unlimited. */
+  dailyReadLimit?: number;
   /** Estimated dollars per day for the whole server; 0 = no cap. */
   budgetUsd: number;
   /** For tests. */
@@ -41,7 +46,10 @@ export type Admission =
 interface ClientDay {
   study: number;
   check: number;
+  read: number;
 }
+
+const emptyDay = (): ClientDay => ({ study: 0, check: 0, read: 0 });
 
 export interface UsageReport {
   day: string;
@@ -60,6 +68,8 @@ export interface UsageReport {
     studyLimit: number | null;
     checks: number;
     checkLimit: number | null;
+    pagesRead: number;
+    readLimit: number | null;
   };
 }
 
@@ -109,24 +119,35 @@ export class DailyLedger {
       this.refused.budget++;
       return { ok: false, reason: "budget" };
     }
-    const limit = kind === "study" ? this.opts.dailyLimit : this.opts.dailyCheckLimit;
+    const limit = this.limitFor(kind);
     // Each counter that must allow the request, with its limit.
     const counters: [string, number][] = [];
     for (const [key, max] of keysFor(client, limit)) {
       counters.push([key, max]);
-      const day = this.clients.get(key) ?? { study: 0, check: 0 };
+      const day = this.clients.get(key) ?? emptyDay();
       if (limit > 0 && day[kind] >= max) {
         this.refused.daily_limit++;
         return { ok: false, reason: "daily_limit", kind, limit: max };
       }
     }
     for (const [key] of counters) {
-      const day = this.clients.get(key) ?? { study: 0, check: 0 };
+      const day = this.clients.get(key) ?? emptyDay();
       day[kind]++;
       this.clients.set(key, day);
     }
     this.byRoute[route] = (this.byRoute[route] ?? 0) + 1;
     return { ok: true };
+  }
+
+  private limitFor(kind: RequestKind): number {
+    switch (kind) {
+      case "study":
+        return this.opts.dailyLimit;
+      case "check":
+        return this.opts.dailyCheckLimit;
+      case "read":
+        return this.opts.dailyReadLimit ?? 0;
+    }
   }
 
   /** Adds what one Claude call cost to today's total. */
@@ -148,9 +169,10 @@ export class DailyLedger {
   report(client?: string | Client): UsageReport {
     this.rollOver();
     const { budgetUsd, dailyLimit, dailyCheckLimit, timeZone } = this.opts;
+    const dailyReadLimit = this.opts.dailyReadLimit ?? 0;
     // The counter that is the client's own: its install, else its address.
     const own = client === undefined ? undefined : keysFor(client, 1)[0]?.[0];
-    const mine = (own && this.clients.get(own)) || { study: 0, check: 0 };
+    const mine = (own && this.clients.get(own)) || emptyDay();
     const requests = Object.values(this.byRoute).reduce((a, b) => a + b, 0);
     return {
       day: this.day,
@@ -168,6 +190,8 @@ export class DailyLedger {
         studyLimit: dailyLimit > 0 ? dailyLimit : null,
         checks: mine.check,
         checkLimit: dailyCheckLimit > 0 ? dailyCheckLimit : null,
+        pagesRead: mine.read,
+        readLimit: dailyReadLimit > 0 ? dailyReadLimit : null,
       },
     };
   }

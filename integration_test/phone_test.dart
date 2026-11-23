@@ -501,10 +501,19 @@ void main() {
         StudyAi.makeStudyKit(text: notes),
         throwsA(isA<StudyAiException>().having((e) => e.code, 'code', 'offline')));
 
+    // A page photo read by Claude (the stand-in answers only if it came as
+    // an image).
+    final printed = notesPhoto(['Mitochondria make ATP']);
+    final pageText = await StudyAi.readPage(printed);
+    expect(pageText, startsWith('E2E read by Claude'),
+        reason: 'the photo reached Claude as an image');
+
     // The whole way through the screens: a photo of notes from the gallery
-    // → read on the phone (ML Kit) → typed up by the server → saved as
-    // notes → Make Flashcards → cards from the server.
+    // → lines found on the phone (ML Kit) → the photo read by Claude →
+    // typed up by the server → saved as notes → Make Flashcards → cards
+    // from the server.
     useServer(url, 'emulator-token');
+    store.updatePrefs(store.prefs.copyWith(aiReading: true));
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/notes_for_ai.jpg');
     await file.writeAsBytes(notesPhoto([
@@ -533,6 +542,8 @@ void main() {
         timeout: const Duration(seconds: 120));
     await tester.pumpAndSettle();
     final note = store.notes.singleWhere((n) => !knownNotes.contains(n.id));
+    expect(note.text, startsWith('E2E read by Claude'),
+        reason: "the note's text is Claude's reading of the photo, not ML Kit's");
     expect(note.cleanText, contains('Mitochondria'),
         reason: 'typed up by Claude via the server');
     expect(note.summary, contains('E2E summary'));
@@ -551,7 +562,7 @@ void main() {
         reason: 'the cards came from Claude via the server, not the offline guesser');
     expect(made.summary, contains('E2E summary'));
     expect(made.sourceText, contains('Mitochondria'),
-        reason: 'the photo was read on the phone first');
+        reason: "the cards were made from the note's text");
     expect(made.folderId, note.folderId);
     await tester.pumpAndSettle();
     await shot(tester, '10-smart-study-set');

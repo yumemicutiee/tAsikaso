@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/scan_service.dart';
+import '../../services/study_ai.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_icons.dart';
 import '../../utils/format.dart';
@@ -9,7 +12,12 @@ import 'captured_page.dart';
 
 /// The pages, cropped and turned upright, and the text read from them.
 class ReadPages {
-  const ReadPages({required this.jpegs, required this.pages, required this.key});
+  const ReadPages({
+    required this.jpegs,
+    required this.pages,
+    required this.key,
+    this.notice,
+  });
 
   final List<Uint8List> jpegs;
 
@@ -21,10 +29,31 @@ class ReadPages {
   /// again only if the user changes them.
   final String key;
 
+  /// Something the user should know about how the pages were read (Claude
+  /// couldn't read some of them), or null.
+  final String? notice;
+
   String get text => RecognizedPage.join(pages);
 
   int get wordCount => countWords(text);
 }
+
+/// Server answers that will be the same for every page: once one comes,
+/// the rest of the pages aren't sent.
+const _stopsClaudeReading = {
+  'not_set',
+  'offline',
+  'unauthorized',
+  'daily_limit',
+  'budget',
+  'rate_limited',
+  'server_key',
+  'server_setup',
+  'not_found',
+};
+
+/// At most this many pages are with Claude at once.
+const _claudeAtOnce = 3;
 
 /// Words in [text]: runs of characters with a letter or digit in them.
 int countWords(String text) => text
@@ -41,9 +70,12 @@ String readKey(List<CapturedPage> pages) => [
 
 /// After Next on the crop screen: each page is cropped, then its text read
 /// on the phone, page by page, while the page shows with a line sweeping
-/// down it and the lines found lit up. Pops with the [ReadPages], or null
-/// when cancelled. Where text isn't read (the web), the pages are only
-/// prepared.
+/// down it and the lines found lit up. With Smart Study's Read Photos with
+/// Claude on, each page's photo then goes to the study server and Claude
+/// writes out its text (a few pages at once, while the next ones are read
+/// on the phone); a page Claude couldn't read keeps the phone's text.
+/// Pops with the [ReadPages], or null when cancelled. Where text isn't read
+/// (the web without a study server), the pages are only prepared.
 class ReadingScreen extends StatefulWidget {
   const ReadingScreen({super.key, required this.pages});
 
@@ -83,7 +115,23 @@ class _ReadingScreenState extends State<ReadingScreen>
   int _index = 0;
   bool _pageRead = false;
 
-  bool get _readsText => ScanService.canReadText;
+  /// Claude reads the photos too (decided once, when the screen opens).
+  late final bool _byClaude = StudyAi.readsPhotos;
+  final _claudeCancel = CancelToken();
+  final _claudeSlots = _Slots(_claudeAtOnce);
+
+  /// Pages Claude has finished with (read or not), and those it couldn't
+  /// read, with the first reason.
+  int _claudeDone = 0;
+  int _claudeFailed = 0;
+  String? _claudeProblem;
+  bool _claudeStopped = false;
+
+  /// Every page is on the phone's side done; Claude is still reading.
+  bool _waitingForClaude = false;
+
+  bool get _readsOnPhone => ScanService.canReadText;
+  bool get _readsText => _readsOnPhone || _byClaude;
   int get _count => widget.pages.length;
 
   @override
@@ -95,12 +143,14 @@ class _ReadingScreenState extends State<ReadingScreen>
   @override
   void dispose() {
     _cancelled = true;
+    _claudeCancel.cancel();
     _sweep.dispose();
     super.dispose();
   }
 
   Future<void> _run() async {
     final key = readKey(widget.pages);
+    final claudeReads = <Future<void>>[];
     try {
       for (var i = 0; i < _count; i++) {
         if (_cancelled) return;
@@ -111,7 +161,7 @@ class _ReadingScreenState extends State<ReadingScreen>
         final jpeg = await widget.pages[i].render();
         if (_cancelled) return;
         setState(() => _jpegs.add(jpeg));
-        final found = _readsText
+        final found = _readsOnPhone
             ? await ScanService.readPages([jpeg])
             : const <RecognizedPage>[];
         if (_cancelled) return;
@@ -119,22 +169,80 @@ class _ReadingScreenState extends State<ReadingScreen>
           _read.add(found.isEmpty ? const RecognizedPage() : found.first);
           _pageRead = true;
         });
-        if (_readsText && ReadingScreen.pause > Duration.zero) {
+        if (_byClaude) claudeReads.add(_readWithClaude(i, jpeg));
+        if (_readsOnPhone && ReadingScreen.pause > Duration.zero) {
           await Future<void>.delayed(ReadingScreen.pause);
         }
       }
+      if (claudeReads.isNotEmpty) {
+        if (_cancelled) return;
+        setState(() => _waitingForClaude = true);
+        await Future.wait(claudeReads);
+      }
       if (_cancelled || !mounted) return;
-      Navigator.of(context)
-          .pop(ReadPages(jpegs: _jpegs, pages: _read, key: key));
+      Navigator.of(context).pop(ReadPages(
+        jpegs: _jpegs,
+        pages: _read,
+        key: key,
+        notice: _claudeNotice(),
+      ));
     } catch (e, st) {
       debugPrint('Reading the pages failed: $e\n$st');
       if (!_cancelled && mounted) setState(() => _failed = true);
     }
   }
 
+  /// Page [i]'s photo to Claude; its text replaces the phone's when it
+  /// comes. A page Claude can't read keeps the phone's text.
+  Future<void> _readWithClaude(int i, Uint8List jpeg) async {
+    await _claudeSlots.take();
+    try {
+      if (_cancelled) return;
+      if (_claudeStopped) {
+        _claudeFailed++;
+        return;
+      }
+      final text = await StudyAi.readPage(jpeg, cancel: _claudeCancel);
+      if (_cancelled) return;
+      // A page Claude found nothing on keeps whatever the phone found.
+      if (text.trim().isNotEmpty) _read[i] = _read[i].withTranscript(text);
+    } on StudyAiException catch (e) {
+      if (e.isCancelled || _cancelled) return;
+      debugPrint('Claude could not read page ${i + 1}: ${e.code} ${e.message}');
+      _claudeFailed++;
+      _claudeProblem ??= e.message;
+      if (_stopsClaudeReading.contains(e.code)) _claudeStopped = true;
+    } finally {
+      _claudeSlots.give();
+      if (!_cancelled && mounted) setState(() => _claudeDone++);
+    }
+  }
+
+  /// What to tell the user when Claude couldn't read some pages.
+  String? _claudeNotice() {
+    if (_claudeFailed == 0) return null;
+    final which = _claudeFailed == _count
+        ? (_count == 1 ? 'The page was' : 'The pages were')
+        : '$_claudeFailed of $_count pages were';
+    final how = _readsOnPhone
+        ? '$which read on your phone instead of by Claude.'
+        : "$which not read: Claude couldn't read ${_count == 1 ? 'it' : 'them'}.";
+    return _claudeProblem == null ? how : '$how $_claudeProblem';
+  }
+
   void _cancel() {
     _cancelled = true;
+    _claudeCancel.cancel();
     Navigator.of(context).pop();
+  }
+
+  /// How far along: cropping and reading on the phone, then Claude.
+  double get _progress {
+    final prepared =
+        _read.length + (_jpegs.length > _read.length ? 0.5 : 0.1);
+    if (!_byClaude) return (prepared / _count).clamp(0.0, 1.0);
+    // Half a page's share for the phone's part, half for Claude's.
+    return ((prepared * 0.5 + _claudeDone * 0.5) / _count).clamp(0.0, 1.0);
   }
 
   @override
@@ -142,14 +250,25 @@ class _ReadingScreenState extends State<ReadingScreen>
     final words = countWords(RecognizedPage.join(_read));
     final title = _failed
         ? "Couldn't read the pages"
-        : _readsText
-            ? 'Reading your notes…'
-            : 'Getting your pages ready…';
+        : _waitingForClaude
+            ? 'Claude is reading your notes…'
+            : _readsText
+                ? 'Reading your notes…'
+                : 'Getting your pages ready…';
     final detail = _failed
         ? 'Something went wrong. Go back and tap Next to try again.'
-        : _count == 1
-            ? (_readsText ? 'Turning your photo into text' : 'One page')
-            : 'Page ${_index + 1} of $_count';
+        : _waitingForClaude
+            ? (_count == 1
+                ? 'Writing out the text on your page'
+                : '$_claudeDone of $_count pages read')
+            : _count == 1
+                ? (_readsText ? 'Turning your photo into text' : 'One page')
+                : 'Page ${_index + 1} of $_count';
+    final footnote = words > 0
+        ? '${plural(words, 'word')} found so far'
+        : _byClaude
+            ? 'Claude reads your handwriting from the photos.'
+            : 'Read on your phone. Nothing is uploaded.';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -179,7 +298,11 @@ class _ReadingScreenState extends State<ReadingScreen>
                       lines: _pageRead && _read.length > _index
                           ? _read[_index].lines
                           : const [],
-                      sweep: _failed || _pageRead ? null : _sweep,
+                      // The sweep runs while the phone reads the page,
+                      // and again over its lit lines while Claude reads.
+                      sweep: _failed || (_pageRead && !_waitingForClaude)
+                          ? null
+                          : _sweep,
                     ),
                   ),
                 ),
@@ -202,11 +325,7 @@ class _ReadingScreenState extends State<ReadingScreen>
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
-                          // Half a page for cropping it, half for reading.
-                          value: ((_read.length +
-                                      (_jpegs.length > _read.length ? 0.5 : 0.1)) /
-                                  _count)
-                              .clamp(0.0, 1.0),
+                          value: _progress,
                           minHeight: 6,
                           backgroundColor: Colors.white12,
                           color: AppColors.accent,
@@ -226,13 +345,12 @@ class _ReadingScreenState extends State<ReadingScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(AppIcons.locked, size: 13, color: Colors.white54),
+                          Icon(_byClaude ? AppIcons.suggest : AppIcons.locked,
+                              size: 13, color: Colors.white54),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              words > 0
-                                  ? '${plural(words, 'word')} found so far'
-                                  : 'Read on your phone. Nothing is uploaded.',
+                              footnote,
                               style: const TextStyle(
                                   color: Colors.white54, fontSize: 11.5),
                             ),
@@ -343,6 +461,32 @@ class _PageBeingRead extends StatelessWidget {
         }),
       ),
     );
+  }
+}
+
+/// A few places to take, waited for in turn when all are taken.
+class _Slots {
+  _Slots(this._free);
+
+  int _free;
+  final _waiting = <Completer<void>>[];
+
+  Future<void> take() {
+    if (_free > 0) {
+      _free--;
+      return Future.value();
+    }
+    final turn = Completer<void>();
+    _waiting.add(turn);
+    return turn.future;
+  }
+
+  void give() {
+    if (_waiting.isNotEmpty) {
+      _waiting.removeAt(0).complete();
+    } else {
+      _free++;
+    }
   }
 }
 

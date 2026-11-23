@@ -307,10 +307,12 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   /// so the setting never claims alerts that can't be shown.
   Future<void> _askPermissionOnce() async {
     if (!await NotificationService.requestPermission()) {
+      // Said with the switch going off, not after Android has taken the
+      // alert back (a platform call that can take a moment).
       _store.updatePrefs(_store.prefs.copyWith(timerAlerts: false));
-      await NotificationService.cancelTimerEnd();
       _say("Timer alerts are off because notifications aren't allowed for "
           "$kAppName. You can allow them in your phone's settings.");
+      await NotificationService.cancelTimerEnd();
       return;
     }
     if (!await NotificationService.exactTimingAllowed()) {
