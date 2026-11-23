@@ -713,8 +713,10 @@ class _KeepProgressSheet extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
                             width: 26,
@@ -730,6 +732,7 @@ class _KeepProgressSheet extends StatelessWidget {
                               style: TextStyle(
                                   fontSize: 15, fontWeight: FontWeight.w700)),
                         ],
+                      ),
                       ),
                     ),
                   ),
