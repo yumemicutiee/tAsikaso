@@ -217,8 +217,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     double bob(double period) =>
         -3.5 * (1 - math.cos(2 * math.pi * seconds / period));
 
-    // While the name is typed the name moves up out of the keyboard's way.
-    final markTop = naming ? 24.0 : centreTop;
+    // While the name is typed the name stays in the middle: of the screen,
+    // or, with the keyboard up, of the room left above the name box.
+    final formTop = h - 20 - keyboard - 230;
+    final markTop = naming
+        ? math.min(centreTop, (formTop - 110) / 2).clamp(8.0, centreTop).toDouble()
+        : centreTop;
 
     return Stack(
       children: [
