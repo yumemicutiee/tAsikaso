@@ -182,9 +182,11 @@ can start a test plan. Smart Study needs your own study server and Anthropic
 API key; on the free plan it is capped by the 20 suggested cards a month,
 but typing up notes (Text Notes) isn't limited.
 
-**Opening the app.** A loading screen (the logo and a moving bar) shows
-while the saved data is read; the web page and Android show the same screen
-before the app starts, so it hands over without a flash. A new install
+**Opening the app.** A loading screen shows while the saved data is read:
+the logo's plus pops in, "tAsikaso" rises letter by letter and is
+underlined, with "Snap. Study. Recall." below. The web page shows the same
+animation while the app downloads; Android first shows the logo on the same
+background. A new install
 starts empty, with no sample data, on the welcome screen: **Continue with
 Google** (signs up or logs in; a copy of the account's data on Google Drive
 can be brought back) or **Continue without an account** (asks only for a

@@ -455,7 +455,8 @@ it. The emulator tests run debug builds, without R8.
 - **Slides** (`intro_slides.dart`): five, Skip / Next / Get Started; then
   `welcomed` is saved and the app opens with no way back.
 - **Loading screen** (`lib/screens/loading_screen.dart`): `main` runs
-  `AppLoader`, which shows it while the data loads (at least 1.1 s), then
+  `AppLoader`, which shows it while the data loads (at least 1.4 s, so the name is spelled out and underlined; the
+  "Wordmark Reveal" design, tagline "Snap. Study. Recall."), then
   fades to the app. `web/index.html` shows the same screen until Flutter's
   first frame; `tool/setup_android.dart` writes Android's launch screen
   (logo on white / dark blue, and the Android 12+ splash background).
