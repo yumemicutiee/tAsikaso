@@ -8,6 +8,7 @@ import 'data/app_store.dart';
 import 'data/pomodoro_controller.dart';
 import 'data/storage/local_storage.dart';
 import 'screens/loading_screen.dart';
+import 'services/account_data.dart';
 import 'services/accounts.dart';
 import 'services/crash_reporter.dart';
 import 'services/drive_sync.dart';
@@ -43,6 +44,9 @@ Future<void> _load() async {
 Future<void> _afterStart() async {
   // Google Drive sync signs the user back in quietly and watches for changes.
   DriveSync.instance.init();
+  // The account keeps the preferences, statistics and tasks (saved as they
+  // change).
+  AccountData.instance.init();
   // The account's plan as the study server has it (makes the anonymous
   // account on the first run). Needs internet; skipped quietly without.
   unawaited(PlanSync.refresh());

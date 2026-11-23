@@ -60,11 +60,13 @@ class HelpScreen extends StatelessWidget {
       "No. The first time you use Smart Study, the app makes a $kAppName "
           'account for you, without a name or email, with a daily allowance '
           'of Claude: pages read, study kits and quizzes, answer checks. '
-          'Continue with Google (Profile → Backup & Sync) for more each day '
-          'and the same plan on every phone; $kPlusName gets the most. Your '
-          'notes stay on your phone either way. Settings → Smart Study shows '
-          "today's use, and Settings → Your Data → Delete Account deletes "
-          'the account.',
+          'Continue with Google (Profile → Backup & Sync) for more each day, '
+          'and your name, photo, settings, tasks and Pomodoro statistics are '
+          'kept in your account: Log Out clears them from the phone and '
+          'Continue with Google brings them back, on any phone. $kPlusName '
+          'gets the most. Notes and flashcards stay on your phone (back them '
+          "up with Backup & Sync). Settings → Smart Study shows today's use, "
+          'and Settings → Your Data → Delete Account deletes the account.',
     ),
     (
       'Where are my notes, and where do my flashcards go?',

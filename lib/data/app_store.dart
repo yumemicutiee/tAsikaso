@@ -1266,6 +1266,165 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
+  // ---- Account data (kept in the user's account, see AccountData) ------------
+
+  /// What the user's account keeps for them in the database, so it comes
+  /// back after Log Out or on a new phone: the profile and preferences, the
+  /// Pomodoro settings, tasks and statistics. Not the study materials
+  /// (folders, notes, flashcard sets and their files: this phone and Google
+  /// Drive), the plan (the study server's) or what belongs to this phone.
+  Map<String, Object?> accountDataToJson() => {
+        'v': 1,
+        'prefs': _accountPrefs(_prefs).toJson(),
+        'settings': _settings.toJson(),
+        'tasks': [for (final t in _tasks) t.toJson()],
+        'currentTask': _currentTaskId,
+        'sessions': [for (final s in _sessions) s.toJson()],
+        'breaks': [for (final b in _breaks) b.toJson()],
+        'focusLog': Map.of(_focusLog),
+        'reviewLog': Map.of(_reviewLog),
+        'suggestedLog': Map.of(_suggestedLog),
+      };
+
+  /// [p] without what belongs to this phone, not the person.
+  static AppPrefs _accountPrefs(AppPrefs p) => p.copyWith(
+        aiServerUrl: '',
+        aiToken: '',
+        installId: '',
+        clearSubscription: true,
+        askedNotifications: false,
+        alarmNotice: false,
+        welcomed: false,
+      );
+
+  /// Brings in the account's data from the database (after signing in):
+  /// its preferences and Pomodoro settings replace this phone's; Pomodoros,
+  /// breaks and tasks from both are kept (each once); the day logs keep the
+  /// larger count. What belongs to this phone (study server, install id,
+  /// plan copy, welcome) stays.
+  void mergeAccountData(Map<String, Object?> j) {
+    final cloudPrefs = j['prefs'];
+    if (cloudPrefs is Map<String, Object?>) {
+      final mine = _prefs;
+      final theirs = AppPrefs.fromJson(cloudPrefs);
+      _prefs = theirs.copyWith(
+        aiServerUrl: mine.aiServerUrl,
+        aiToken: mine.aiToken,
+        installId: mine.installId,
+        subscription: mine.subscription,
+        clearSubscription: mine.subscription == null,
+        lastBackupAt: mine.lastBackupAt,
+        askedNotifications: mine.askedNotifications,
+        alarmNotice: mine.alarmNotice,
+        welcomed: mine.welcomed,
+        // A name typed on this phone wins over none in the account.
+        userName: theirs.userName.trim().isEmpty ? mine.userName : theirs.userName,
+      );
+    }
+    final settings = j['settings'];
+    if (settings is Map<String, Object?>) {
+      try {
+        _settings = PomodoroSettings.fromJson(settings);
+      } catch (_) {}
+    }
+
+    List<T> parsed<T>(Object? list, T Function(Json) parse) => [
+          if (list is List)
+            for (final item in list)
+              if (item is Map<String, Object?>)
+                if (_tryParse(item, parse) case final T value) value,
+        ];
+
+    // Pomodoros and breaks: each once, oldest first.
+    String sessionKey(DateTime end, int min) =>
+        '${end.toUtc().toIso8601String()}|$min';
+    final sessions = {
+      for (final s in _sessions) sessionKey(s.endedAt, s.minutes): s,
+    };
+    for (final s in parsed(j['sessions'], FocusSession.fromJson)) {
+      sessions.putIfAbsent(sessionKey(s.endedAt, s.minutes), () => s);
+    }
+    _sessions
+      ..clear()
+      ..addAll(sessions.values.toList()
+        ..sort((a, b) => a.endedAt.compareTo(b.endedAt)));
+    if (_sessions.length > _maxSessions) {
+      _sessions.removeRange(0, _sessions.length - _maxSessions);
+    }
+    final breaks = {
+      for (final b in _breaks) sessionKey(b.endedAt, b.minutes): b,
+    };
+    for (final b in parsed(j['breaks'], BreakSession.fromJson)) {
+      breaks.putIfAbsent(sessionKey(b.endedAt, b.minutes), () => b);
+    }
+    _breaks
+      ..clear()
+      ..addAll(breaks.values.toList()
+        ..sort((a, b) => a.endedAt.compareTo(b.endedAt)));
+
+    // Tasks: each once; when both have one, the further along wins.
+    final tasks = {for (final t in _tasks) t.id: t};
+    for (final t in parsed(j['tasks'], StudyTask.fromJson)) {
+      final mine = tasks[t.id];
+      if (mine == null || t.pomodorosDone > mine.pomodorosDone ||
+          (t.pomodorosDone == mine.pomodorosDone && t.done && !mine.done)) {
+        tasks[t.id] = t;
+      }
+    }
+    _tasks
+      ..clear()
+      ..addAll(tasks.values);
+    final current = j['currentTask'];
+    if (_currentTaskId == null && current is String && task(current) != null) {
+      _currentTaskId = current;
+    }
+
+    void maxInto(Map<String, int> into, Object? from) {
+      for (final e in _intMap(from).entries) {
+        if (e.value > (into[e.key] ?? 0)) into[e.key] = e.value;
+      }
+    }
+
+    maxInto(_focusLog, j['focusLog']);
+    maxInto(_reviewLog, j['reviewLog']);
+    maxInto(_suggestedLog, j['suggestedLog']);
+    _changed();
+  }
+
+  static T? _tryParse<T>(Json item, T Function(Json) parse) {
+    try {
+      return parse(item);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Log Out of an account: the account's data (preferences, profile,
+  /// Pomodoro settings, tasks and statistics) and the plan copy leave this
+  /// phone; it was saved to the account first and comes back on signing
+  /// in. Study materials stay, and so does what belongs to this phone.
+  Future<void> resetAccountData() async {
+    final keep = _prefs;
+    if (_profilePhoto != null) await _tryDelete(profilePhotoKey);
+    _profilePhoto = null;
+    _tasks.clear();
+    _currentTaskId = null;
+    _sessions.clear();
+    _breaks.clear();
+    _focusLog.clear();
+    _reviewLog.clear();
+    _suggestedLog.clear();
+    _settings = const PomodoroSettings();
+    _timer = null;
+    _prefs = AppPrefs(
+      aiServerUrl: keep.aiServerUrl,
+      aiToken: keep.aiToken,
+      installId: keep.installId,
+      askedNotifications: keep.askedNotifications,
+    );
+    _changed();
+  }
+
   /// The plan the study server has for this account (null: the free
   /// plan), kept here so Plus features work offline too.
   void applyServerPlan(Subscription? plan) {

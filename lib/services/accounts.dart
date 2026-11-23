@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../theme/brand.dart';
+
 /// tAsikaso's Supabase project: accounts, plans and daily limits (see
 /// `supabase/migrations/0001_accounts.sql` and `server/src/accounts.ts`).
 /// The URL and publishable key are public by design: they only let the app
@@ -31,9 +33,35 @@ abstract class AccountsBackend {
   /// Signs in with Google's ID token. An anonymous user's account becomes
   /// the Google one (same id, so usage and plan carry over), unless that
   /// Google account already has a tAsikaso account: then that one is used.
-  Future<void> signInWithGoogle({required String idToken, String? accessToken});
+  /// True when the user is now in a different account than before (its
+  /// data should be brought in), false when this account was linked.
+  Future<bool> signInWithGoogle({required String idToken, String? accessToken});
 
   Future<void> signOut();
+
+  /// The account's saved data (`user_data`: data, photo), null when it
+  /// has none yet. Throws when it can't be read.
+  Future<Map<String, Object?>?> loadUserData();
+
+  /// Saves the account's data; [photo] (base64 JPEG, '' for none) only
+  /// when [includePhoto]. Throws when it can't be saved.
+  Future<void> saveUserData(Map<String, Object?> data,
+      {String? photo, bool includePhoto = false});
+}
+
+/// What signing in with Google did to the tAsikaso account.
+enum GoogleAccountResult {
+  /// Accounts are off, there was no ID token, or it failed.
+  failed,
+
+  /// This account already was that Google account.
+  unchanged,
+
+  /// The account (anonymous until now) became the Google account.
+  linked,
+
+  /// Now in the Google account's own, different account: bring its data in.
+  switched,
 }
 
 /// The user's tAsikaso account. Until [init] runs (and in tests) accounts
@@ -93,18 +121,49 @@ class Accounts {
     }
   }
 
+  /// A signed-in account exists on this phone (none is made here).
+  bool get hasSession => _backend?.userId != null;
+
   /// After signing in with Google on the phone: the tAsikaso account
   /// becomes that Google account. Quietly does nothing when accounts are
-  /// off or this account already is a Google one; false if it failed.
-  Future<bool> signInWithGoogle({required String? idToken, String? accessToken}) async {
+  /// off or this account already is a Google one.
+  Future<GoogleAccountResult> signInWithGoogle(
+      {required String? idToken, String? accessToken}) async {
     final backend = _backend;
-    if (backend == null || idToken == null || idToken.isEmpty) return false;
-    if (backend.userId != null && !backend.isAnonymous) return true;
+    if (backend == null || idToken == null || idToken.isEmpty) {
+      return GoogleAccountResult.failed;
+    }
+    if (backend.userId != null && !backend.isAnonymous) {
+      return GoogleAccountResult.unchanged;
+    }
     try {
-      await backend.signInWithGoogle(idToken: idToken, accessToken: accessToken);
-      return true;
+      final switched = await backend.signInWithGoogle(
+          idToken: idToken, accessToken: accessToken);
+      return switched ? GoogleAccountResult.switched : GoogleAccountResult.linked;
     } catch (e) {
       debugPrint('Linking the Google account failed: $e');
+      return GoogleAccountResult.failed;
+    }
+  }
+
+  /// The account's saved data, or null when it has none yet. Throws when
+  /// it can't be read (so nothing is overwritten by mistake).
+  Future<Map<String, Object?>?> loadUserData() async {
+    final backend = _backend;
+    if (backend == null || backend.userId == null) return null;
+    return backend.loadUserData();
+  }
+
+  /// Saves the account's data; false when there's no account or it failed.
+  Future<bool> saveUserData(Map<String, Object?> data,
+      {String? photo, bool includePhoto = false}) async {
+    final backend = _backend;
+    if (backend == null || backend.userId == null) return false;
+    try {
+      await backend.saveUserData(data, photo: photo, includePhoto: includePhoto);
+      return true;
+    } catch (e) {
+      debugPrint('Saving the account data failed: $e');
       return false;
     }
   }
@@ -146,12 +205,12 @@ class _SupabaseBackend implements AccountsBackend {
   Future<void> refresh() => _auth.refreshSession();
 
   @override
-  Future<void> signInWithGoogle({required String idToken, String? accessToken}) async {
+  Future<bool> signInWithGoogle({required String idToken, String? accessToken}) async {
     if (_auth.currentUser?.isAnonymous ?? false) {
       try {
         await _auth.linkIdentityWithIdToken(
             provider: OAuthProvider.google, idToken: idToken, accessToken: accessToken);
-        return;
+        return false;
       } on AuthException catch (e) {
         // This Google account already has a tAsikaso account (e.g. from
         // another phone): sign in to that one instead.
@@ -160,8 +219,33 @@ class _SupabaseBackend implements AccountsBackend {
     }
     await _auth.signInWithIdToken(
         provider: OAuthProvider.google, idToken: idToken, accessToken: accessToken);
+    return true;
   }
 
   @override
   Future<void> signOut() => _auth.signOut();
+
+  SupabaseQueryBuilder get _table => Supabase.instance.client.from('user_data');
+
+  @override
+  Future<Map<String, Object?>?> loadUserData() async {
+    final id = userId;
+    if (id == null) return null;
+    final row = await _table.select('data, photo').eq('user_id', id).maybeSingle();
+    return row;
+  }
+
+  @override
+  Future<void> saveUserData(Map<String, Object?> data,
+      {String? photo, bool includePhoto = false}) async {
+    final id = userId;
+    if (id == null) return;
+    await _table.upsert({
+      'user_id': id,
+      'data': data,
+      if (includePhoto) 'photo': photo == null || photo.isEmpty ? null : photo,
+      'app_version': kAppVersion,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
 }

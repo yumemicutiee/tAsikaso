@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/app_store.dart';
+import '../data/pomodoro_controller.dart';
+import '../services/account_data.dart';
+import '../services/accounts.dart';
 import '../services/drive_sync.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -197,27 +201,64 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  /// Logs out: signs out of Google (if signed in) and goes back to the
-  /// welcome screen. The notes stay on this device; the name and a photo
-  /// from Google are cleared, so the next sign-in starts fresh.
+  /// Logs out and goes back to the welcome screen.
+  ///
+  /// With a Google account: the account's data (name, photo, preferences,
+  /// Pomodoro settings, tasks and statistics) is saved to the account,
+  /// then cleared from this phone along with the plan copy; Continue with
+  /// Google brings it all back, here or on another phone. Notes, flashcards
+  /// and their pages stay on this phone (Google Drive keeps them with
+  /// Backup & Sync).
+  ///
+  /// Without one there's no account to come back to, so nothing is
+  /// cleared but the name.
   static Future<void> _logOut(BuildContext context) async {
     final sync = DriveSync.instance;
     final navigator = Navigator.of(context, rootNavigator: true);
-    final who = sync.isSignedIn
-        ? "You'll be signed out of Google (${sync.email}) and go"
-        : "You'll go";
+    final messenger = ScaffoldMessenger.of(context);
+    final store = AppStore.instance;
+    final account = Accounts.instance;
+    final withAccount =
+        sync.isSignedIn && account.enabled && account.hasSession && !account.isAnonymous;
     final sure = await showConfirmDialog(
       context,
       title: 'Log Out?',
-      message: '$who back to the welcome screen. Your notes, flashcards '
-          'and tasks stay on this phone.',
+      message: withAccount
+          ? 'Your name, photo, settings, tasks and Pomodoro statistics are '
+              'saved to your account (${sync.email}), then cleared from this '
+              'phone. Continue with Google to get them back, here or on '
+              'another phone. Your notes and flashcards stay on this phone.'
+          : sync.isSignedIn
+              ? "You'll be signed out of Google (${sync.email}) and go back "
+                  'to the welcome screen. Your notes, flashcards and tasks '
+                  'stay on this phone.'
+              : "You don't have an account yet, so your notes, statistics and "
+                  'tasks stay on this phone. Continue with Google first to '
+                  'keep them in an account.',
       confirmLabel: 'Log Out',
       danger: false,
     );
-    if (!sure) return;
+    if (!sure || !context.mounted) return;
+    if (withAccount && !await AccountData.instance.save()) {
+      if (!context.mounted) return;
+      final anyway = await showConfirmDialog(
+        context,
+        title: "Couldn't Save to Your Account",
+        message: 'Check your internet connection. If you log out now, '
+            'changes since your last save stay only on this phone and are '
+            'cleared from it.',
+        confirmLabel: 'Log Out Anyway',
+      );
+      if (!anyway) return;
+    }
     if (sync.isSignedIn) await sync.signOut();
-    final store = AppStore.instance;
-    if (store.prefs.profilePhotoUrl.isNotEmpty) {
+    if (withAccount) {
+      PomodoroController.instance.restart();
+      await NotificationService.cancelTimerEnd();
+      await NotificationService.setDailyReminder(null);
+      await store.resetAccountData();
+      messenger.hideCurrentSnackBar();
+    } else if (store.prefs.profilePhotoUrl.isNotEmpty) {
       await store.setProfilePhoto(null);
     }
     store.updatePrefs(store.prefs.copyWith(userName: '', welcomed: false));

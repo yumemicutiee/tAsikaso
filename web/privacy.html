@@ -34,18 +34,19 @@
   <p class="muted">Last updated 24 November 2026 · applies to the tAsikaso app for Android and the web version at yumemicutiee.github.io/tAsikaso</p>
 
   <div class="box">
-    <strong>In short:</strong> your notes, photos, flashcards, tasks and statistics are kept on your phone.
+    <strong>In short:</strong> your notes, scanned pages and flashcards are kept on your phone.
     Only when you use <strong>Smart Study</strong> are the photos of the pages you scan (so Claude can read the text in them) and the
     text from your notes sent to our study server and to Anthropic (the company that makes Claude) to write your study materials.
     Neither keeps them for us. With <em>Read Photos with Claude</em> off, only text is sent; with Smart Study off, nothing is.
-    A small tAsikaso account (your plan and how much Smart Study you used each day, never your notes) is kept with Supabase. If you sign in with Google, a copy of your data is kept in a private folder of <em>your own</em> Google Drive.
+    Your tAsikaso account, kept with Supabase, holds your name and photo, settings, tasks, Pomodoro statistics, plan and daily Smart Study
+    use, so they come back when you sign in again; never your notes. If you sign in with Google, a copy of your data is kept in a private folder of <em>your own</em> Google Drive.
     We don't sell data, show ads, or track you.
   </div>
 
   <h2>What stays on your phone</h2>
-  <p>Folders, notes (PDFs), photos you scan, flashcards, quizzes, tasks, your name, settings and Pomodoro statistics are saved
-     in the app's own storage on your phone (or, on the web, in your browser). Uninstalling the app or
-     <em>Settings → Delete All Data</em> removes them.</p>
+  <p>Folders, notes (PDFs), photos you scan, flashcards and quizzes are saved only in the app's own storage on your phone (or, on the web,
+     in your browser). Your name, settings, tasks and Pomodoro statistics are saved there too, and copied to your account (below).
+     Uninstalling the app or <em>Settings → Delete All Data</em> removes them from the phone.</p>
   <p>These features work entirely on your phone, with no internet:</p>
   <ul>
     <li><strong>Finding the page edges</strong> (auto-crop) uses AI models built into the app (DocAligner). Your photos are not sent anywhere.</li>
@@ -77,16 +78,23 @@
      You can turn Smart Study off there too; then nothing is sent and the app reads text, makes flashcards and quizzes on the phone instead.</p>
 
   <h2>Your tAsikaso account</h2>
-  <p>So that Smart Study's daily limits and your tAsikaso+ plan follow <em>you</em> (and can't be used up by someone else), the app makes a
-     tAsikaso account the first time you use Smart Study: without a name or email at first, or linked to your Google account once you
-     <em>Continue with Google</em>. It is kept by <strong>Supabase</strong> (our account provider) in Singapore and holds only:</p>
+  <p>So that your settings and statistics come back when you sign in again, and Smart Study's daily limits and your tAsikaso+ plan follow
+     <em>you</em> (and can't be used up by someone else), the app makes a tAsikaso account: without a name or email at first, or linked to
+     your Google account once you <em>Continue with Google</em>. It is kept by <strong>Supabase</strong> (our account provider) in Singapore
+     and holds only:</p>
   <ul>
     <li>an account id, and for a Google account your Google <strong>name and email address</strong>,</li>
+    <li>your <strong>profile</strong>: the name and photo you use in the app,</li>
+    <li>your <strong>settings</strong> (colours, theme, timer and alarm choices, reminder, Smart Study switches) and Pomodoro lengths,</li>
+    <li>your <strong>Pomodoro tasks and statistics</strong>: each finished Pomodoro and break (when and how long, and the task's name), and how
+        many minutes you focused and cards you reviewed each day,</li>
     <li>your <strong>plan</strong> (which one, from when, until when), and later your payments,</li>
     <li>how many Smart Study requests, answer checks and pages read by Claude you used <strong>each day</strong>, and their estimated cost.</li>
   </ul>
-  <p>Your notes, photos, flashcards, tasks and statistics are <strong>not</strong> stored there. <em>Settings &rarr; Your Data &rarr; Delete Account</em>
-     deletes the account, its plan and its usage at once (records of payments, once real payments exist, are kept without your name,
+  <p>It is saved a few seconds after a change and before you log out. When you <em>Log Out</em> of a Google account, these are cleared from the
+     phone and come back when you continue with Google again. Your notes, scanned pages and flashcards are <strong>not</strong> stored there.
+     Only you can read or change your own account data. <em>Settings &rarr; Your Data &rarr; Delete Account</em>
+     deletes the account, its data, plan and usage at once (records of payments, once real payments exist, are kept without your name,
      for the books). Supabase's privacy policy: <a href="https://supabase.com/privacy">supabase.com/privacy</a>.</p>
 
   <h2>Google sign-in and Drive sync</h2>

@@ -591,11 +591,12 @@ class SettingsScreen extends StatelessWidget {
     final sure = await showConfirmDialog(
       context,
       title: 'Delete Your Account?',
-      message: 'Your $kAppName account is deleted from the study server: '
-          'its plan and its Smart Study usage. You are signed out here. '
-          'Your notes, flashcards and tasks on this device stay, and so does '
-          'your copy on Google Drive; Delete All Data removes the ones on '
-          'this device. This cannot be undone.',
+      message: 'Your $kAppName account is deleted: its plan, its Smart '
+          'Study usage, and the settings, tasks and statistics saved in it. '
+          'You are signed out here. What is on this device stays (notes, '
+          'flashcards, tasks, statistics), and so does your copy on Google '
+          'Drive; Delete All Data removes the ones on this device. This '
+          'cannot be undone.',
       confirmLabel: 'Delete Account',
     );
     if (!sure) return;

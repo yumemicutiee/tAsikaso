@@ -47,16 +47,45 @@ class FakeAccounts implements AccountsBackend {
     current = 'account-token-${refreshes + 1}';
   }
 
+  /// Signing in with Google lands in this account (null: the anonymous
+  /// one is linked and keeps its id).
+  String? googleAccount;
+
   @override
-  Future<void> signInWithGoogle({required String idToken, String? accessToken}) async {
+  Future<bool> signInWithGoogle({required String idToken, String? accessToken}) async {
     googleTokens.add(idToken);
     isAnonymous = false;
+    if (googleAccount == null) return false;
+    userId = googleAccount;
+    return true;
   }
 
   @override
   Future<void> signOut() async {
     signOuts++;
     userId = null;
+  }
+
+  /// user_data rows by account id: {data, photo}.
+  final rows = <String, Map<String, Object?>>{};
+  int saves = 0;
+  bool saveFails = false;
+  bool loadFails = false;
+
+  @override
+  Future<Map<String, Object?>?> loadUserData() async {
+    if (loadFails) throw Exception('no internet');
+    return rows[userId];
+  }
+
+  @override
+  Future<void> saveUserData(Map<String, Object?> data,
+      {String? photo, bool includePhoto = false}) async {
+    if (saveFails) throw Exception('no internet');
+    saves++;
+    final row = rows.putIfAbsent(userId!, () => {});
+    row['data'] = jsonDecode(jsonEncode(data));
+    if (includePhoto) row['photo'] = photo == null || photo.isEmpty ? null : photo;
   }
 }
 
@@ -281,16 +310,27 @@ void main() {
         () async {
       await Accounts.instance.token(); // the anonymous account
       expect(await Accounts.instance.signInWithGoogle(idToken: 'google-id-token'),
-          isTrue);
+          GoogleAccountResult.linked);
       expect(accounts.googleTokens, ['google-id-token']);
       expect(Accounts.instance.isAnonymous, isFalse);
       // Signed in again on the next start: nothing to do.
-      expect(await Accounts.instance.signInWithGoogle(idToken: 'again'), isTrue);
+      expect(await Accounts.instance.signInWithGoogle(idToken: 'again'),
+          GoogleAccountResult.unchanged);
       expect(accounts.googleTokens, hasLength(1));
     });
 
+    test('a Google account that already has an account switches to it',
+        () async {
+      await Accounts.instance.token();
+      accounts.googleAccount = 'google-user';
+      expect(await Accounts.instance.signInWithGoogle(idToken: 'tok'),
+          GoogleAccountResult.switched);
+      expect(Accounts.instance.userId, 'google-user');
+    });
+
     test('no ID token (e.g. the web) leaves the account as it is', () async {
-      expect(await Accounts.instance.signInWithGoogle(idToken: null), isFalse);
+      expect(await Accounts.instance.signInWithGoogle(idToken: null),
+          GoogleAccountResult.failed);
       expect(accounts.googleTokens, isEmpty);
     });
 

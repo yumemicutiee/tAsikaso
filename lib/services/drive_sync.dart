@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 
 import '../data/app_store.dart';
 import '../utils/profile_photo.dart';
+import 'account_data.dart';
 import 'accounts.dart';
 import 'drive_store.dart';
 import 'plan_sync.dart';
@@ -234,9 +235,11 @@ class DriveSync extends ChangeNotifier {
         debugPrint('Google sign-out: $e');
       }
     }
-    // Out of the tAsikaso account too; the next Smart Study request starts
-    // a new one without an account.
+    // Out of the tAsikaso account too, its latest data saved first; the
+    // next Smart Study request starts a new one without an account.
+    await AccountData.instance.save();
     await Accounts.instance.signOut();
+    AccountData.instance.forget();
     notifyListeners();
   }
 
@@ -338,9 +341,14 @@ class DriveSync extends ChangeNotifier {
   Future<void> _useGoogleForAccount(GoogleSignInAccount account) async {
     try {
       final idToken = account.authentication.idToken;
-      if (await Accounts.instance.signInWithGoogle(idToken: idToken)) {
-        await PlanSync.refresh();
+      final result = await Accounts.instance.signInWithGoogle(idToken: idToken);
+      if (result == GoogleAccountResult.failed) return;
+      // A different account (signing back in, a new phone): its
+      // preferences, statistics and tasks come back.
+      if (result == GoogleAccountResult.switched) {
+        await AccountData.instance.bringIn();
       }
+      await PlanSync.refresh();
     } catch (e) {
       debugPrint('Account from Google: $e');
     }
