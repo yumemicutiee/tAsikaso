@@ -86,7 +86,8 @@ class BrandMark extends StatelessWidget {
             height: wordHeight,
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              // The plus sits level with the middle of the letters.
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Opacity(
                   opacity: plus.clamp(0.0, 1.0),
