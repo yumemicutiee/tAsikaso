@@ -17,3 +17,6 @@ emulator-results/
 
 # Local keys for Supabase and Render (see ADMIN_PAGE_PLAN.txt). Never commit.
 KEYS.local.txt
+
+# Python caches (tool/*.py)
+__pycache__/
