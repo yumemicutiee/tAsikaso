@@ -57,6 +57,8 @@ Future<void> main() async {
         ]),
       ));
     final bytes = await doc.save();
+    // The same reading as Import PDF (a check, like a test).
+    // ignore: invalid_use_of_visible_for_testing_member
     final pdf = await readPdf('check.pdf', bytes);
     say('pdf pages: ${pdf.pages.length}, text: "${pdf.text.replaceAll('\n', ' / ')}"');
   } catch (e, st) {
