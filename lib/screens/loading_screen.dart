@@ -139,7 +139,7 @@ class _LoadingScreenState extends State<LoadingScreen>
       } else {
         _reveal.forward();
       }
-      _startFill = Timer(Duration(milliseconds: kIsWeb ? 0 : 700), () {
+      _startFill = Timer(const Duration(milliseconds: kIsWeb ? 0 : 700), () {
         if (!_finishing) {
           _fill.animateTo(0.9,
               duration: const Duration(milliseconds: 1100),
