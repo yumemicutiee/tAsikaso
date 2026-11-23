@@ -69,8 +69,39 @@ h1 span{color:var(--muted);font-weight:500}
 .seg{background:var(--well);border-radius:999px;padding:4px;display:flex}
 .seg button{border:0;background:none;padding:8px 18px;border-radius:999px;color:#3A3D46;min-height:40px;cursor:pointer;font-size:14px}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
-.chart{position:relative;flex:1 1 260px;min-height:260px;margin-top:8px}
-.chart svg{width:100%;height:100%;display:block;overflow:visible}
+.chart{position:relative;flex:1 1 auto;min-height:120px;margin-top:2px}
+.row.ov > .card, #plans > .card{gap:10px;padding:18px 22px}
+/* The chart card and the Plans card are as tall as each other; the chart
+   fills its card. */
+.row.ov{align-items:stretch}
+#plans > section{flex:1}
+/* % stats in place of badges: green up, red down, blue for a share. */
+.statline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.card.accent .statline{color:#D8E4F5}
+.delta{display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;background:var(--accent-tint);color:var(--accent)}
+.delta.up{background:#E2F5E9;color:#15803D}
+.delta.down{background:#FDE8E6;color:#B3261E}
+.card.accent .delta{background:rgba(255,255,255,.16);color:#fff}
+.card.accent .delta.up{color:#B8F0CC}
+.card.accent .delta.down{color:#FFC9C4}
+/* The chart: four numbers over it, and a hover guide. */
+.chart{cursor:crosshair;touch-action:pan-y}
+.cguide{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed #9AA4B8;pointer-events:none}
+.cdot{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.2);pointer-events:none}
+.ctip{position:absolute;transform:translate(-50%,calc(-100% - 14px));background:var(--ink);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;line-height:1.35;white-space:nowrap;pointer-events:none;display:flex;flex-direction:column;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.ctip span{color:#C9CCD4}
+.ctip[data-edge="right"]{transform:translate(calc(-100% + 12px),calc(-100% - 14px))}
+.ctip[data-edge="left"]{transform:translate(-12px,calc(-100% - 14px))}
+/* Plans: a headline number, then one bar per plan. */
+.plancount{text-align:right}
+.plancount .big{font-size:30px;line-height:1}
+.plancount .sub{margin:2px 0 0}
+.planbar{display:flex;gap:3px;height:12px;border-radius:999px;overflow:hidden;background:var(--well);margin-top:auto}
+.planbar span{min-width:6px}
+.planlegend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
+.planlegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.planlegend strong{color:var(--ink);margin-left:2px}
+.chart svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
 .chart .chip{position:absolute;right:0}
 .xlabels{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);text-transform:uppercase}
 .bars{display:flex;gap:12px;align-items:flex-end;height:150px}
@@ -78,9 +109,6 @@ h1 span{color:var(--muted);font-weight:500}
 .bar{width:100%;max-width:56px;border-radius:18px;min-height:16px}
 .barlabels{display:flex;gap:12px}
 .barlabels div{flex:1;text-align:center;font-size:12px;color:var(--muted)}
-.line{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;padding:8px 0;border-top:1px solid var(--well)}
-.line .who{min-width:0}
-.line .who div:first-child{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .meta{font-size:12px;color:var(--muted)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--good)}
 .search{font:inherit;font-size:14px;padding:11px 18px;border:0;background:var(--well);border-radius:999px;width:260px;max-width:100%}
@@ -119,6 +147,44 @@ details.crash pre{margin:10px 0 0;font-size:12px;white-space:pre-wrap;word-break
   .big{font-size:34px}
   .search{width:100%}
 }
+/* Icons */
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ttlrow{display:flex;align-items:center;gap:12px;min-width:0}
+.ico{width:40px;height:40px;border-radius:12px;background:var(--accent-tint);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.card.accent .ico{background:rgba(255,255,255,.14);color:#fff}
+nav.pills a{gap:10px}
+/* The menu. Phones: a bar at the top (logo and sign out; the sections in
+   a row under it). */
+.side-label,.me .avatar,.me .me-text{display:none}
+header.top .me{order:3}
+.me{display:flex;align-items:center;gap:10px;margin-left:auto}
+header.top .brand{order:1}
+header.top nav.pills{order:4}
+@media (max-width:899px){ header.top nav.pills{width:100%;flex-wrap:nowrap;overflow-x:auto} nav.pills a{white-space:nowrap} }
+@media (max-width:640px){ header.top{gap:8px} .brand{font-size:18px;gap:8px} .brand img{width:32px;height:32px} }
+/* Wider screens: a side menu. */
+@media (min-width:900px){
+  .wrap{max-width:1700px;margin:0;padding-left:304px}
+  header.top{position:fixed;left:24px;top:24px;bottom:24px;width:248px;z-index:5;border-radius:28px;flex-direction:column;align-items:stretch;flex-wrap:nowrap;justify-content:flex-start;padding:22px 16px 16px;gap:0;box-shadow:0 1px 2px rgba(22,24,29,.04)}
+  header.top .brand{order:1}
+  header.top .side-label{order:3}
+  header.top nav.pills{order:4}
+  header.top .me{order:5}
+  .brand{padding:0 8px 22px;font-size:20px}
+  .brand img{width:36px;height:36px}
+  .side-label{display:block;margin:0 0 8px;padding:0 12px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  nav.pills{flex-direction:column;flex-wrap:nowrap;background:none;padding:0;gap:4px}
+  nav.pills a{border-radius:14px;padding:11px 12px;min-height:46px;color:#4A4D57;font-weight:500}
+  nav.pills a:hover{background:var(--row);color:var(--ink)}
+  nav.pills a.on{background:var(--accent);color:var(--accent-ink);font-weight:600;box-shadow:0 6px 14px rgba(30,58,110,.22)}
+  .me{margin:auto 0 0;background:var(--row);border-radius:18px;padding:10px 10px 10px 12px}
+  .me .avatar{display:inline-flex;width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;align-items:center;justify-content:center;flex:none}
+  .me .me-text{display:block;min-width:0;flex:1}
+  .me-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .me-mail{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .me .round{width:38px;height:38px}
+}
+.grid4 .seg button{padding:6px 12px;min-height:34px;font-size:13px}
 /* Views: the Overview shows the totals, chart, plans and payments; Users
    and Crash reports each show on their own, from their tab. */
 body[data-view="overview"] #users, body[data-view="overview"] #crashes,
@@ -140,20 +206,31 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
 </div>
 
 <div id="app" class="wrap" hidden>
+  <!-- Line icons, drawn once and reused with <use>. -->
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.4 3.3-5.5 6.5-5.5s5.9 2.1 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.8c1.9.6 3.2 2.5 3.5 5.2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4.2 2.6 17.5a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol>
+    <symbol id="i-peso" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 17V7h3.2a2.8 2.8 0 0 1 0 5.6H9.5M8 9.3h8.5M8 11.3h8.5"/></symbol>
+    <symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.4 3.3-5.5 6.5-5.5 1.6 0 3 .5 4.1 1.4"/><path d="M18 14v6M15 17h6"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></symbol>
+    <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 8l4 3.5L12 5l4 6.5L20 8l-1.8 10H5.8z"/><path d="M6 21h12"/></symbol>
+  </svg>
+
   <header class="top">
     <div class="brand"><img src="../icons/Icon-192.png" alt="">tAsikaso <span>admin</span></div>
+    <p class="side-label">Menu</p>
     <nav class="pills" aria-label="Admin sections">
-      <a href="#overview" class="on">Overview</a>
-      <a href="#users">Users</a>
-      <a href="#plans">Plans &amp; payments</a>
-      <a href="#crashes">Crash reports</a>
+      <a href="#overview" class="on"><svg class="i"><use href="#i-grid"/></svg>Overview</a>
+      <a href="#users"><svg class="i"><use href="#i-users"/></svg>Users</a>
+      <a href="#crashes"><svg class="i"><use href="#i-alert"/></svg>Crash reports</a>
     </nav>
-    <div style="display:flex;gap:10px">
-      <a class="round" href="#users" aria-label="Search users" id="jumpSearch">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </a>
-      <button class="round" type="button" id="signOut" aria-label="Sign out">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+    <div class="me">
+      <span class="avatar" id="meInitial" aria-hidden="true">A</span>
+      <div class="me-text"><div class="me-name" id="meName">Admin</div><div class="me-mail" id="meEmail"></div></div>
+      <button class="round" type="button" id="signOut" aria-label="Sign out" title="Sign out">
+        <svg class="i"><use href="#i-logout"/></svg>
       </button>
     </div>
   </header>
@@ -172,35 +249,43 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
 
   <div class="grid4 ov">
     <div class="card accent">
-      <div><p class="ttl">Total users</p><p class="sub">Everyone who has opened the app</p></div>
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><p class="ttl">Total users</p><p class="sub">Everyone who has opened the app</p></div></div>
       <div class="big" id="total">–</div>
+      <div class="statline"><span class="delta" id="totalDelta">–</span><span>growth this month</span></div>
       <div class="split"><span id="google">Google –</span><span id="anonymous">No account –</span></div>
     </div>
-    <div class="card">
-      <div><p class="ttl">New this week</p><p class="sub">Since Monday</p></div>
-      <div class="kpi"><div class="big" id="week">–</div><span class="chip" id="weekPrev"></span></div>
-    </div>
-    <div class="card">
-      <div><p class="ttl">New this month</p><p class="sub" id="monthName">This month</p></div>
-      <div class="kpi"><div class="big" id="month">–</div><span class="chip" id="monthPrev"></span></div>
-    </div>
-    <div class="card">
-      <div><p class="ttl">New this year</p><p class="sub" id="yearName">This year</p></div>
-      <div class="kpi"><div class="big" id="year">–</div><span class="chip" id="yearPrev"></span></div>
-    </div>
+    <section class="card">
+      <div class="cardhead">
+        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments <span class="pill demo" id="demoPill" hidden>Demo</span></h2><p class="sub" id="payNote">This month</p></div></div>
+      </div>
+      <div class="big" id="payTotal">–</div>
+      <div class="statline"><span class="delta flat" id="payShare">–</span><span id="payShareNote">of users paid this month</span></div>
+    </section>
+    <section class="card">
+      <div class="cardhead">
+        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-user-plus"/></svg></span><div><h2 class="ttl">New users</h2><p class="sub" id="newSub">This month</p></div></div>
+        <div class="seg" role="group" aria-label="New users period">
+          <button type="button" data-period="week" aria-pressed="false">Week</button>
+          <button type="button" data-period="month" aria-pressed="true">Month</button>
+          <button type="button" data-period="year" aria-pressed="false">Year</button>
+        </div>
+      </div>
+      <div class="big" id="newCount">–</div>
+      <div class="statline"><span class="delta" id="newDelta">–</span><span id="newPrev"></span></div>
+    </section>
   </div>
 
   <div class="row ov">
-    <section class="card" style="flex:999 1 560px">
+    <section class="card chartcard" style="flex:999 1 560px">
       <div class="cardhead">
-        <div><h2 class="ttl">New users</h2><p class="sub" id="chartNote"></p></div>
+        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-trend"/></svg></span><div><h2 class="ttl">New users</h2><p class="sub" id="chartNote"></p></div></div>
         <div class="seg" role="group" aria-label="Period">
           <button type="button" data-period="week" aria-pressed="false">Week</button>
           <button type="button" data-period="month" aria-pressed="true">Month</button>
           <button type="button" data-period="year" aria-pressed="false">Year</button>
         </div>
       </div>
-      <div class="chart">
+      <div class="chart" id="chartBox">
         <svg viewBox="0 0 600 200" preserveAspectRatio="none" role="img" id="chart">
           <defs>
             <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
@@ -214,24 +299,21 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
           <path id="area" fill="url(#fill)"/>
           <path id="curve" fill="none" stroke="#1E3A6E" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
         </svg>
-        <span class="chip" id="lastChip"></span>
+        <div class="cguide" id="cguide" hidden></div>
+        <div class="cdot" id="cdot" hidden></div>
+        <div class="ctip" id="ctip" hidden></div>
       </div>
       <div class="xlabels" id="xlabels"></div>
     </section>
 
     <div style="flex:1 1 340px;display:flex;flex-direction:column;gap:20px" id="plans">
       <section class="card">
-        <div><h2 class="ttl">Plans</h2><p class="sub">tAsikaso+ plans running now</p></div>
-        <div class="bars" id="planBars"></div>
-        <div class="barlabels" id="planLabels"></div>
-        <div class="note" id="planNote"></div>
-      </section>
-      <section class="card">
         <div class="cardhead">
-          <div><h2 class="ttl">Payments <span class="pill demo" id="demoPill" hidden>Demo</span></h2><p class="sub" id="payNote">This month</p></div>
+          <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-crown"/></svg></span><div><h2 class="ttl">Plans</h2><p class="sub">tAsikaso+ right now</p></div></div>
+          <div class="plancount"><div class="big" id="planActive">–</div><div class="sub">active</div></div>
         </div>
-        <div class="kpi" style="justify-content:flex-start"><div class="big" id="payTotal">–</div><span class="chip" id="payCount"></span></div>
-        <div id="payList"></div>
+        <div class="planbar" id="planBar" role="img"></div>
+        <div class="planlegend" id="planLegend"></div>
       </section>
     </div>
   </div>
@@ -239,7 +321,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
   <div class="row">
     <section class="card" style="flex:999 1 640px" id="users">
       <div class="cardhead">
-        <div><h2 class="ttl">Users</h2><p class="sub" id="userNote">Newest first</p></div>
+        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Users</h2><p class="sub" id="userNote">Newest first</p></div></div>
         <label><span class="sr">Search users</span><input class="search" id="search" type="search" placeholder="Search email, name or id" autocomplete="off"></label>
       </div>
       <div class="tablebox">
@@ -258,7 +340,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     </section>
 
     <section class="card" style="flex:1 1 340px" id="crashes">
-      <div><h2 class="ttl">Crash reports</h2><p class="sub">Last 7 days, grouped by error</p></div>
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-alert"/></svg></span><div><h2 class="ttl">Crash reports</h2><p class="sub">Last 7 days, grouped by error</p></div></div>
       <div class="big" id="crashTotal">–</div>
       <div id="crashList" style="display:flex;flex-direction:column;gap:10px"></div>
     </section>
@@ -300,7 +382,6 @@ const userState = { q: "", page: 1, total: 0, pageSize: 25 };
 
 const fmtNum = (n) => Number(n ?? 0).toLocaleString("en-US");
 const fmtDate = (iso) => iso ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: tz }).format(new Date(iso)) : "—";
-const fmtShort = (iso) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: tz }).format(new Date(iso));
 const fmtAgo = (iso) => {
   const s = (Date.now() - Date.parse(iso)) / 1000;
   if (s < 3600) return `${Math.max(1, Math.round(s / 60))} min ago`;
@@ -386,6 +467,11 @@ async function load() {
   tz = dash.timeZone || tz;
   const meta = data.session.user.user_metadata ?? {};
   $("hello").textContent = (meta.full_name || meta.name || dash.admin.email || "admin").split(" ")[0];
+  // The signed-in admin, at the bottom of the menu.
+  const fullName = meta.full_name || meta.name || "Admin";
+  $("meName").textContent = fullName;
+  $("meEmail").textContent = data.session.user.email ?? dash.admin.email ?? "";
+  $("meInitial").textContent = fullName.trim().charAt(0).toUpperCase() || "A";
   $("stamp").textContent = "Updated " + new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: tz }).format(new Date());
   renderOverview();
   renderChart();
@@ -398,89 +484,149 @@ $("refresh").addEventListener("click", load);
 
 // ---- Overview ----------------------------------------------------------------
 
+/** The change from [prev] to [cur] as "▲ 12%" / "▼ 8%", and its colour class. */
+function change(cur, prev) {
+  if (!prev) return cur > 0 ? ["New", "up"] : ["0%", "flat"];
+  const pct = Math.round(((cur - prev) / prev) * 100);
+  if (pct > 0) return [`▲ ${pct}%`, "up"];
+  if (pct < 0) return [`▼ ${Math.abs(pct)}%`, "down"];
+  return ["0%", "flat"];
+}
+function setDelta(id, [text, cls]) {
+  $(id).textContent = text;
+  $(id).className = `delta ${cls}`;
+}
+/** [part] as a share of [whole]: "1.4%". */
+const share = (part, whole) => `${whole > 0 ? (Math.round((part / whole) * 1000) / 10).toLocaleString("en-US") : 0}%`;
+
 function renderOverview() {
   const o = dash.overview;
   $("total").textContent = fmtNum(o.total);
   $("google").textContent = `Google ${fmtNum(o.google)}`;
   $("anonymous").textContent = `No account ${fmtNum(o.anonymous)}`;
-  $("week").textContent = fmtNum(o.newThisWeek);
-  $("month").textContent = fmtNum(o.newThisMonth);
-  $("year").textContent = fmtNum(o.newThisYear);
-  $("weekPrev").textContent = `Last week ${fmtNum(o.newLastWeek)}`;
-  $("monthPrev").textContent = `Last month ${fmtNum(o.newLastMonth)}`;
-  $("yearPrev").textContent = `Last year ${fmtNum(o.newLastYear)}`;
-  const today = new Date(`${o.today}T12:00:00Z`);
-  $("monthName").textContent = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(today);
-  $("yearName").textContent = String(today.getUTCFullYear());
+  // Growth this month: everyone now, against everyone before the 1st.
+  setDelta("totalDelta", change(o.total, o.total - o.newThisMonth));
+  renderNewUsers();
 }
 
-/** A smooth line through [vals] (Catmull-Rom as Béziers), in a 600×200 box. */
-function curvePath(vals) {
+/** The New users card: this week, month or year, with the one before. */
+function renderNewUsers() {
+  const o = dash.overview;
+  const today = new Date(`${o.today}T12:00:00Z`);
+  const [count, prev, sub, prevName] = {
+    week: [o.newThisWeek, o.newLastWeek, "This week, since Monday", "Last week"],
+    month: [o.newThisMonth, o.newLastMonth, new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(today), "Last month"],
+    year: [o.newThisYear, o.newLastYear, `This year, ${today.getUTCFullYear()}`, "Last year"],
+  }[period];
+  $("newCount").textContent = fmtNum(count);
+  $("newSub").textContent = sub;
+  setDelta("newDelta", change(count, prev));
+  $("newPrev").textContent = `vs ${prevName.toLowerCase()} (${fmtNum(prev)})`;
+}
+
+/**
+ * The line through [vals] in a 600×200 box: a monotone cubic (Fritsch–
+ * Carlson), smooth but never dipping below 0 or overshooting a peak.
+ */
+function chartGeom(vals) {
   const n = vals.length;
   const max = Math.max(...vals, 1);
-  const pts = vals.map((v, i) => [n === 1 ? 300 : (i * 600) / (n - 1), 190 - (v / max) * 165]);
+  const pts = vals.map((v, i) => [n === 1 ? 300 : (i * 600) / (n - 1), 188 - (v / max) * 168]);
   const f = (x) => Math.round(x * 10) / 10;
+  if (n < 2) return { d: `M0,${f(pts[0]?.[1] ?? 188)} L600,${f(pts[0]?.[1] ?? 188)}`, pts };
+  const s = [];
+  for (let i = 0; i < n - 1; i++) s.push((pts[i + 1][1] - pts[i][1]) / (pts[i + 1][0] - pts[i][0]));
+  const m = [s[0]];
+  for (let i = 1; i < n - 1; i++) m.push(s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2);
+  m.push(s[n - 2]);
+  for (let i = 0; i < n - 1; i++) {
+    if (s[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / s[i], b = m[i + 1] / s[i], h = a * a + b * b;
+    if (h > 9) { const t = 3 / Math.sqrt(h); m[i] = t * a * s[i]; m[i + 1] = t * b * s[i]; }
+  }
   let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
   for (let i = 0; i < n - 1; i++) {
-    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(n - 1, i + 2)];
-    d += ` C${f(p1[0] + (p2[0] - p0[0]) / 6)},${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)},${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])},${f(p2[1])}`;
+    const h = (pts[i + 1][0] - pts[i][0]) / 3;
+    d += ` C${f(pts[i][0] + h)},${f(pts[i][1] + m[i] * h)} ${f(pts[i + 1][0] - h)},${f(pts[i + 1][1] - m[i + 1] * h)} ${f(pts[i + 1][0])},${f(pts[i + 1][1])}`;
   }
-  return { d, lastY: pts[n - 1][1] };
+  return { d, pts };
 }
+
+/** The chart's points, for the hover tooltip. */
+let chartPoints = [];
 
 function renderChart() {
   const o = dash.overview;
-  let rows, labels, note, unit;
+  const fmt = (day, opts) => new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
+  let items, labels, note;
   if (period === "year") {
-    rows = o.monthly.map((m) => m.count);
-    labels = o.monthly.filter((_, i) => i % 2 === 1 || i === o.monthly.length - 1)
-      .map((m) => new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${m.month}-15T00:00:00Z`)));
+    items = o.monthly.map((m) => ({ n: m.count, title: fmt(`${m.month}-15`, { month: "long", year: "numeric" }), short: fmt(`${m.month}-15`, { month: "short" }) }));
+    labels = items.filter((_, i) => i % 2 === 1 || i === items.length - 1).map((i) => i.short);
     note = "Per month, last 12 months";
-    unit = "this month";
   } else {
     const days = period === "week" ? o.daily.slice(-7) : o.daily;
-    rows = days.map((d) => d.count);
+    items = days.map((d) => ({
+      n: d.count,
+      title: fmt(d.day, { weekday: "short", day: "numeric", month: "short" }),
+      short: fmt(d.day, period === "week" ? { weekday: "short" } : { day: "numeric", month: "short" }),
+    }));
     const step = period === "week" ? 1 : 5;
-    labels = days.filter((_, i) => i % step === 0 || i === days.length - 1)
-      .map((d) => new Intl.DateTimeFormat("en-GB", period === "week" ? { weekday: "short", timeZone: "UTC" } : { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${d.day}T12:00:00Z`)));
+    labels = items.filter((_, i) => i % step === 0 || i === items.length - 1).map((i) => i.short);
     note = period === "week" ? "Per day, last 7 days" : "Per day, last 30 days";
-    unit = "today";
   }
-  const { d, lastY } = curvePath(rows);
+  const vals = items.map((i) => i.n);
+  const sum = vals.reduce((a, b) => a + b, 0);
+  const best = items.reduce((a, b) => (b.n > a.n ? b : a), items[0] ?? { n: 0, title: "" });
+  const { d, pts } = chartGeom(vals);
   $("curve").setAttribute("d", d);
   $("area").setAttribute("d", `${d} L600,200 L0,200 Z`);
-  $("chart").setAttribute("aria-label", `Line chart of new users, ${note.toLowerCase()}; latest ${rows.at(-1)}, total ${rows.reduce((a, b) => a + b, 0)}`);
+  $("chart").setAttribute("aria-label", `Line chart of new users, ${note.toLowerCase()}; total ${sum}, best ${best.n}, latest ${vals.at(-1) ?? 0}`);
   $("chartNote").textContent = note;
-  const chip = $("lastChip");
-  chip.textContent = `${fmtNum(rows.at(-1))} new ${unit}`;
-  chip.style.top = `${Math.max(0, Math.round((lastY * $("chart").clientHeight) / 200 - 34))}px`;
   $("xlabels").replaceChildren(...labels.map((l) => el("div", {}, l)));
+  chartPoints = items.map((it, i) => ({ ...it, x: pts[i][0] / 600, y: pts[i][1] / 200 }));
+  hideHover();
   for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.period === period));
 }
+
+// Hover (or tap) the chart: a guide line, a dot and the day's number.
+function hideHover() {
+  for (const id of ["cguide", "cdot", "ctip"]) $(id).hidden = true;
+}
+function showHover(e) {
+  if (!chartPoints.length) return;
+  const r = $("chartBox").getBoundingClientRect();
+  const f = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  const p = chartPoints[Math.round(f * (chartPoints.length - 1))];
+  const left = `${p.x * 100}%`, top = `${p.y * 100}%`;
+  $("cguide").style.left = left;
+  Object.assign($("cdot").style, { left, top });
+  const tip = $("ctip");
+  tip.replaceChildren(el("strong", {}, `${fmtNum(p.n)} new`), el("span", {}, p.title));
+  Object.assign(tip.style, { left, top });
+  tip.dataset.edge = p.x > 0.8 ? "right" : p.x < 0.2 ? "left" : "";
+  for (const id of ["cguide", "cdot", "ctip"]) $(id).hidden = false;
+}
+$("chartBox").addEventListener("pointermove", showHover);
+$("chartBox").addEventListener("pointerdown", showHover);
+$("chartBox").addEventListener("pointerleave", hideHover);
+// The New users card and the chart share one Week / Month / Year choice.
 for (const b of document.querySelectorAll(".seg button")) {
-  b.addEventListener("click", () => { period = b.dataset.period; if (dash) renderChart(); });
+  b.addEventListener("click", () => { period = b.dataset.period; if (dash) { renderChart(); renderNewUsers(); } });
 }
 
 // ---- Plans and payments ------------------------------------------------------
 
-function stripes(color, top) {
-  return `background:repeating-linear-gradient(135deg, ${color} 0 8px, rgba(255,255,255,${top ? ".14" : ".35"}) 8px 10px), ${color}`;
-}
-
 function renderPlans() {
   const p = dash.overview.plans;
-  const items = [["Monthly", p.monthly], ["Semester", p.semester], ["Yearly", p.yearly]];
-  const max = Math.max(...items.map((i) => i[1]), 1);
-  const top = Math.max(...items.map((i) => i[1]));
-  $("planBars").replaceChildren(...items.map(([label, n]) => el("div", {},
-    el("span", { style: "font-size:13px;font-weight:700" }, fmtNum(n)),
-    el("div", { class: "bar", style: `height:${Math.max(16, Math.round((n / max) * 120))}px;${stripes(n === top && n > 0 ? "#1E3A6E" : "#9FCBF5", n === top && n > 0)}`, "aria-label": `${label}: ${n}`, role: "img" }),
-  )));
-  $("planLabels").replaceChildren(...items.map(([label]) => el("div", {}, label)));
-  const parts = [`${fmtNum(p.free)} on Free`];
-  if (p.test) parts.push(`${fmtNum(p.test)} switched on for free (test)`);
-  parts.push(`${fmtNum(p.endingIn7Days)} end in the next 7 days`);
-  $("planNote").textContent = parts.join(" · ");
+  const active = p.monthly + p.semester + p.yearly;
+  $("planActive").textContent = fmtNum(active);
+  // One bar split by plan, and a one-line legend with the counts.
+  const rows = [["Monthly", p.monthly, "#1E3A6E"], ["Semester", p.semester, "#4C78BE"], ["Yearly", p.yearly, "#9FCBF5"]];
+  $("planBar").setAttribute("aria-label", rows.map(([label, n]) => `${label} ${n}`).join(", "));
+  $("planBar").replaceChildren(...rows.filter(([, n]) => n > 0).map(([, n, color]) =>
+    el("span", { style: `flex:${n};background:${color}` })));
+  $("planLegend").replaceChildren(...rows.map(([label, n, color]) =>
+    el("span", {}, el("i", { style: `background:${color}` }), `${label} `, el("strong", {}, fmtNum(n)))));
 }
 
 function renderPayments() {
@@ -489,14 +635,9 @@ function renderPayments() {
   $("payNote").textContent = pay.anyDemo ? "This month · pretend payments for the demo" : "This month";
   const [whole, cents] = peso(pay.monthTotalPhp);
   $("payTotal").replaceChildren(whole, el("span", { class: "cents" }, cents));
-  $("payCount").textContent = `${fmtNum(pay.monthCount)} paid`;
-  const list = pay.recent.map((r) => el("div", { class: "line" },
-    el("div", { class: "who" },
-      el("div", {}, r.email ?? "Deleted account"),
-      el("div", { class: "meta" }, el("span", { class: "dot", style: r.status === "paid" ? "" : "background:#A3A6AE" }), `${PLAN_TITLE[r.plan] ?? "—"} · ${fmtShort(r.createdAt)}${r.demo ? " · demo" : ""}`)),
-    el("strong", { style: "white-space:nowrap" }, peso(r.amountPhp).join("")),
-  ));
-  $("payList").replaceChildren(...(list.length ? list : [el("div", { class: "empty" }, "No payments yet. A pretend one is added each time someone switches a plan on in the app.")]));
+  // Share of all users who paid this month (last month's total isn't sent, so no change in %).
+  $("payShare").textContent = share(pay.monthCount, dash.overview.total);
+  $("payShareNote").textContent = `of users paid this month · ${fmtNum(pay.monthCount)} ${pay.monthCount === 1 ? "payment" : "payments"}`;
 }
 
 // ---- Users -------------------------------------------------------------------
@@ -539,7 +680,6 @@ $("search").addEventListener("input", (e) => {
 });
 $("prev").addEventListener("click", () => { if (userState.page > 1) { userState.page--; loadUsers(); } });
 $("next").addEventListener("click", () => { userState.page++; loadUsers(); });
-$("jumpSearch").addEventListener("click", () => setTimeout(() => $("search").focus(), 300));
 
 // ---- Crash reports -------------------------------------------------------------
 
