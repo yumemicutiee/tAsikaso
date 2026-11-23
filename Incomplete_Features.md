@@ -421,3 +421,19 @@ saved as Text Notes there.
   no text they're saved for the notes to be typed in).
 - The Smart Study step (typing up) runs after Save Notes.
 - Notes saved as Scan PDFs before 0.7.1 still open as they did.
+
+## 18. Text recognition in the APK (fixed 23 Nov)
+
+Photos and PDFs gave no text in the published APK, while the emulator tests
+passed. R8 (which shrinks release builds) renamed or removed the classes ML
+Kit looks up by name, so every call to the text recogniser failed with
+"Object.getClass() on a null object reference". `ScanService.readPages`
+treats a failure as "no text" (reading must never block saving), which hid
+it. The emulator tests run debug builds, without R8.
+
+- Fix: `tool/setup_android.dart` writes `-keep` rules for ML Kit
+  (`com.google.mlkit.**`, `com.google.android.gms.internal.mlkit_**`, the
+  plugins' own classes) into `android/app/proguard-rules.pro`.
+- Guard: `.github/workflows/release-check.yml` builds
+  `tool/release_check/main.dart` in release mode (with R8, like the APK),
+  runs it on an emulator, and fails unless a photo and a PDF are read.

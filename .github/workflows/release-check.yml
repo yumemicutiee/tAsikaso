@@ -1,12 +1,14 @@
 # Checks text recognition in a release build (shrunk by R8, as the
 # published APK is) on an emulator: tool/release_check/main.dart reads a
-# photo and a PDF and logs what it found. Run by hand.
+# photo and a PDF and logs what it found. The debug builds of the emulator
+# tests can't catch this: in Nov 2026 R8 broke ML Kit in the APK only.
+# The results go to the release-check branch.
 name: Release text recognition check
 
 on:
-  workflow_dispatch:
   push:
-    branches: [fix/release-ocr]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -60,6 +62,8 @@ jobs:
             adb logcat -d > release-check/logcat.txt
             grep RELEASECHECK release-check/logcat.txt || echo "no RELEASECHECK lines"
             grep -E " E |AndroidRuntime|FATAL|mlkit|MlKit" release-check/logcat.txt | tail -60 || true
+            grep -q 'RELEASECHECK photo ok: ".*OSMOSIS' release-check/logcat.txt
+            grep -q 'RELEASECHECK pdf pages: 1, text: ".*MITOSIS' release-check/logcat.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

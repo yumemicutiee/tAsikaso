@@ -120,7 +120,9 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
-0.7.1  23 Nov  Next on the crop screen opens the reading screen (text read page by
+0.7.1  23 Nov  Fixed: text was never read in the APK (R8 broke ML Kit in release
+               builds only); ML Kit kept whole, checked by release-check.yml.
+               Next on the crop screen opens the reading screen (text read page by
                page, lines lit up); then only the folder is asked and the pages
                are saved as Text Notes (no Scan PDF, no Flashcards from photos).
                Logo: sky-blue letters with a navy outline on transparent (white
