@@ -683,7 +683,7 @@ function authenticate(appToken: string, verifier: TokenVerifier | undefined, all
 function tierRefusal(kind: RequestKind, limit: number, tier: Tier, secondsToMidnight: number): HttpError {
   const what =
     kind === "read"
-      ? `${limit === 1 ? "page" : "pages"} read by Claude`
+      ? `${limit === 1 ? "page" : "pages"} read by AI`
       : kind === "study"
         ? `Smart Study ${limit === 1 ? "request" : "requests"}`
         : `answer ${limit === 1 ? "check" : "checks"}`;
@@ -770,7 +770,7 @@ function refusal(a: Exclude<Admission, { ok: true }>, secondsToMidnight: number)
     429,
     "daily_limit",
     a.kind === "read"
-      ? `You've reached today's limit of ${a.limit} ${what} read by Claude. Try again tomorrow.`
+      ? `You've reached today's limit of ${a.limit} ${what} read by AI. Try again tomorrow.`
       : `You've reached today's limit of ${a.limit} ${what}. Try again tomorrow.`,
     headers,
   );
@@ -811,7 +811,7 @@ export function describeError(
   }
   if (err instanceof RefusedError) {
     return {
-      error: fail(422, "declined", `Claude couldn't work with ${what}.`),
+      error: fail(422, "declined", `The AI couldn't work with ${what}.`),
       detail: { explanation: err.explanation },
     };
   }
@@ -828,13 +828,13 @@ export function describeError(
   }
   if (err instanceof BadOutputError) {
     return {
-      error: fail(502, "bad_output", "Claude's answer came back incomplete. Please try again."),
+      error: fail(502, "bad_output", "The AI's answer came back incomplete. Please try again."),
       detail: { detail: err.message },
     };
   }
   if (err instanceof ClaudeCallError) {
     return {
-      error: fail(502, "upstream", "Claude had a problem with this request. Please try again."),
+      error: fail(502, "upstream", "The AI had a problem with this request. Please try again."),
       detail: { detail: err.message },
     };
   }
@@ -876,7 +876,7 @@ export function describeError(
     };
     if (err instanceof Anthropic.AuthenticationError) {
       return {
-        error: fail(500, "server_key", "The server's Claude API key is missing or wrong."),
+        error: fail(500, "server_key", "The server's AI API key is missing or wrong."),
         detail,
       };
     }
@@ -886,7 +886,7 @@ export function describeError(
       err instanceof Anthropic.NotFoundError
     ) {
       return {
-        error: fail(500, "server_setup", "The study server's Claude account isn't set up right. Please try again later."),
+        error: fail(500, "server_setup", "The study server's AI account isn't set up right. Please try again later."),
         detail,
       };
     }
@@ -909,24 +909,24 @@ export function describeError(
       err.type === "timeout_error"
     ) {
       return {
-        error: fail(504, "timeout", "Claude took too long to answer. Please try again."),
+        error: fail(504, "timeout", "The AI took too long to answer. Please try again."),
         detail,
       };
     }
     if (err instanceof Anthropic.APIConnectionError) {
       return {
-        error: fail(502, "upstream", "The server couldn't reach Claude. Please try again."),
+        error: fail(502, "upstream", "The server couldn't reach the AI. Please try again."),
         detail,
       };
     }
     return {
-      error: fail(502, "upstream", "Claude had a problem with this request. Please try again."),
+      error: fail(502, "upstream", "The AI had a problem with this request. Please try again."),
       detail,
     };
   }
   if (err instanceof Anthropic.AnthropicError) {
     return {
-      error: fail(502, "upstream", "Claude had a problem with this request. Please try again."),
+      error: fail(502, "upstream", "The AI had a problem with this request. Please try again."),
       detail: { detail: err.message },
     };
   }

@@ -304,8 +304,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
 
   Widget _methodStep() => _page([
-        const _TestPaymentNote(),
-        const SizedBox(height: 16),
         _OrderSummary(plan: _plan, switching: widget.switching),
         const SizedBox(height: 22),
         Text('Pay With', style: AppText.sectionTitle),
@@ -334,8 +332,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ]);
 
   Widget _gcashNumberStep() => _page([
-        const _TestPaymentNote(),
-        const SizedBox(height: 18),
         const _StepHeader(
           icon: AppIcons.phone,
           title: 'Your GCash number',
@@ -359,9 +355,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         ),
         _errorText(),
-        const SizedBox(height: 10),
-        Text('Test mode: no text message is sent.',
-            style: AppText.statLabel.copyWith(fontSize: 11.5)),
       ], bottom: [
         AccentButton(label: 'Send Code', onPressed: _sendCode),
       ]);
@@ -369,8 +362,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _gcashCodeStep() {
     final d = _mobileDigits;
     return _page([
-      const _TestPaymentNote(),
-      const SizedBox(height: 18),
       _StepHeader(
         icon: AppIcons.locked,
         title: 'Enter the code',
@@ -397,15 +388,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       _errorText(),
       const SizedBox(height: 10),
-      Text('Test mode: any 6 digits work. 000000 shows a failed payment.',
-          style: AppText.statLabel.copyWith(fontSize: 11.5)),
       Align(
         alignment: Alignment.centerLeft,
         child: TextButton(
           onPressed: () => ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(const SnackBar(
-                content: Text('Test mode: a new code would be sent now.'))),
+                content: Text('A new code is on its way.'))),
           child: const Text('Send a New Code'),
         ),
       ),
@@ -415,8 +404,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _cardStep() => _page([
-        const _TestPaymentNote(),
-        const SizedBox(height: 18),
         TextField(
           controller: _cardName,
           autofocus: true,
@@ -478,16 +465,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _errorText(),
         const SizedBox(height: 10),
         Text(
-            'Test mode: try 4242 4242 4242 4242 (goes through) or '
-            '4000 0000 0000 0002 (declined). Card details are never saved.',
+            'Card details are never saved.',
             style: AppText.statLabel.copyWith(fontSize: 11.5, height: 1.4)),
       ], bottom: [
         AccentButton(label: 'Continue', onPressed: _checkCard),
       ]);
 
   Widget _reviewStep() => _page([
-        const _TestPaymentNote(),
-        const SizedBox(height: 16),
         _OrderSummary(plan: _plan, switching: widget.switching),
         const SizedBox(height: 16),
         _Card(
@@ -528,7 +512,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         const SizedBox(height: 14),
         Text(
           'Your plan renews every ${_plan.per} at ${_plan.price} until you '
-          'cancel. Test mode: no money is taken.',
+          'cancel.',
           style: AppText.statLabel.copyWith(fontSize: 11.5, height: 1.4),
         ),
       ], bottom: [
@@ -607,10 +591,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ],
         ),
       ),
-      const SizedBox(height: 12),
-      Text('Test payment: no money was taken and no email was really sent.',
-          textAlign: TextAlign.center,
-          style: AppText.statLabel.copyWith(fontSize: 11.5)),
     ], bottom: [
       AccentButton(
         label: 'Start Using $kPlusName',
@@ -652,35 +632,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: const Text('Cancel'),
         ),
       ]);
-}
-
-/// "Test payment: no real money is charged."
-class _TestPaymentNote extends StatelessWidget {
-  const _TestPaymentNote();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
-      decoration: BoxDecoration(
-        color: AppColors.goldSoft,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(AppIcons.suggest, size: 15, color: AppColors.ink),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Test payment: this checkout is pretend. No real money is '
-              'charged.',
-              style: TextStyle(fontSize: 11.5, height: 1.35, color: AppColors.ink),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _Card extends StatelessWidget {

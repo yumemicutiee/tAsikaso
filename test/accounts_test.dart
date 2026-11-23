@@ -356,7 +356,7 @@ void main() {
       server((_) => (200, me()));
       await openSettings(tester);
       await tester.scrollUntilVisible(
-          find.textContaining('Today with Claude'), 300,
+          find.textContaining('Today with AI'), 300,
           scrollable: find.byType(Scrollable).first);
       expect(
           find.textContaining('no account yet. Continue with Google'), findsOneWidget);
@@ -396,7 +396,7 @@ void main() {
       await tester.scrollUntilVisible(find.text('Delete All Data'), 300,
           scrollable: find.byType(Scrollable).first);
       expect(find.text('Delete Account'), findsNothing);
-      expect(find.textContaining('Today with Claude'), findsNothing);
+      expect(find.textContaining('Today with AI'), findsNothing);
     });
   });
 }

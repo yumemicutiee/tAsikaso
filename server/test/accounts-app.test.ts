@@ -139,7 +139,7 @@ test("the limit message tells each tier what it can do next", async () => {
   assert.equal(body.error.tier, "anonymous");
   assert.equal(
     body.error.message,
-    "You've reached today's limit of 2 pages read by Claude. Continue with Google in tAsikaso for more, or try again tomorrow.",
+    "You've reached today's limit of 2 pages read by AI. Continue with Google in tAsikaso for more, or try again tomorrow.",
   );
   assert.ok(Number(anon.headers.get("retry-after")) > 0);
 
