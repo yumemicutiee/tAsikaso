@@ -162,9 +162,14 @@ Future<void> _walk(WidgetTester tester, List<String> problems, String folderId,
     await look(tab.label);
     if (tab == AppTab.study) {
       // Today's summary is shown whole, not cut short with "…".
-      final today = tester
-          .renderObject<RenderParagraph>(find.textContaining('Today ·'));
-      if (today.didExceedMaxLines) problems.add('Study: today strip cut short');
+      final strip = find.ancestor(
+          of: find.text('Today'), matching: find.byType(InkWell));
+      for (final text in find
+          .descendant(of: strip.first, matching: find.byType(RichText))
+          .evaluate()) {
+        final p = text.renderObject! as RenderParagraph;
+        if (p.didExceedMaxLines) problems.add('Study: today strip cut short');
+      }
     }
   }
 

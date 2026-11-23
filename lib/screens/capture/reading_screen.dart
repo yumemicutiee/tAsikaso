@@ -231,7 +231,7 @@ class _ReadingScreenState extends State<ReadingScreen>
                           Flexible(
                             child: Text(
                               words > 0
-                                  ? '${plural(words, 'word')} found so far · read on your phone'
+                                  ? '${plural(words, 'word')} found so far'
                                   : 'Read on your phone. Nothing is uploaded.',
                               style: const TextStyle(
                                   color: Colors.white54, fontSize: 11.5),

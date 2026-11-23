@@ -668,7 +668,7 @@ void main() {
       ScanService.debugRead =
           (jpegs) async => [for (final _ in jpegs) const RecognizedPage()];
       await openSaveSheet(tester);
-      expect(find.text('1 page · no text found'), findsOneWidget);
+      expect(find.text('1 page, no text found'), findsOneWidget);
       await tester.tap(find.text('Save Notes').last);
       await tester.pump();
       await waitUntil(tester, () => store.notes.isNotEmpty);

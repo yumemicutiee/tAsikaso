@@ -12,6 +12,7 @@ import '../utils/format.dart';
 import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/folder_card.dart';
+import '../widgets/meta_row.dart';
 import '../widgets/progress_ring.dart';
 import '../widgets/streak_badge.dart';
 import 'actions.dart';
@@ -667,9 +668,9 @@ class _DeckRow extends StatelessWidget {
     final due = store.isPlus ? store.dueCards(deck).length : 0;
     final score = scored ? deck.lastKnown / seen : 0.0;
     final deep = Color.lerp(color, AppColors.ink, 0.35)!;
-    final meta = '${plural(deck.cards.length, 'card')}'
-        '${due > 0 ? ' · $due due' : ''} · '
-        '${studied == null ? 'Not studied yet' : formatAgo(studied, now)}';
+    final cards = plural(deck.cards.length, 'card');
+    final when = studied == null ? 'Not studied yet' : formatAgo(studied, now);
+    final meta = '$cards${due > 0 ? ', $due due' : ''}, $when';
 
     // One label with everything, so the title isn't read twice.
     return Semantics(
@@ -708,13 +709,12 @@ class _DeckRow extends StatelessWidget {
                       style: AppText.itemTitle.copyWith(fontSize: 13.5),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      meta,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.textSecondary),
-                    ),
+                    MetaRow([
+                      MetaItem(AppIcons.flashcards, cards),
+                      if (due > 0) MetaItem(AppIcons.due, '$due due'),
+                      MetaItem(AppIcons.clock, when),
+                    ], gap: 10, style: TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary)),
                   ],
                 ),
               ),

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../widgets/list_items.dart';
+import '../widgets/meta_row.dart';
 import 'actions.dart';
 import 'notebook_screen.dart';
 
@@ -71,10 +73,10 @@ class FolderScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
-              Text(
-                '${plural(notes.length, 'note')} · ${plural(sets.length, 'flashcard set')}',
-                style: AppText.statLabel,
-              ),
+              MetaRow([
+                MetaItem(AppIcons.notebook, plural(notes.length, 'note')),
+                MetaItem(AppIcons.flashcards, plural(sets.length, 'flashcard set')),
+              ], style: AppText.statLabel),
               // Each folder has one Notebook, where its notes are.
               const SizedBox(height: 16),
               NotebookCard(folder: folder, notes: notes),

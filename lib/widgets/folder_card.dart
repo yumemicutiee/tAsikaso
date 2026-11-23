@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../utils/format.dart';
+import 'meta_row.dart';
 
 /// Soft, rounded folder tile: a tint of the folder's colour, a coloured
 /// icon badge, then the name and what's inside.
@@ -31,7 +32,9 @@ class FolderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tint = AppColors.tint(folder.color, 0.3);
-    final contents = '${plural(noteCount, 'note')} · ${plural(setCount, 'set')}';
+    final notes = plural(noteCount, 'note');
+    final sets = plural(setCount, 'set');
+    final contents = '$notes, $sets';
     return AspectRatio(
       aspectRatio: aspectRatio,
       // One label with everything, so the name isn't read twice.
@@ -97,10 +100,12 @@ class FolderCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        contents,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      MetaRow(
+                        [
+                          MetaItem(AppIcons.notebook, notes),
+                          MetaItem(AppIcons.flashcards, sets),
+                        ],
+                        gap: 8,
                         style: TextStyle(
                           color: AppColors.ink.withValues(alpha: 0.65),
                           fontSize: 9.5,

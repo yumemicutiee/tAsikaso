@@ -5,6 +5,7 @@ import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/meta_row.dart';
 import 'actions.dart';
 
 /// Matching folders, flashcard sets and notes for a search [query].
@@ -35,10 +36,12 @@ List<Widget> buildSearchResults(BuildContext context, String query) {
           contentPadding: EdgeInsets.zero,
           leading: CircleAvatar(radius: 12, backgroundColor: f.color),
           title: Text(f.name, style: AppText.itemTitle),
-          subtitle: Text(
-            '${plural(store.noteCountIn(f.id), 'note')} · '
-            '${plural(store.setCountIn(f.id), 'set')}',
-            style: AppText.itemMeta,
+          subtitle: Align(
+            alignment: Alignment.centerLeft,
+            child: MetaRow([
+              MetaItem(AppIcons.notebook, plural(store.noteCountIn(f.id), 'note')),
+              MetaItem(AppIcons.flashcards, plural(store.setCountIn(f.id), 'set')),
+            ]),
           ),
           onTap: () => openFolder(context, f),
         ),

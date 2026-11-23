@@ -688,7 +688,7 @@ class _SaveSheetState extends State<SaveSheet> {
                   ScanService.canReadText
                       ? 'no text found'
                       : 'text is read in the phone app',
-              ].join(' · '),
+              ].join(', '),
             ),
             const SizedBox(height: 18),
             FolderField(
@@ -727,7 +727,7 @@ class _SaveSheetState extends State<SaveSheet> {
               subtitle: [
                 plural(widget.pageCount, 'page'),
                 if (fromPdf && !canReadText) 'no text found',
-              ].join(' · '),
+              ].join(', '),
             ),
             if (widget.notice case final notice?) ...[
               const SizedBox(height: 6),
@@ -768,9 +768,9 @@ class _SaveSheetState extends State<SaveSheet> {
                   // suggested, so the monthly allowance doesn't apply.
                   switch (canReadText ? AppStore.instance.suggestedCardsLeft : null) {
                     null => '',
-                    0 => " · this month's suggested cards are used up",
+                    0 => ". This month's suggested cards are used up",
                     final left =>
-                      ' · $left of $kFreeSuggestedCardsPerMonth suggested cards left this month',
+                      '. $left of $kFreeSuggestedCardsPerMonth suggested cards left this month',
                   },
               selected: _format == SaveFormat.flashcards,
               onTap: () => setState(() => _format = SaveFormat.flashcards),

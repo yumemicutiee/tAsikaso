@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../theme/brand.dart';
 import '../utils/format.dart';
 import '../widgets/app_header.dart';
+import '../widgets/meta_row.dart';
 import '../widgets/segmented_tabs.dart';
 import '../widgets/streak_badge.dart';
 import 'plans_screen.dart';
@@ -244,16 +245,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         const SizedBox(height: 16),
         _Card(
           title: 'History',
-          trailing: Text(
-            '${bucketName(shown, long: true)} · ${formatMinutes(minutes[shown])}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          trailing: MetaRow([
+            MetaItem(AppIcons.calendar, bucketName(shown, long: true)),
+            MetaItem(AppIcons.clock, formatMinutes(minutes[shown])),
+          ], gap: 10, style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          )),
           child: _Bars(
             minutes: minutes,
             labels: [for (final b in buckets) axisLabel(b)],
@@ -735,7 +734,7 @@ class _Bars extends StatelessWidget {
             children: [
               const SizedBox(width: 16, child: _DashedLine()),
               const SizedBox(width: 6),
-              Text('Daily goal · ${formatMinutes(g)}', style: AppText.itemMeta),
+              Text('Daily goal: ${formatMinutes(g)}', style: AppText.itemMeta),
             ],
           ),
         ],
@@ -1226,18 +1225,24 @@ class _HeatmapState extends State<_Heatmap> {
         Row(
           children: [
             Expanded(
-              child: Text(
-                picked == null
-                    ? (AppColors.isDark
-                        ? 'Brightest = daily goal met'
-                        : 'Darkest = daily goal met')
-                    : '${weekdayShort(picked)}, ${picked.day} '
-                        '${monthShort(picked)} · '
-                        '${formatMinutes(store.focusMinutesOn(picked))}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.itemMeta,
-              ),
+              child: picked == null
+                  ? Text(
+                      AppColors.isDark
+                          ? 'Brightest = daily goal met'
+                          : 'Darkest = daily goal met',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.itemMeta,
+                    )
+                  : Align(
+                      alignment: Alignment.centerLeft,
+                      child: MetaRow([
+                        MetaItem(AppIcons.calendar,
+                            '${weekdayShort(picked)}, ${picked.day} ${monthShort(picked)}'),
+                        MetaItem(AppIcons.clock,
+                            formatMinutes(store.focusMinutesOn(picked))),
+                      ]),
+                    ),
             ),
             Text('Less ', style: AppText.itemMeta),
             for (final c in AppColors.heat)
@@ -1269,8 +1274,15 @@ class _HeatmapState extends State<_Heatmap> {
                       color: AppColors.streakText,
                     ),
                   ),
-                  TextSpan(
-                      text: ' · Best ${plural(store.longestStreak, 'day')}'),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12, right: 4),
+                      child: Icon(AppIcons.trophy,
+                          size: 14, color: AppColors.primaryDeep),
+                    ),
+                  ),
+                  TextSpan(text: 'Best ${plural(store.longestStreak, 'day')}'),
                 ]),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1429,10 +1441,10 @@ class _Timeline extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: AppText.sectionTitle),
                   ),
-                  Text(
-                    '${plural(pomodoros, 'Pomodoro')} · ${formatMinutes(focus)}',
-                    style: AppText.itemMeta,
-                  ),
+                  MetaRow([
+                    MetaItem(AppIcons.timer, plural(pomodoros, 'Pomodoro')),
+                    MetaItem(AppIcons.clock, formatMinutes(focus)),
+                  ]),
                 ],
               ),
               const SizedBox(height: 8),

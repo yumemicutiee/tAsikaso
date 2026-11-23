@@ -325,7 +325,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Earlier days are part of your full timeline.'),
           findsNothing);
-      expect(find.textContaining('Pomodoro · 25m'), findsNWidgets(2));
+      // Each day's heading: its Pomodoros and focus time.
+      expect(find.text('1 Pomodoro'), findsNWidgets(2));
     });
 
     testWidgets('Smart review: free studies all cards, Plus sees what is due',

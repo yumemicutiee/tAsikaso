@@ -8,6 +8,7 @@ import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import 'common.dart';
+import 'meta_row.dart';
 
 /// Menu entries for a "⋮" button: label → action.
 typedef MenuActions = Map<String, VoidCallback>;
@@ -73,12 +74,10 @@ class NoteTile extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
-                          '${formatNoteDate(note.createdAt)} · ${plural(note.pageCount, 'page')}',
-                          style: AppText.itemMeta,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: MetaRow([
+                          MetaItem(AppIcons.calendar, formatNoteDate(note.createdAt)),
+                          MetaItem(AppIcons.pages, plural(note.pageCount, 'page')),
+                        ]),
                       ),
                       if (f != null) ...[
                         const SizedBox(width: 6),
@@ -152,13 +151,10 @@ class SetTile extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
-                          '${plural(deck.cards.length, 'card')}'
-                          '${due > 0 ? ' · $due due' : ''}',
-                          style: AppText.itemMeta,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: MetaRow([
+                          MetaItem(AppIcons.flashcards, plural(deck.cards.length, 'card')),
+                          if (due > 0) MetaItem(AppIcons.due, '$due due'),
+                        ]),
                       ),
                       if (f != null) ...[
                         const SizedBox(width: 6),
@@ -279,21 +275,12 @@ class TaskCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Icon(task.done ? AppIcons.check : AppIcons.play,
-                                size: 11, color: AppColors.textSecondary),
-                            const SizedBox(width: 3),
-                            Flexible(
-                              child: Text(
-                                task.progressLabel(focusLength),
-                                style: AppText.itemMeta,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+                        MetaRow([
+                          MetaItem(task.done ? AppIcons.check : AppIcons.timer,
+                              '${task.pomodorosDone} / ${task.pomodorosTotal}'),
+                          MetaItem(AppIcons.clock,
+                              '${task.focusMinutes} / ${task.estimatedMinutes(focusLength)} min'),
+                        ]),
                       ],
                     ),
                   ),

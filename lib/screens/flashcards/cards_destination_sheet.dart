@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
 import '../../widgets/choices.dart';
 import '../../widgets/common.dart';
+import '../../widgets/meta_row.dart';
 
 /// Where a note's flashcards go: a new set in [folder], or added to [set].
 class CardsDestination {
@@ -118,10 +119,22 @@ class _CardsDestinationSheetState extends State<CardsDestinationSheet> {
                   for (final s in _sets)
                     DropdownMenuItem(
                       value: s,
-                      child: Text(
-                        '${s.title} · ${_store.folder(s.folderId)?.name ?? 'No folder'}'
-                        ' · ${plural(s.cards.length, 'card')}',
-                        overflow: TextOverflow.ellipsis,
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(s.title,
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: MetaRow([
+                              MetaItem(AppIcons.folderOpen,
+                                  _store.folder(s.folderId)?.name ?? 'No folder'),
+                              MetaItem(AppIcons.flashcards,
+                                  plural(s.cards.length, 'card')),
+                            ], gap: 8),
+                          ),
+                        ],
                       ),
                     ),
                 ],

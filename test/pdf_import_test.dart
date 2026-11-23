@@ -188,7 +188,7 @@ void main() {
         (tester) async {
       pdfWith(1); // scanned, read where there's no text recognition
       await openImport(tester);
-      expect(find.text('1 page · no text found'), findsOneWidget);
+      expect(find.text('1 page, no text found'), findsOneWidget);
       expect(find.textContaining('No text was found; its pages are kept'),
           findsOneWidget);
       expect(find.textContaining('scanned PDFs are read in the Android'), findsOneWidget);

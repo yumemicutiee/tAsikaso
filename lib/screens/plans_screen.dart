@@ -285,7 +285,7 @@ class _CurrentPlan extends StatelessWidget {
           'active until ${formatNoteDate(end)}'
               '${daysLeft != null && daysLeft <= 31 ? ' (${plural(daysLeft, 'day')} left)' : ''}',
         if (subscription.test) 'test plan, no charge',
-      ].join(' · '),
+      ].join(', '),
     );
   }
 }

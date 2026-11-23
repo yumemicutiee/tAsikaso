@@ -12,6 +12,7 @@ import '../widgets/app_header.dart';
 import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/list_items.dart';
+import '../widgets/meta_row.dart';
 import '../widgets/progress_ring.dart';
 import 'actions.dart';
 import 'analysis_screen.dart';
@@ -412,15 +413,26 @@ class _TodayStrip extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 // Two lines on a small phone, rather than cutting it short.
-                child: Text(
-                  'Today · ${plural(pomodoros, 'Pomodoro')} · ${formatMinutes(minutes)}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.ink,
-                  ),
+                child: Row(
+                  children: [
+                    Text('Today',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
+                        )),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: MetaRow([
+                        MetaItem(AppIcons.timer, plural(pomodoros, 'Pomodoro')),
+                        MetaItem(AppIcons.clock, formatMinutes(minutes)),
+                      ], style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                      )),
+                    ),
+                  ],
                 ),
               ),
               Text(

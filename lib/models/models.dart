@@ -216,10 +216,10 @@ class StudyTask {
     return estimate < focusMinutes ? focusMinutes : estimate;
   }
 
-  /// "4 / 8 · 100 / 200 mins"
+  /// "4 of 8 Pomodoros, 100 of 200 min" (read out for the task).
   String progressLabel(int focusLength) =>
-      '$pomodorosDone / $pomodorosTotal · $focusMinutes / '
-      '${estimatedMinutes(focusLength)} mins';
+      '$pomodorosDone of $pomodorosTotal Pomodoros, $focusMinutes of '
+      '${estimatedMinutes(focusLength)} min';
 
   StudyTask copyWith({
     String? title,

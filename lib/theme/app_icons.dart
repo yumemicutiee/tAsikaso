@@ -81,6 +81,9 @@ class AppIcons {
   static const IconData newFolder = IconData(0xe258, fontFamily: _light); // folderPlus
   static const IconData newNote = IconData(0xe34c, fontFamily: _light); // notePencil
   static const IconData notebook = IconData(0xe34e, fontFamily: _light); // notebook
+  static const IconData timer = IconData(0xe492, fontFamily: _light); // timer
+  static const IconData pages = IconData(0xe23a, fontFamily: _light); // fileText
+  static const IconData due = IconData(0xe4e2, fontFamily: _light); // warningCircle
   static const IconData newCards = IconData(0xe0f8, fontFamily: _light); // cards
 
   // Capture & crop

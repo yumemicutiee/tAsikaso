@@ -477,7 +477,7 @@ class _DriveCard extends StatelessWidget {
                   : sync.lastSyncAt == null
                       ? 'Not synced yet'
                       : 'Last synced ${formatAgo(sync.lastSyncAt!, now)}'
-                          '${sync.hasUnsyncedChanges ? ' · changes waiting' : ''}',
+                          '${sync.hasUnsyncedChanges ? ', changes waiting' : ''}',
               style: AppText.statLabel,
             ),
             if (sync.error case final error?) ...[

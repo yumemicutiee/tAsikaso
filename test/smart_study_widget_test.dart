@@ -109,7 +109,7 @@ void main() {
     testWidgets('where text is not read (the web), the sheet says so',
         (tester) async {
       await openSaveSheet(tester);
-      expect(find.text('1 page · text is read in the phone app'), findsOneWidget);
+      expect(find.text('1 page, text is read in the phone app'), findsOneWidget);
     });
 
     testWidgets('Next shows the pages being read, then what was read',

@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../widgets/app_header.dart';
 import '../widgets/common.dart';
+import '../widgets/meta_row.dart';
 import 'actions.dart';
 import 'capture/scan_flow.dart';
 
@@ -78,7 +79,7 @@ class NotebookCard extends StatelessWidget {
     final latest = notes.isEmpty ? null : notes.first;
     final detail = latest == null
         ? 'No notes yet'
-        : '${plural(notes.length, 'note')} · latest: ${latest.title}';
+        : '${plural(notes.length, 'note')}, latest: ${latest.title}';
     return Semantics(
       button: true,
       label: '${folder.name} Notebook, $detail',
@@ -118,10 +119,13 @@ class NotebookCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                               color: AppColors.ink)),
                       const SizedBox(height: 3),
-                      Text(detail,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.itemMeta),
+                      if (latest == null)
+                        Text(detail, style: AppText.itemMeta)
+                      else
+                        MetaRow([
+                          MetaItem(AppIcons.notebook, plural(notes.length, 'note')),
+                          MetaItem(AppIcons.newNote, latest.title),
+                        ]),
                     ],
                   ),
                 ),
