@@ -6,9 +6,10 @@
 # Optional repo settings (Settings → Secrets and variables → Actions):
 #   variable GOOGLE_CLIENT_ID  the web OAuth client id for Google Drive sync
 #
-# The study server's address and app token are NOT built in: this site is
-# public and anything built in can be read from its JavaScript. People type
-# the address and token in Settings → Smart Study instead.
+# The study server's ADDRESS is built in (since 0.8.0): visitors get a
+# tAsikaso account (anonymous, or Google) and the server applies that
+# account's daily limits. The shared app TOKEN is never built in: this site
+# is public and anything built in can be read from its JavaScript.
 name: Deploy web app to GitHub Pages
 
 on:
@@ -49,7 +50,8 @@ jobs:
       - name: Build the web app
         run: |
           flutter build web --release --base-href /tAsikaso/ \
-            --dart-define=GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}"
+            --dart-define=GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}" \
+            --dart-define=STUDY_AI_URL=https://tasikaso-study-server.onrender.com
 
       - uses: actions/configure-pages@v5
         with:

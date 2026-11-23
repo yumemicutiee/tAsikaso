@@ -1,7 +1,7 @@
 tAsikaso - Milestones and progress
 ==================================
-Updated: 23 November 2026
-Latest version: 0.7.2 (Android APK, version code 17)
+Updated: 24 November 2026
+Latest version: 0.8.0 (Android APK, version code 18)
 Download: https://github.com/yumemicutiee/tAsikaso/releases
 Web app: https://yumemicutiee.github.io/tAsikaso/
 Study server (Claude): https://tasikaso-study-server.onrender.com
@@ -72,7 +72,7 @@ MILESTONES
            cards, quiz, answer check, wrong token, no server; about 6 s
          - a 12-page scan to one searchable PDF (about 1-1.5 min, memory flat)
          - the APK: only approved permissions, ready for Android 15+ phones
-       Unit and widget tests: 288 (app) and 72 (server), all passing.
+       Unit and widget tests: 307 (app) and 106 (server), all passing.
        Still being checked: the alarm channels of "When Time Is Up" on the
        emulator (sound, alarm volume, vibration), and timing on a slow,
        cheap-phone emulator profile.
@@ -94,13 +94,15 @@ MILESTONES
            after 7 days); the privacy policy URL above is ready for it
          - GitHub: add the signing secrets so the automatic test builds
            can install over releases
-       Known limits: one shared app token, limits reset when the server
-       restarts, a $5/day spending cap for the whole server (real accounts
-       come with milestone E).
+       Accounts (24 Nov, v0.8.0): every user has a tAsikaso account in
+       Supabase (anonymous, or their Google account); daily limits per
+       account and plan are kept in a database, so they survive restarts.
+       Still: a $5/day spending cap for the whole server.
 
-[NOT STARTED] E. Paid plans for real
-       Real payments instead of test purchases, and accounts on the server
-       so Free vs Plus is enforced there too. Needs the owner's decisions.
+[IN PROGRESS] E. Paid plans for real
+       Done (24 Nov): accounts on the server (Supabase), plans and limits
+       enforced there. Left: real payments instead of test purchases, and
+       an admin page. Needs the owner's decisions.
 
 [NOT STARTED] F. Launch 1.0
        Distribution, version 1.0, announcement.
@@ -119,13 +121,19 @@ HOUSEKEEPING FOR THE OWNER
 - Delete the Render API key that was shared in chat
   (Render -> Account Settings -> API Keys).
 - Set a monthly spend limit in the Claude Console.
-- Try v0.7.2 on a phone: the welcome screen, handwritten notes read by Claude,
+- Try v0.8.0 on a phone: Continue with Google, handwritten notes read by Claude,
   Make Flashcards from the note (Smart Study), the auto-crop corners, and
   Settings -> When Time Is Up -> Alarm Clock.
 
 
 VERSION HISTORY (recent)
 ------------------------
+0.8.0  24 Nov  Accounts: a tAsikaso account in Supabase for every user (anonymous
+               at first, the Google account after Continue with Google); daily
+               Claude limits per account (no account 20 pages, 10 kits, 50 checks;
+               Google 50/30/150; Plus 200/100/500); plans kept on the server;
+               today's use in Settings; Delete Account. The website gets Smart
+               Study, with Claude reading its scans.
 0.7.2  23 Nov  Read Photos with Claude: Claude Opus 5.5 (effort medium) reads each
                scanned page from its photo, handwriting too; the phone's ML Kit
                still finds the lines (lit up in blue) and is the fallback.
