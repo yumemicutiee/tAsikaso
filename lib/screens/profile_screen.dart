@@ -18,6 +18,7 @@ import 'analysis_screen.dart';
 import 'backup_screen.dart';
 import 'help_screen.dart';
 import 'plans_screen.dart';
+import 'welcome/welcome_screen.dart';
 
 /// Profile: photo and name (filled in from the Google account on sign-in,
 /// changeable here), study stats and app settings.
@@ -190,10 +191,8 @@ class ProfileScreen extends StatelessWidget {
                     _row(AppIcons.backup, 'Backup & Sync',
                         () => openBackup(context),
                         badge: store.isPlus ? null : 'Plus'),
-                  ]),
-                  const SizedBox(height: 16),
-                  _Group(children: [
                     _row(AppIcons.help, 'Help & FAQ', () => openHelp(context)),
+                    _row(AppIcons.signOut, 'Log Out', () => _logOut(context)),
                   ]),
                 ],
               );
@@ -201,6 +200,41 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Logs out: signs out of Google (if signed in) and goes back to the
+  /// welcome screen. The notes stay on this device; the name and a photo
+  /// from Google are cleared, so the next sign-in starts fresh.
+  static Future<void> _logOut(BuildContext context) async {
+    final sync = DriveSync.instance;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final who = sync.isSignedIn
+        ? "You'll be signed out of Google (${sync.email}) and go"
+        : "You'll go";
+    final sure = await showConfirmDialog(
+      context,
+      title: 'Log Out?',
+      message: '$who back to the welcome screen. Your notes, flashcards '
+          'and tasks stay on this phone.',
+      confirmLabel: 'Log Out',
+      danger: false,
+    );
+    if (!sure) return;
+    if (sync.isSignedIn) await sync.signOut();
+    final store = AppStore.instance;
+    if (store.prefs.profilePhotoUrl.isNotEmpty) {
+      await store.setProfilePhoto(null);
+    }
+    store.updatePrefs(store.prefs.copyWith(userName: '', welcomed: false));
+    navigator.pushAndRemoveUntil(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (_, _, _) => const WelcomeScreen(),
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+      (_) => false,
     );
   }
 

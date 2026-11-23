@@ -24,7 +24,6 @@ import 'actions.dart' show openPrivacyPolicy;
 import 'backup_screen.dart';
 import 'help_screen.dart';
 import 'plans_screen.dart';
-import 'welcome/welcome_screen.dart';
 
 /// A part of Settings that another screen can open directly.
 enum SettingsSection { notifications }
@@ -326,18 +325,6 @@ class SettingsScreen extends StatelessWidget {
                   "it happened, never your notes, photos or name. They go to "
                   'the study server.'),
 
-              const _Heading('Account'),
-              _Group(children: [
-                _TapRow(
-                  label: 'Log Out',
-                  icon: AppIcons.signOut,
-                  value: DriveSync.instance.isSignedIn
-                      ? DriveSync.instance.email
-                      : 'No account',
-                  onTap: () => _logOut(context),
-                ),
-              ]),
-
               const _Heading('About'),
               _Group(children: [
                 _TapRow(
@@ -584,41 +571,6 @@ class SettingsScreen extends StatelessWidget {
         ));
     }
     return ok;
-  }
-
-  /// Logs out: signs out of Google (if signed in) and goes back to the
-  /// welcome screen. The notes stay on this device; the name and a photo
-  /// from Google are cleared, so the next sign-in starts fresh.
-  static Future<void> _logOut(BuildContext context) async {
-    final sync = DriveSync.instance;
-    final navigator = Navigator.of(context, rootNavigator: true);
-    final who = sync.isSignedIn
-        ? "You'll be signed out of Google (${sync.email}) and go"
-        : "You'll go";
-    final sure = await showConfirmDialog(
-      context,
-      title: 'Log Out?',
-      message: '$who back to the welcome screen. Your notes, flashcards '
-          'and tasks stay on this phone.',
-      confirmLabel: 'Log Out',
-      danger: false,
-    );
-    if (!sure) return;
-    if (sync.isSignedIn) await sync.signOut();
-    final store = AppStore.instance;
-    if (store.prefs.profilePhotoUrl.isNotEmpty) {
-      await store.setProfilePhoto(null);
-    }
-    store.updatePrefs(store.prefs.copyWith(userName: '', welcomed: false));
-    navigator.pushAndRemoveUntil(
-      PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (_, _, _) => const WelcomeScreen(),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-      (_) => false,
-    );
   }
 
   static Future<void> _eraseAll(BuildContext context) async {
