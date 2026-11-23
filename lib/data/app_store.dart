@@ -1266,6 +1266,24 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
+  /// The plan the study server has for this account (null: the free
+  /// plan), kept here so Plus features work offline too.
+  void applyServerPlan(Subscription? plan) {
+    final mine = _prefs.subscription;
+    final same = plan == null
+        ? mine == null
+        : mine != null &&
+            mine.plan == plan.plan &&
+            mine.startedAt.isAtSameMomentAs(plan.startedAt) &&
+            mine.endsAt == plan.endsAt &&
+            mine.test == plan.test;
+    if (same) return;
+    _prefs = plan == null
+        ? _prefs.copyWith(clearSubscription: true)
+        : _prefs.copyWith(subscription: plan, hidePlusBanner: false);
+    _changed();
+  }
+
   /// When a plan on record has run out: back to Free, and the user is told.
   /// Called at start-up; returns true if a plan just ended.
   bool checkPlanEnded() {

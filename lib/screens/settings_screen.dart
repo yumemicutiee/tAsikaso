@@ -5,8 +5,10 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../data/app_store.dart';
 import '../data/pomodoro_controller.dart';
 import '../models/models.dart';
+import '../services/accounts.dart';
 import '../services/drive_sync.dart';
 import '../services/notification_service.dart';
+import '../services/plan_sync.dart';
 import '../services/scan_service.dart';
 import '../services/study_ai.dart';
 import '../theme/app_colors.dart';
@@ -293,6 +295,7 @@ class SettingsScreen extends StatelessWidget {
                       '(see its README), then add its address here to get '
                       'clean notes, key concepts, flashcards and quizzes '
                       'made for you. $kSmartStudyPrivacy'),
+              if (StudyAi.usesAccounts) const _AccountUsage(),
 
               const _Heading('Your Data'),
               _Note(store.isPersistent
@@ -323,6 +326,12 @@ class SettingsScreen extends StatelessWidget {
                   icon: AppIcons.help,
                   onTap: () => openPrivacyPolicy(context),
                 ),
+                if (StudyAi.usesAccounts)
+                  _TapRow(
+                    label: 'Delete Account',
+                    danger: true,
+                    onTap: () => _deleteAccount(context),
+                  ),
                 _TapRow(
                   label: 'Delete All Data',
                   danger: true,
@@ -570,6 +579,40 @@ class SettingsScreen extends StatelessWidget {
         ));
     }
     return ok;
+  }
+
+  /// Deletes the account on the study server (plan and usage) and signs
+  /// out; notes on this device and the Drive copy stay.
+  static Future<void> _deleteAccount(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    void say(String text) => messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text), showCloseIcon: true));
+    final sure = await showConfirmDialog(
+      context,
+      title: 'Delete Your Account?',
+      message: 'Your $kAppName account is deleted from the study server: '
+          'its plan and its Smart Study usage. You are signed out here. '
+          'Your notes, flashcards and tasks on this device stay, and so does '
+          'your copy on Google Drive; Delete All Data removes the ones on '
+          'this device. This cannot be undone.',
+      confirmLabel: 'Delete Account',
+    );
+    if (!sure) return;
+    try {
+      await StudyAi.deleteAccount();
+    } on StudyAiException catch (e) {
+      say(e.message);
+      return;
+    }
+    final sync = DriveSync.instance;
+    if (sync.isSignedIn) {
+      await sync.signOut(); // signs out of the account too
+    } else {
+      await Accounts.instance.signOut();
+    }
+    AppStore.instance.applyServerPlan(null);
+    say('Your account was deleted.');
   }
 
   static Future<void> _eraseAll(BuildContext context) async {
@@ -923,6 +966,52 @@ class _Swatch extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Which account this is and today's use of Claude against its limits,
+/// read from the study server when Settings opens.
+class _AccountUsage extends StatefulWidget {
+  const _AccountUsage();
+
+  @override
+  State<_AccountUsage> createState() => _AccountUsageState();
+}
+
+class _AccountUsageState extends State<_AccountUsage> {
+  late final Future<AccountInfo?> _account = PlanSync.refresh();
+
+  static String _use(DailyUse u, String one, String many) {
+    final limit = u.limit;
+    final word = (limit ?? u.used) == 1 ? one : many;
+    return limit == null ? '${u.used} $word' : '${u.used} of $limit $word';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<AccountInfo?>(
+      future: _account,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const _Note("Loading today's use of Claude…");
+        }
+        final a = snap.data;
+        if (a == null) {
+          return const _Note("Today's use of Claude couldn't be loaded. "
+              'Check your internet connection.');
+        }
+        final who = a.isPlus
+            ? 'Your account: $kPlusName.'
+            : a.anonymous
+                ? 'Your account: no account yet. Continue with Google '
+                    '(Profile → Backup & Sync) for more each day.'
+                : 'Your account: signed in with Google.';
+        return _Note('$who Today with Claude: '
+            '${_use(a.pagesRead, 'page read', 'pages read')}, '
+            '${_use(a.studyRequests, 'Smart Study request', 'Smart Study requests')}, '
+            '${_use(a.answerChecks, 'answer check', 'answer checks')}.');
+      },
     );
   }
 }

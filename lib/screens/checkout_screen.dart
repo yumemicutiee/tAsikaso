@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../data/app_store.dart';
 import '../data/plans.dart';
 import '../services/drive_sync.dart';
+import '../services/plan_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -216,12 +217,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _go(_Step.failed);
       return;
     }
+    // The plan goes on the account (the study server) when accounts are in
+    // use; if that fails nothing was "paid", and the review step says why.
+    final problem = await PlanSync.change(_plan);
+    if (!mounted) return;
+    if (problem != null) {
+      _go(_Step.review);
+      setState(() => _error = problem);
+      return;
+    }
     final random = math.Random();
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     _reference =
         'TSK-${List.generate(8, (_) => chars[random.nextInt(chars.length)]).join()}';
     _paidAt = clock.now();
-    AppStore.instance.startPlan(_plan);
     _go(_Step.done);
   }
 

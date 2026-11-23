@@ -11,7 +11,9 @@ import 'package:http/http.dart' as http;
 
 import '../data/app_store.dart';
 import '../utils/profile_photo.dart';
+import 'accounts.dart';
 import 'drive_store.dart';
+import 'plan_sync.dart';
 
 /// Keeps the user's data in their own Google Drive and brings it back on
 /// any device: sign in with Google once, then every change is uploaded
@@ -232,6 +234,9 @@ class DriveSync extends ChangeNotifier {
         debugPrint('Google sign-out: $e');
       }
     }
+    // Out of the tAsikaso account too; the next Smart Study request starts
+    // a new one without an account.
+    await Accounts.instance.signOut();
     notifyListeners();
   }
 
@@ -323,7 +328,22 @@ class DriveSync extends ChangeNotifier {
     await _saveState();
     notifyListeners();
     await _adoptGoogleProfile(_googleName, _googlePhotoUrl);
+    if (account != null) unawaited(_useGoogleForAccount(account));
     await checkRemote();
+  }
+
+  /// The tAsikaso account (limits, plan) becomes this Google account:
+  /// the anonymous one is linked to it, or the Google account's own is
+  /// used if it has one already. Then its plan is fetched.
+  Future<void> _useGoogleForAccount(GoogleSignInAccount account) async {
+    try {
+      final idToken = account.authentication.idToken;
+      if (await Accounts.instance.signInWithGoogle(idToken: idToken)) {
+        await PlanSync.refresh();
+      }
+    } catch (e) {
+      debugPrint('Account from Google: $e');
+    }
   }
 
   /// Fills in the profile from the Google account: the name when none is

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../data/app_store.dart';
 import '../models/models.dart';
 import '../utils/format.dart';
+import 'accounts.dart';
 
 /// What the study server made from a scan's text.
 @immutable
@@ -90,6 +91,75 @@ class AnswerCheck {
   bool get partly => verdict == 'partly';
 }
 
+/// Today's use of one kind of request against its daily limit.
+@immutable
+class DailyUse {
+  const DailyUse(this.used, this.limit);
+
+  final int used;
+
+  /// Null: no limit.
+  final int? limit;
+
+  static DailyUse fromJson(Object? j) => j is Map
+      ? DailyUse((j['used'] as num?)?.toInt() ?? 0, (j['limit'] as num?)?.toInt())
+      : const DailyUse(0, null);
+}
+
+/// The user's account on the study server: which limits apply, the plan
+/// on record there, and today's usage.
+@immutable
+class AccountInfo {
+  const AccountInfo({
+    required this.tier,
+    required this.anonymous,
+    required this.plan,
+    required this.pagesRead,
+    required this.studyRequests,
+    required this.answerChecks,
+  });
+
+  /// `anonymous`, `free` or `plus`.
+  final String tier;
+  final bool anonymous;
+
+  /// The plan the server has, or null on the free plan.
+  final Subscription? plan;
+  final DailyUse pagesRead;
+  final DailyUse studyRequests;
+  final DailyUse answerChecks;
+
+  bool get isPlus => tier == 'plus';
+
+  factory AccountInfo.fromJson(Json j) {
+    final p = j['plan'];
+    final name = p is Map ? PlusPlan.fromName(p['name']) : null;
+    final since = p is Map && p['startedAt'] is String
+        ? DateTime.tryParse(p['startedAt'] as String)
+        : null;
+    final until = p is Map && p['endsAt'] is String
+        ? DateTime.tryParse(p['endsAt'] as String)
+        : null;
+    final user = j['user'];
+    final today = j['today'];
+    return AccountInfo(
+      tier: j['tier'] as String? ?? 'anonymous',
+      anonymous: user is Map ? user['anonymous'] != false : true,
+      plan: name == null || since == null
+          ? null
+          : Subscription(
+              plan: name,
+              startedAt: since.toLocal(),
+              endsAt: until?.toLocal(),
+              test: p is Map && p['test'] == true,
+            ),
+      pagesRead: DailyUse.fromJson(today is Map ? today['read'] : null),
+      studyRequests: DailyUse.fromJson(today is Map ? today['study'] : null),
+      answerChecks: DailyUse.fromJson(today is Map ? today['check'] : null),
+    );
+  }
+}
+
 /// Why the study server couldn't help, in words for the user.
 class StudyAiException implements Exception {
   const StudyAiException(this.code, this.message);
@@ -136,8 +206,14 @@ class CancelToken {
 class StudyAi {
   StudyAi._();
 
-  static const _builtInUrl = String.fromEnvironment('STUDY_AI_URL');
+  static const _builtInUrlDefine = String.fromEnvironment('STUDY_AI_URL');
   static const _builtInToken = String.fromEnvironment('STUDY_AI_TOKEN');
+
+  /// Set in tests to stand in for an address built into the app.
+  @visibleForTesting
+  static String? debugBuiltInUrl;
+
+  static String get _builtInUrl => debugBuiltInUrl ?? _builtInUrlDefine;
 
   /// Set in tests to stand in for the network.
   @visibleForTesting
@@ -187,6 +263,44 @@ class StudyAi {
   /// Scanned pages are read by Claude from their photos (Settings → Smart
   /// Study → Read Photos with Claude, on with Smart Study).
   static bool get readsPhotos => isOn && _prefs.aiReading;
+
+  /// Requests carry the user's account (Supabase) token: accounts started
+  /// and the built-in study server is used. A server typed into Settings
+  /// keeps its own typed token.
+  static bool get usesAccounts =>
+      Accounts.instance.enabled &&
+      _prefs.aiServerUrl.trim().isEmpty &&
+      _builtInUrl.trim().isNotEmpty;
+
+  /// The user's account: plan and today's usage. Null when accounts aren't
+  /// in use.
+  static Future<AccountInfo?> fetchAccount() async {
+    if (!usesAccounts) return null;
+    final j = await _post('/v1/me', null, method: 'GET');
+    return AccountInfo.fromJson(j);
+  }
+
+  /// A test purchase on the server: [plan] switched on from now, or back
+  /// to Free (null). Returns the account as the server now has it.
+  static Future<AccountInfo> setTestPlan(PlusPlan? plan) async {
+    final j = await _post('/v1/plan/test', {'plan': plan?.name});
+    return AccountInfo.fromJson(j);
+  }
+
+  /// Deletes the user's account (plan and usage) on the server.
+  static Future<void> deleteAccount() async {
+    await _post('/v1/me', null, method: 'DELETE');
+  }
+
+  /// The bearer token for a request: the account's, else the typed or
+  /// built-in one.
+  static Future<String> _bearer() async {
+    if (usesAccounts) {
+      final t = await Accounts.instance.token();
+      if (t != null) return t;
+    }
+    return token;
+  }
 
   /// How long one page may take to be read (Claude at medium effort takes
   /// about 10–40 s; a sleeping free server adds up to a minute).
@@ -322,26 +436,44 @@ class StudyAi {
   static Uri _uri(String base, String path) =>
       Uri.parse(base.trim().replaceFirst(RegExp(r'/+$'), '') + path);
 
-  static Future<Json> _post(String path, Json body,
-      {CancelToken? cancel, Duration timeout = StudyAi.timeout}) async {
+  /// A request to the study server; a sign-in that had run out is
+  /// refreshed and the request sent once more.
+  static Future<Json> _post(String path, Json? body,
+      {CancelToken? cancel,
+      Duration timeout = StudyAi.timeout,
+      String method = 'POST'}) async {
+    try {
+      return await _send(path, body, cancel: cancel, timeout: timeout, method: method);
+    } on StudyAiException catch (e) {
+      if (e.code != 'session_expired' || !usesAccounts) rethrow;
+      await Accounts.instance.refresh();
+      return _send(path, body, cancel: cancel, timeout: timeout, method: method);
+    }
+  }
+
+  static Future<Json> _send(String path, Json? body,
+      {CancelToken? cancel,
+      required Duration timeout,
+      required String method}) async {
     final base = serverUrl;
     if (!isValidUrl(base)) {
       throw const StudyAiException('not_set',
           'No study server is set. Add its address in Settings → Smart Study.');
     }
     if (cancel != null && cancel.isCancelled) throw StudyAiException.cancelled;
+    final bearer = await _bearer();
     final client = (debugClient ?? http.Client.new)();
     try {
+      final request = http.Request(method, _uri(base, path))
+        ..headers.addAll({
+          if (body != null) 'content-type': 'application/json',
+          if (bearer.isNotEmpty) 'authorization': 'Bearer $bearer',
+          'x-install-id': installId,
+        });
+      if (body != null) request.body = jsonEncode(body);
       var reply = client
-          .post(
-            _uri(base, path),
-            headers: {
-              'content-type': 'application/json',
-              if (token.isNotEmpty) 'authorization': 'Bearer $token',
-              'x-install-id': installId,
-            },
-            body: jsonEncode(body),
-          )
+          .send(request)
+          .then(http.Response.fromStream)
           .timeout(timeout);
       if (cancel != null) {
         // Cancel doesn't wait for the server: the request is dropped (the
@@ -379,6 +511,8 @@ class StudyAi {
                 ? message
                 : '$message (Ref ${id.length > 8 ? id.substring(0, 8) : id})');
       }
+      // Done, nothing to say (Delete Account).
+      if (res.statusCode == 204) return const {};
       if (decoded is! Map<String, Object?>) throw _badReply;
       return decoded;
     } on StudyAiException {

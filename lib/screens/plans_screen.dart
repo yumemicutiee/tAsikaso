@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../data/app_store.dart';
 import '../data/plans.dart';
 import '../models/models.dart' show Subscription;
+import '../services/plan_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -130,6 +131,13 @@ class _PlansScreenState extends State<PlansScreen> {
   final _store = AppStore.instance;
   late PlusPlan _picked = _store.plan ?? PlusPlan.yearly;
 
+  @override
+  void initState() {
+    super.initState();
+    // The account's plan, as the server has it (no-op without accounts).
+    PlanSync.refresh();
+  }
+
   void _toast(String text) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -166,8 +174,9 @@ class _PlansScreenState extends State<PlansScreen> {
       confirmLabel: 'Go to Free',
     );
     if (!sure || !mounted) return;
-    _store.endPlan();
-    _toast("You're on the free plan now.");
+    final problem = await PlanSync.change(null);
+    if (!mounted) return;
+    _toast(problem ?? "You're on the free plan now.");
   }
 
   @override

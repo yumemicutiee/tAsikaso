@@ -31,14 +31,14 @@
 <body>
 <main>
   <h1>tAsikaso Privacy Policy</h1>
-  <p class="muted">Last updated 23 November 2026 · applies to the tAsikaso app for Android and the web version at yumemicutiee.github.io/tAsikaso</p>
+  <p class="muted">Last updated 24 November 2026 · applies to the tAsikaso app for Android and the web version at yumemicutiee.github.io/tAsikaso</p>
 
   <div class="box">
     <strong>In short:</strong> your notes, photos, flashcards, tasks and statistics are kept on your phone.
     Only when you use <strong>Smart Study</strong> are the photos of the pages you scan (so Claude can read the text in them) and the
     text from your notes sent to our study server and to Anthropic (the company that makes Claude) to write your study materials.
     Neither keeps them for us. With <em>Read Photos with Claude</em> off, only text is sent; with Smart Study off, nothing is.
-    If you sign in with Google, a copy of your data is kept in a private folder of <em>your own</em> Google Drive.
+    A small tAsikaso account (your plan and how much Smart Study you used each day, never your notes) is kept with Supabase. If you sign in with Google, a copy of your data is kept in a private folder of <em>your own</em> Google Drive.
     We don't sell data, show ads, or track you.
   </div>
 
@@ -76,6 +76,19 @@
   <p>You can turn <em>Read Photos with Claude</em> off in <em>Settings → Smart Study</em>; then your photos aren't sent, only text read on the phone.
      You can turn Smart Study off there too; then nothing is sent and the app reads text, makes flashcards and quizzes on the phone instead.</p>
 
+  <h2>Your tAsikaso account</h2>
+  <p>So that Smart Study's daily limits and your tAsikaso+ plan follow <em>you</em> (and can't be used up by someone else), the app makes a
+     tAsikaso account the first time you use Smart Study: without a name or email at first, or linked to your Google account once you
+     <em>Continue with Google</em>. It is kept by <strong>Supabase</strong> (our account provider) in Singapore and holds only:</p>
+  <ul>
+    <li>an account id, and for a Google account your Google <strong>name and email address</strong>,</li>
+    <li>your <strong>plan</strong> (which one, from when, until when), and later your payments,</li>
+    <li>how many Smart Study requests, answer checks and pages read by Claude you used <strong>each day</strong>, and their estimated cost.</li>
+  </ul>
+  <p>Your notes, photos, flashcards, tasks and statistics are <strong>not</strong> stored there. <em>Settings &rarr; Your Data &rarr; Delete Account</em>
+     deletes the account, its plan and its usage at once (records of payments, once real payments exist, are kept without your name,
+     for the books). Supabase's privacy policy: <a href="https://supabase.com/privacy">supabase.com/privacy</a>.</p>
+
   <h2>Google sign-in and Drive sync</h2>
   <p>Signing in with Google is optional. If you do, the app receives your Google <strong>name, email address and profile photo</strong> (to show on
      your Profile) and permission for <strong>one private folder in your Google Drive</strong> that only tAsikaso can see
@@ -98,7 +111,7 @@
   <h2>What we don't do</h2>
   <ul>
     <li>No advertising, no analytics or tracking SDKs, no selling or sharing data with advertisers.</li>
-    <li>No account on our side: we don't keep a database of users.</li>
+    <li>No profiles for advertising: the only account data we keep is described under <em>Your tAsikaso account</em>.</li>
     <li>Payments for tAsikaso+ aren't connected yet; when they are, this page will say how they're handled.</li>
   </ul>
 
