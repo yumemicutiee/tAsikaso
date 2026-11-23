@@ -20,7 +20,7 @@ Future<void> main() async {
   });
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   // The loading screen shows while the saved data is read.
-  runApp(AppLoader(load: _load, onReady: _afterStart));
+  runApp(const AppLoader(load: _load, onReady: _afterStart));
 }
 
 /// Reads the saved data and gets the app ready, behind the loading screen.

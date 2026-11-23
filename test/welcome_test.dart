@@ -97,7 +97,7 @@ void main() {
       await store.addSet(
         title: 'Cells',
         folderId: biology.id,
-        cards: const [Flashcard(front: 'Cell', back: 'The unit of life')],
+        cards: const [Flashcard(id: 'c1', front: 'Cell', back: 'The unit of life')],
       );
       final cert = store.task('t-cert')!;
       store.updateTask(cert.copyWith(pomodorosDone: 5, focusMinutes: 125));
