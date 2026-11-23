@@ -1,0 +1,1351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>tAsikaso admin</title>
+<link rel="icon" type="image/png" href="../favicon.png">
+<!--
+  tAsikaso's admin page, for the owner only (ADMIN_PAGE_PLAN.txt).
+
+  It holds no secrets and reads no database. It signs in with Google (the
+  same web client as the app), turns that into a Supabase session, and asks
+  the study server's /v1/admin routes, which check that the account is in
+  ADMIN_EMAILS on Render and read Supabase with the secret key. Anyone can
+  load this page; only an admin's account gets any data from it.
+
+  Published with the web app by .github/workflows/deploy-web.yml (Flutter
+  copies web/ into the build), at https://yumemicutiee.github.io/tAsikaso/admin/
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+:root{
+  --bg:#EDEEF1;--card:#FFFFFF;--ink:#16181D;--muted:#61646E;--faint:#9A9DA6;
+  --line:#E3E5EA;--well:#F0F1F4;--row:#F5F6F8;
+  --accent:#1E3A6E;--accent-ink:#FFFFFF;--accent-soft:#9FCBF5;--accent-tint:#E1EEFC;
+  --good:#22A55B;--warn-bg:#FFF1CC;--warn-ink:#7A5300;--bad:#B3261E;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',Inter,system-ui,sans-serif;font-size:15px;line-height:1.45}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+.wrap{max-width:1440px;margin:0 auto;padding:24px 32px 48px;display:flex;flex-direction:column;gap:24px}
+header.top{background:var(--card);border-radius:999px;padding:10px 12px 10px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:700;color:var(--accent)}
+.brand img{width:40px;height:40px}
+.brand span{font-weight:500;color:var(--muted)}
+nav.pills{background:var(--well);border-radius:999px;padding:5px;display:flex;flex-wrap:wrap;gap:2px}
+nav.pills a{font-size:15px;padding:10px 18px;border-radius:999px;color:#3A3D46;text-decoration:none;min-height:44px;display:flex;align-items:center}
+nav.pills a.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.round{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;color:var(--ink);text-decoration:none}
+.round:disabled{opacity:.5;cursor:default}
+.headline{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+h1{margin:0;font-size:38px;font-weight:600;letter-spacing:-.5px}
+h1 span{color:var(--muted);font-weight:500}
+.stamp{background:var(--card);border-radius:999px;padding:6px 6px 6px 20px;font-size:14px;display:flex;align-items:center;gap:10px}
+.row{display:flex;flex-wrap:wrap;gap:20px}
+.card{background:var(--card);border-radius:24px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card.accent{background:var(--accent);color:var(--accent-ink)}
+.card.accent .sub,.card.accent .split{color:#D8E4F5}
+.cardhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.ttl{font-size:16px;font-weight:600;margin:0}
+.sub{font-size:13px;color:var(--muted);margin:2px 0 0}
+.big{font-size:40px;font-weight:600;letter-spacing:-1px;line-height:1.1}
+.big small{font-size:15px;font-weight:500;color:var(--muted);letter-spacing:0}
+.big .cents{color:var(--faint)}
+.split{display:flex;gap:16px;font-size:13px;flex-wrap:wrap}
+.kpi{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--accent);color:var(--accent-ink);white-space:nowrap}
+.chip.plain{background:var(--well);color:#3A3D46}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--well);color:#3A3D46;white-space:nowrap}
+.pill.plus{background:var(--accent-tint);color:var(--accent)}
+.pill.test,.pill.demo{background:var(--warn-bg);color:var(--warn-ink)}
+.seg{background:var(--well);border-radius:999px;padding:4px;display:flex}
+.seg button{border:0;background:none;padding:8px 18px;border-radius:999px;color:#3A3D46;min-height:40px;cursor:pointer;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.chart{position:relative;flex:1 1 auto;min-height:120px;margin-top:2px}
+/* % stats in place of badges: green up, red down, blue for a share. */
+.statline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.card.accent .statline{color:#D8E4F5}
+.delta{display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;background:var(--accent-tint);color:var(--accent)}
+.delta.up{background:#E2F5E9;color:#15803D}
+.delta.down{background:#FDE8E6;color:#B3261E}
+.card.accent .delta{background:rgba(255,255,255,.16);color:#fff}
+.card.accent .delta.up{color:#B8F0CC}
+.card.accent .delta.down{color:#FFC9C4}
+/* The chart: four numbers over it, and a hover guide. */
+.chart{cursor:crosshair;touch-action:pan-y}
+.cguide{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed #9AA4B8;pointer-events:none}
+.cdot{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.2);pointer-events:none}
+.ctip{position:absolute;transform:translate(-50%,calc(-100% - 14px));background:var(--ink);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;line-height:1.35;white-space:nowrap;pointer-events:none;display:flex;flex-direction:column;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.ctip span{color:#C9CCD4}
+.ctip[data-edge="right"]{transform:translate(calc(-100% + 12px),calc(-100% - 14px))}
+.ctip[data-edge="left"]{transform:translate(-12px,calc(-100% - 14px))}
+.chart svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.chart .chip{position:absolute;right:0}
+.bars{display:flex;gap:12px;align-items:flex-end;height:150px}
+.bars > div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%}
+.bar{width:100%;max-width:56px;border-radius:18px;min-height:16px}
+.barlabels{display:flex;gap:12px}
+.barlabels div{flex:1;text-align:center;font-size:12px;color:var(--muted)}
+.meta{font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--good)}
+.tablebox{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0 4px}
+th{font-size:13px;font-weight:500;color:var(--muted);text-align:left;padding:8px 12px;white-space:nowrap}
+td{font-size:14px;padding:12px;white-space:nowrap}
+tbody tr:nth-child(even) td{background:var(--row)}
+tbody tr:nth-child(even) td:first-child{border-radius:12px 0 0 12px}
+tbody tr:nth-child(even) td:last-child{border-radius:0 12px 12px 0}
+td .meta{white-space:nowrap}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.pager div{display:flex;gap:8px}
+.note{font-size:13px;color:var(--muted)}
+.empty{font-size:14px;color:var(--muted);padding:8px 0}
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.gate .card{max-width:420px;width:100%;align-items:center;text-align:center;gap:18px;padding:36px 28px}
+.gate img{width:64px;height:64px}
+.gate h1{font-size:28px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:10px 20px;min-height:44px;cursor:pointer;font-size:14px}
+.error{color:var(--bad);font-size:14px}
+[hidden]{display:none !important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:640px){
+  .wrap{padding:16px 16px 40px}
+  header.top{border-radius:28px}
+  nav.pills{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto}
+  nav.pills a{white-space:nowrap;padding:10px 14px}
+  h1{font-size:28px}
+  .big{font-size:34px}
+}
+/* Icons */
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ttlrow{display:flex;align-items:center;gap:12px;min-width:0}
+.ico{width:40px;height:40px;border-radius:12px;background:var(--accent-tint);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.card.accent .ico{background:rgba(255,255,255,.14);color:#fff}
+nav.pills a{gap:10px}
+/* The menu. Phones: a bar at the top (logo and sign out; the sections in
+   a row under it). */
+.side-label,.me .avatar,.me .me-text{display:none}
+header.top .me{order:3}
+.me{display:flex;align-items:center;gap:10px;margin-left:auto}
+header.top .brand{order:1}
+header.top nav.pills{order:4}
+@media (max-width:1099px){ header.top nav.pills{width:100%;flex-wrap:nowrap;overflow-x:auto} nav.pills a{white-space:nowrap} }
+@media (max-width:640px){ header.top{gap:8px} .brand{font-size:18px;gap:8px} .brand img{width:32px;height:32px} }
+/* Wider screens: a side menu. */
+@media (min-width:1100px){
+  .wrap{max-width:1700px;margin:0;padding-left:304px}
+  header.top{position:fixed;left:24px;top:24px;bottom:24px;width:248px;z-index:5;border-radius:28px;flex-direction:column;align-items:stretch;flex-wrap:nowrap;justify-content:flex-start;padding:22px 16px 16px;gap:0;box-shadow:0 1px 2px rgba(22,24,29,.04)}
+  header.top .brand{order:1}
+  header.top .side-label{order:3}
+  header.top nav.pills{order:4}
+  header.top .me{order:5}
+  .brand{padding:0 8px 22px;font-size:20px}
+  .brand img{width:36px;height:36px}
+  .side-label{display:block;margin:0 0 8px;padding:0 12px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  nav.pills{flex-direction:column;flex-wrap:nowrap;background:none;padding:0;gap:4px}
+  nav.pills a{border-radius:14px;padding:11px 12px;min-height:46px;color:#4A4D57;font-weight:500}
+  nav.pills a:hover{background:var(--row);color:var(--ink)}
+  nav.pills a.on{background:var(--accent);color:var(--accent-ink);font-weight:600;box-shadow:0 6px 14px rgba(30,58,110,.22)}
+  .me{margin:auto 0 0;background:var(--row);border-radius:18px;padding:10px 10px 10px 12px}
+  .me .avatar{display:inline-flex;width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;align-items:center;justify-content:center;flex:none}
+  .me .me-text{display:block;min-width:0;flex:1}
+  .me-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .me-mail{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .me .round{width:38px;height:38px}
+}
+/* ---- Layout (responsive) -------------------------------------------------
+   The cards sit in grids that follow the width of the content area (not the
+   window), so they fit next to the side menu too. */
+main.content{container-type:inline-size;display:flex;flex-direction:column;gap:24px;min-width:0}
+.kpis{display:grid;grid-template-columns:1fr;gap:20px}
+.kpis > .card{gap:10px}
+.charts{display:grid;grid-template-columns:1fr;gap:20px}
+@container (min-width:560px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpis > .card:first-child{grid-column:1 / -1}
+}
+@container (min-width:880px){
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kpis > .card:first-child{grid-column:auto}
+}
+@container (min-width:1000px){
+  .charts{grid-template-columns:minmax(0,2fr) minmax(300px,1fr)}
+}
+/* The three cards on top share one layout: title, one big line, one stat line. */
+.card.stat{gap:12px}
+.card.stat .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.stat .ttlrow > div{min-width:0}
+.kv{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:8px;row-gap:2px}
+.kv .big{font-size:40px;line-height:1.1}
+.kv .vs{font-size:15px;font-weight:500;color:var(--muted);margin:0 2px}
+.card.stat .statline{margin-top:auto}
+/* Chart paging. */
+.pager-mini{display:flex;align-items:center;gap:6px;margin-left:auto}
+.pager-mini .round{width:36px;height:36px}
+.pager-mini .now{min-height:36px;padding:6px 14px;font-size:13px;font-weight:600}
+.chartcard .cardhead{flex-wrap:wrap;row-gap:12px}
+.chartcard .cardhead .seg{order:3}
+.hint{display:none;margin:-4px 0 0;font-size:12px;color:var(--faint)}
+@media (pointer:coarse){.hint{display:block}}
+.chart{cursor:grab;outline:none;border-radius:6px}
+.chart:focus-visible{box-shadow:0 0 0 3px var(--accent-tint)}
+.plot.dragging .chart{cursor:grabbing}
+.slide{transition:transform .22s ease,opacity .22s ease}
+.plot.dragging .slide,.slide.instant{transition:none}
+/* Accounts: Google vs no account. */
+.versus{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.versus .n{font-size:32px;font-weight:600;letter-spacing:-.8px;line-height:1.1}
+.versus .lbl{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.versus .lbl i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.versus .pct{font-size:12.5px;font-weight:700;color:var(--muted)}
+.splitbar{display:flex;gap:3px;height:10px;border-radius:999px;overflow:hidden;background:var(--well);margin-top:auto}
+.splitbar span{min-width:6px}
+/* The chart card: the period's number over the line. */
+.chartstat{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.chartstat .big{font-size:34px}
+.plot{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:8px}
+.ylabels{position:relative;font-size:11.5px;color:var(--faint);text-align:right;min-width:14px}
+.ylabels span{position:absolute;right:0;transform:translateY(-50%);line-height:1}
+.plot .chart{height:200px;flex:none;min-height:0;margin:0}
+.xlabels{position:relative;height:16px;grid-column:2;color:var(--muted);text-transform:uppercase}
+.xlabels span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap;font-size:11.5px}
+.xlabels span.first{transform:none}
+.xlabels span.last{transform:translateX(-100%)}
+/* Plans: one row per plan. */
+.planhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.planhead .big{font-size:34px}
+.planrows{display:flex;flex-direction:column;gap:14px}
+.planrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:6px}
+.planrow .tag{width:36px;height:36px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;grid-row:span 2}
+.planrow .name{font-size:14px;font-weight:600}
+.planrow .price{font-size:12.5px;color:var(--muted);font-weight:500;margin-left:6px}
+.planrow .count{font-size:15px;font-weight:700;text-align:right}
+.planrow .count small{font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}
+.planrow .track{grid-column:2 / 4;height:6px;border-radius:999px;background:var(--well);overflow:hidden}
+.planrow .track span{display:block;height:100%;border-radius:999px}
+.planfoot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin-top:auto}
+.planfoot strong{color:var(--ink)}
+.planempty{font-size:13px;color:var(--muted);background:var(--row);border-radius:12px;padding:10px 12px}
+/* ---- Users ------------------------------------------------------------------
+   A card the height of the window: search and filters stay at the top, the
+   pager at the bottom, and only the list scrolls (with its header row). */
+#users{flex:1 1 auto;min-width:0}
+.searchbox{display:flex;align-items:center;gap:8px;height:44px;width:340px;max-width:100%;padding:0 8px 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--muted);transition:border-color .15s,box-shadow .15s}
+.searchbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.searchbox input{flex:1;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:14px;color:var(--ink);height:100%}
+.searchbox input::-webkit-search-cancel-button{display:none}
+.searchbox input::placeholder{color:var(--faint)}
+.searchbox .clear{border:0;background:var(--well);width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);padding:0}
+.searchbox .clear svg{width:14px;height:14px}
+.searchbox kbd{font:600 12px 'Plus Jakarta Sans',sans-serif;color:var(--faint);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
+.searchbox:focus-within kbd{display:none}
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.seg.small button{padding:6px 14px;min-height:34px;font-size:13px}
+/* Dropdowns: a button that is as wide as its text, and a menu under it
+   (the browser's own select is kept, hidden, for the value). */
+.pick{position:relative;display:inline-flex;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.pick select{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.pickbtn{display:inline-flex;align-items:center;gap:6px;width:100%;height:100%;padding:0 12px 0 14px;border:0;background:none;border-radius:12px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap;outline:0}
+.pickbtn b{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+.pickbtn svg{width:14px;height:14px;flex:none;margin-left:auto;padding-left:2px;color:var(--muted);transition:transform .15s}
+.pick.open .pickbtn svg{transform:rotate(180deg)}
+.pickmenu{position:absolute;top:calc(100% + 6px);left:-1px;min-width:calc(100% + 2px);z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 28px rgba(22,24,29,.14);padding:6px;display:flex;flex-direction:column;gap:2px;max-height:320px;overflow:auto}
+.pickmenu button{display:flex;align-items:center;justify-content:space-between;gap:18px;border:0;background:none;border-radius:8px;padding:9px 10px 9px 12px;font:inherit;font-size:13px;color:var(--ink);text-align:left;cursor:pointer;white-space:nowrap;outline:0}
+.pickmenu button:hover,.pickmenu button:focus-visible{background:var(--row)}
+.pickmenu button[aria-selected="true"]{color:var(--accent);font-weight:600}
+.pickmenu button svg{width:16px;height:16px;visibility:hidden}
+.pickmenu button[aria-selected="true"] svg{visibility:visible}
+.pick:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.pick.on{border-color:var(--accent);background:var(--accent-tint)}
+.pick.on .pickbtn{color:var(--accent)}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;padding:8px 6px;text-decoration:underline;text-underline-offset:3px}
+#users thead th{position:sticky;top:0;z-index:1;background:var(--card)}
+@media (min-width:641px){
+  body[data-view="users"] .wrap{height:100dvh;padding-bottom:24px}
+  body[data-view="users"] main.content{flex:1 1 auto;min-height:0}
+  body[data-view="users"] main.content > .row{flex:1 1 auto;min-height:0}
+  #users{height:100%;min-height:0}
+  #users .tablebox{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -8px;padding:0 8px}
+  #users .pager{padding-top:12px;border-top:1px solid var(--line)}
+}
+/* ---- Crash reports ---------------------------------------------------------- */
+#crashes{flex:1 1 auto;min-width:0}
+.ico.warn{background:#FDE8E6;color:#B3261E}
+.cstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.cstats > div{background:var(--row);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.cstats .lbl{font-size:12px;color:var(--muted)}
+.cstats strong{font-size:24px;font-weight:600;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crashlist{display:flex;flex-direction:column;gap:10px}
+/* flex:none: an opened error keeps its full height and the list scrolls,
+   instead of every card being squeezed to fit. */
+details.crash{flex:none;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:0;overflow:hidden}
+details.crash[open]{border-color:#C9CEDA;box-shadow:0 4px 14px rgba(22,24,29,.06)}
+details.crash summary{display:grid;grid-template-columns:minmax(0,1fr) auto 20px;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;list-style:none}
+details.crash summary::-webkit-details-marker{display:none}
+details.crash summary:hover{background:var(--row)}
+details.crash .num.mid strong{color:#B26A00}
+details.crash .num.high strong{color:#C62828}
+details.crash .what{min-width:0;display:flex;flex-direction:column;gap:4px}
+details.crash .type{font-size:14px;font-weight:700;color:var(--ink)}
+details.crash .msg{font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:#3A3D46;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
+details.crash .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+details.crash .tags span{font-size:11.5px;font-weight:600;color:#3A3D46;background:var(--well);border-radius:999px;padding:2px 9px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+details.crash .num{text-align:right;white-space:nowrap}
+details.crash .num strong{display:block;font-size:20px;font-weight:700;color:var(--ink)}
+details.crash .num span{font-size:12px;color:var(--muted)}
+details.crash .chev{width:18px;height:18px;color:var(--faint);transition:transform .15s}
+details.crash[open] .chev{transform:rotate(180deg)}
+details.crash .body{padding:0 16px 16px;display:flex;flex-direction:column;gap:8px}
+details.crash .bodyhead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+details.crash pre{margin:0;background:#16181D;color:#E6E8EE;border-radius:12px;padding:14px 16px;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;overflow:auto;max-height:280px}
+details.crash pre .ln{color:#6E7380;user-select:none;display:inline-block;min-width:2.2em}
+details.crash pre .app{color:#9FCBF5}
+.copybtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--ink)}
+.cempty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:40px 16px;color:var(--muted);font-size:14px;flex:1}
+.cempty .big-ico{width:56px;height:56px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;background:#E2F5E9;color:#15803D}
+.cempty .big-ico.off{background:var(--well);color:var(--muted)}
+.cempty strong{color:var(--ink);font-size:16px}
+.cempty code{background:var(--well);border-radius:6px;padding:2px 6px;font-size:13px}
+@media (min-width:641px){
+  body[data-view="crashes"] .wrap{height:100dvh;padding-bottom:24px}
+  body[data-view="crashes"] main.content{flex:1 1 auto;min-height:0}
+  body[data-view="crashes"] main.content > .row{flex:1 1 auto;min-height:0}
+  #crashes{height:100%;min-height:0}
+  #crashes .crashlist{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -8px;padding:2px 8px 8px}
+}
+@media (max-width:900px){ .cstats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+#crashTools{gap:10px}
+#crashTools .searchbox{flex:1 1 260px;width:auto}
+.pick{flex:0 0 auto}
+@media (max-width:640px){
+  #crashes .cardhead .seg{width:100%}
+  #crashes .cardhead .seg button{flex:1;padding:6px 4px}
+  #crashTools .searchbox{flex:1 1 100%}
+  #crashTools .pick{flex:1 1 0;min-width:0}
+  details.crash summary{grid-template-columns:minmax(0,1fr) auto;gap:10px}
+  details.crash .chev{display:none}
+}
+/* Short menu labels on phones. */
+.short{display:none}
+@media (max-width:640px){
+  .long{display:none}.short{display:inline}
+  header.top nav.pills{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible}
+  header.top nav.pills a{justify-content:center;padding:10px 6px;gap:6px;font-size:14px}
+  .headline{flex-direction:column;align-items:flex-start}
+  .card{padding:18px;border-radius:20px}
+  .chartcard .cardhead{align-items:center}
+  .chartcard .cardhead .ttlrow{flex:1 1 0}
+  .chartcard .seg{width:100%}
+  .chartcard .seg button{flex:1}
+  .plot .chart{height:170px}
+  /* Users: each row a small card (user and plan on top, dates under). */
+  #users .searchbox{width:100%}
+  .filters .seg.small{width:100%}
+  .filters .seg.small button{flex:1}
+  .pick{flex:1 1 140px;min-width:0}
+  .searchbox kbd{display:none}
+  #users .tablebox{overflow:visible}
+  #users table{border-spacing:0 8px}
+  #users thead{display:none}
+  #users tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;background:var(--row);border-radius:14px;padding:12px 14px}
+  #users tbody td{padding:0;background:none !important;border-radius:0 !important;white-space:normal;min-width:0}
+  #users tbody td:first-child div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #users tbody td:nth-child(3),#users tbody td:nth-child(4){grid-column:1 / -1;font-size:12.5px;color:var(--muted)}
+  #users tbody td[data-label]::before{content:attr(data-label) " "}
+  #users tbody td[colspan]{grid-column:1 / -1}
+  #users tbody td.noplan{display:none}
+}
+/* Views: the Overview shows the totals, chart, plans and payments; Users
+   and Crash reports each show on their own, from their tab. */
+body[data-view="overview"] #users, body[data-view="overview"] #crashes,
+body[data-view="users"] .ov, body[data-view="users"] #crashes,
+body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
+</style>
+</head>
+<body data-view="overview">
+
+<div id="gate" class="gate">
+  <div class="card">
+    <img src="../icons/Icon-192.png" alt="tAsikaso logo">
+    <h1>tAsikaso admin</h1>
+    <p id="gateText" class="sub" style="font-size:15px">Sign in with the Google account that runs tAsikaso.</p>
+    <div id="googleButton"></div>
+    <button id="gateSignOut" class="btn" type="button" hidden>Use another account</button>
+    <p id="gateError" class="error" role="alert"></p>
+  </div>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <!-- Line icons, drawn once and reused with <use>. -->
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.4 3.3-5.5 6.5-5.5s5.9 2.1 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.8c1.9.6 3.2 2.5 3.5 5.2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4.2 2.6 17.5a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol>
+    <symbol id="i-peso" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 17V7h3.2a2.8 2.8 0 0 1 0 5.6H9.5M8 9.3h8.5M8 11.3h8.5"/></symbol>
+    <symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.4 3.3-5.5 6.5-5.5 1.6 0 3 .5 4.1 1.4"/><path d="M18 14v6M15 17h6"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></symbol>
+    <symbol id="i-google" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.6 2.6L16 9.6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 8l4 3.5L12 5l4 6.5L20 8l-1.8 10H5.8z"/><path d="M6 21h12"/></symbol>
+  </svg>
+
+  <header class="top">
+    <div class="brand"><img src="../icons/Icon-192.png" alt="tAsikaso">Super Admin</div>
+    <p class="side-label">Menu</p>
+    <nav class="pills" aria-label="Admin sections">
+      <a href="#overview" class="on"><svg class="i"><use href="#i-grid"/></svg>Overview</a>
+      <a href="#users"><svg class="i"><use href="#i-users"/></svg>Users</a>
+      <a href="#crashes"><svg class="i"><use href="#i-alert"/></svg><span class="long">Crash reports</span><span class="short">Crashes</span></a>
+    </nav>
+    <div class="me">
+      <span class="avatar" id="meInitial" aria-hidden="true">A</span>
+      <div class="me-text"><div class="me-name" id="meName">Admin</div><div class="me-mail" id="meEmail"></div></div>
+      <button class="round" type="button" id="signOut" aria-label="Sign out" title="Sign out">
+        <svg class="i"><use href="#i-logout"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="content">
+  <div class="headline ov" id="overview">
+    <h1>Welcome back, <span id="hello">admin</span></h1>
+    <div class="stamp">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <span id="stamp" aria-live="polite">Loading…</span>
+      <button class="round" type="button" id="refresh" aria-label="Refresh">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+      </button>
+    </div>
+  </div>
+  <p id="loadError" class="error" role="alert" hidden></p>
+
+  <div class="kpis ov">
+    <section class="card stat accent">
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Total users</h2><p class="sub">Everyone who has opened the app</p></div></div>
+      <div class="kv"><span class="big" id="total">–</span></div>
+      <div class="statline"><span class="delta" id="totalDelta">–</span><span>growth this month</span></div>
+    </section>
+    <section class="card stat">
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Accounts</h2><p class="sub">Google sign-in vs no account</p></div></div>
+      <div class="kv"><span class="big" id="google" title="Google">–</span><span class="vs">vs</span><span class="big" id="anonymous" title="No account">–</span></div>
+      <div class="statline"><span class="delta flat" id="googlePct">–</span><span>signed in with Google</span></div>
+    </section>
+    <section class="card stat">
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments</h2><p class="sub">This month</p></div></div>
+      <div class="kv"><span class="big" id="payTotal">–</span></div>
+      <div class="statline"><span class="delta flat" id="payShare">–</span><span>of users paid this month</span></div>
+    </section>
+  </div>
+
+  <div class="charts ov">
+    <section class="card chartcard">
+      <div class="cardhead">
+        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-trend"/></svg></span><div><h2 class="ttl">New users</h2><p class="sub" id="chartNote"></p></div></div>
+        <div class="pager-mini">
+          <button class="round" type="button" id="chartPrev" aria-label="Earlier"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="round" type="button" id="chartNext" aria-label="Later"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button class="btn now" type="button" id="chartNow" hidden>Now</button>
+        </div>
+        <div class="seg" role="group" aria-label="Period">
+          <button type="button" data-period="week" aria-pressed="false">Week</button>
+          <button type="button" data-period="month" aria-pressed="true">Month</button>
+          <button type="button" data-period="year" aria-pressed="false">Year</button>
+        </div>
+      </div>
+      <p class="hint">Drag the chart sideways to see earlier periods.</p>
+      <div class="chartstat"><span class="big" id="newCount">–</span><span class="delta" id="newDelta">–</span><span class="meta" id="newPrev"></span></div>
+      <div class="plot">
+        <div class="ylabels" id="ylabels" aria-hidden="true"></div>
+        <div class="chart" id="chartBox" tabindex="0" aria-label="New users chart. Drag, or use the left and right arrow keys, to see earlier periods.">
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" role="img" id="chart" class="slide">
+            <defs>
+              <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#1E3A6E" stop-opacity="0.26"/>
+                <stop offset="1" stop-color="#1E3A6E" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g id="grid"></g>
+            <path id="area" fill="url(#fill)"/>
+            <path id="curve" fill="none" stroke="#1E3A6E" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="cguide" id="cguide" hidden></div>
+          <div class="cdot" id="cdot" hidden></div>
+          <div class="ctip" id="ctip" hidden></div>
+        </div>
+        <div class="xlabels slide" id="xlabels" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section class="card" id="plans">
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-crown"/></svg></span><div><h2 class="ttl">tAsikaso+ plans</h2><p class="sub">Active right now</p></div></div>
+      <div class="planhead"><span class="big" id="planActive">–</span><span class="delta flat" id="planShare">–</span><span class="meta">of all users</span></div>
+      <div class="planrows" id="planRows"></div>
+      <div class="planfoot"><span>Ending in 7 days <strong id="planEnding">–</strong></span><span>On Free <strong id="planFree">–</strong></span></div>
+    </section>
+  </div>
+
+  <div class="row">
+    <section class="card" id="users">
+      <div class="cardhead">
+        <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Users</h2><p class="sub" id="userNote">&nbsp;</p></div></div>
+        <div class="searchbox">
+          <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+          <label class="sr" for="search">Search users</label>
+          <input id="search" type="search" placeholder="Search email, name or id" autocomplete="off" spellcheck="false">
+          <button type="button" id="searchClear" class="clear" aria-label="Clear search" hidden><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+          <kbd aria-hidden="true">/</kbd>
+        </div>
+      </div>
+      <div class="filters" role="group" aria-label="Filter users">
+        <div class="seg small" role="group" aria-label="Account">
+          <button type="button" data-account="all" aria-pressed="true">All</button>
+          <button type="button" data-account="google" aria-pressed="false">Google</button>
+          <button type="button" data-account="anonymous" aria-pressed="false">No account</button>
+        </div>
+        <label class="pick"><span>Plan</span>
+          <select id="fPlan">
+            <option value="all">All</option>
+            <option value="free">Free</option>
+            <option value="plus">Any tAsikaso+</option>
+            <option value="monthly">Monthly</option>
+            <option value="semester">Semester</option>
+            <option value="yearly">Yearly</option>
+            <option value="ending">Ending in 7 days</option>
+          </select>
+        </label>
+        <label class="pick"><span>Joined</span>
+          <select id="fDays">
+            <option value="0">Any time</option>
+            <option value="1">Last 24 hours</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last year</option>
+          </select>
+        </label>
+        <label class="pick"><span>Sort</span>
+          <select id="fSort">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="ending">Plan ending soonest</option>
+          </select>
+        </label>
+        <button type="button" class="linkbtn" id="fClear" hidden>Clear filters</button>
+      </div>
+      <div class="tablebox">
+        <table>
+          <thead><tr><th>User</th><th>Plan</th><th>Plan ends</th><th>Joined</th></tr></thead>
+          <tbody id="userRows"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <span id="pageNote"></span>
+        <div>
+          <button class="round" type="button" id="prev" aria-label="Previous page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="round" type="button" id="next" aria-label="Next page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="crashes">
+      <div class="cardhead">
+        <div class="ttlrow"><span class="ico warn"><svg class="i"><use href="#i-alert"/></svg></span><div><h2 class="ttl">Crash reports</h2><p class="sub">Errors the app didn't handle, grouped by error, version and system</p></div></div>
+        <div class="seg small" role="group" aria-label="Crash reports period">
+          <button type="button" data-days="1" aria-pressed="false">24 h</button>
+          <button type="button" data-days="7" aria-pressed="true">7 days</button>
+          <button type="button" data-days="30" aria-pressed="false">30 days</button>
+          <button type="button" data-days="90" aria-pressed="false">90 days</button>
+        </div>
+      </div>
+      <div class="cstats" id="crashStats">
+        <div><span class="lbl">Crashes</span><strong id="cTotal">–</strong></div>
+        <div><span class="lbl">Users affected</span><strong id="cUsers">–</strong></div>
+        <div><span class="lbl">Different errors</span><strong id="cGroups">–</strong></div>
+        <div><span class="lbl">Latest</span><strong id="cLatest">–</strong></div>
+      </div>
+      <div class="filters" id="crashTools">
+        <div class="searchbox">
+          <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+          <label class="sr" for="crashSearch">Search errors</label>
+          <input id="crashSearch" type="search" placeholder="Search errors or code" autocomplete="off" spellcheck="false">
+        </div>
+        <label class="pick"><span>Version</span><select id="crashVersion"><option value="">All</option></select></label>
+        <label class="pick"><span>System</span><select id="crashSystem"><option value="">All</option></select></label>
+      </div>
+      <div class="crashlist" id="crashList"></div>
+    </section>
+  </div>
+  </main>
+</div>
+
+<script>
+"use strict";
+// Public settings, the same ones the app has built in (lib/services/
+// accounts.dart, drive_sync.dart, deploy-web.yml). None of them is secret.
+const SUPABASE_URL = "https://zwresopjspwugugikrqt.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dTGsBPMT_7QfOZS4RBntww_6y0DGv4A";
+const GOOGLE_CLIENT_ID = "308120396420-6n1da38mf6nok7j456s0mrmo859hbqda.apps.googleusercontent.com";
+const SERVER = "https://tasikaso-study-server.onrender.com";
+
+// Its own storage key, so signing in here never replaces a student
+// session of the web app on the same site.
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { storageKey: "tasikaso-admin-auth", persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+});
+
+const $ = (id) => document.getElementById(id);
+/** An element with text only: nothing from the server is ever read as HTML. */
+function el(tag, props = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "style") e.setAttribute("style", v);
+    else e.setAttribute(k, v);
+  }
+  for (const c of children) if (c != null) e.append(c instanceof Node ? c : String(c));
+  return e;
+}
+
+let tz = "Asia/Manila";
+let dash = null;
+let period = "month";
+/** 0: the week, month or year we are in; -1 the one before, and so on. */
+let offset = 0;
+const userState = { q: "", page: 1, total: 0, pageSize: 25, account: "all", plan: "all", days: "0", sort: "newest" };
+const filtersOn = () => userState.account !== "all" || userState.plan !== "all" || userState.days !== "0" || userState.sort !== "newest";
+
+const fmtNum = (n) => Number(n ?? 0).toLocaleString("en-US");
+const fmtDate = (iso) => iso ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: tz }).format(new Date(iso)) : "—";
+const fmtAgo = (iso) => {
+  const s = (Date.now() - Date.parse(iso)) / 1000;
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  const d = Math.round(s / 86400);
+  return d === 1 ? "yesterday" : `${d} days ago`;
+};
+const peso = (n) => {
+  const [whole, cents] = Number(n ?? 0).toFixed(2).split(".");
+  return [`₱${Number(whole).toLocaleString("en-US")}`, `.${cents}`];
+};
+const PLAN_TITLE = { monthly: "Monthly", semester: "Semester", yearly: "Yearly" };
+
+// ---- Signing in -----------------------------------------------------------
+
+function showGate(text, error = "", canSwitch = false) {
+  $("app").hidden = true;
+  $("gate").hidden = false;
+  $("gateText").textContent = text;
+  $("gateError").textContent = error;
+  $("gateSignOut").hidden = !canSwitch;
+  $("googleButton").hidden = canSwitch;
+}
+
+function initGoogle() {
+  if (!window.google?.accounts?.id) { setTimeout(initGoogle, 200); return; }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: async ({ credential }) => {
+      $("gateError").textContent = "";
+      const { error } = await sb.auth.signInWithIdToken({ provider: "google", token: credential });
+      if (error) { $("gateError").textContent = `Couldn't sign in: ${error.message}`; return; }
+      load();
+    },
+  });
+  google.accounts.id.renderButton($("googleButton"), { theme: "outline", size: "large", shape: "pill", text: "signin_with" });
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  dash = null;
+  showGate("Sign in with the Google account that runs tAsikaso.");
+}
+$("signOut").addEventListener("click", signOut);
+$("gateSignOut").addEventListener("click", signOut);
+
+/** GET a /v1/admin route with the admin's Supabase token. */
+async function api(path) {
+  const { data } = await sb.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw Object.assign(new Error("Signed out"), { code: "signed_out" });
+  const r = await fetch(SERVER + path, { headers: { Authorization: `Bearer ${token}` } });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(body?.error?.message ?? `HTTP ${r.status}`), { code: body?.error?.code ?? String(r.status) });
+  return body;
+}
+
+async function load() {
+  const { data } = await sb.auth.getSession();
+  if (!data.session) { showGate("Sign in with the Google account that runs tAsikaso."); return; }
+  $("stamp").textContent = "Loading… (the server may take a minute to wake up)";
+  try {
+    dash = await api("/v1/admin/dashboard");
+  } catch (e) {
+    if (e.code === "not_admin") {
+      showGate(`${data.session.user.email ?? "This account"} isn't an admin of tAsikaso.`, "", true);
+    } else if (e.code === "signed_out" || e.code === "session_expired" || e.code === "sign_in_required") {
+      await sb.auth.signOut();
+      showGate("Your sign-in expired. Please sign in again.");
+    } else if (e.code === "not_found" || e.code === "404") {
+      showGate("The admin page isn't switched on yet: ADMIN_EMAILS isn't set on the study server.", "", true);
+    } else if (!dash) {
+      showGate("Couldn't load the dashboard.", e.message, true);
+    } else {
+      $("loadError").hidden = false;
+      $("loadError").textContent = `Couldn't refresh: ${e.message}`;
+    }
+    return;
+  }
+  $("loadError").hidden = true;
+  $("gate").hidden = true;
+  $("app").hidden = false;
+  tz = dash.timeZone || tz;
+  const meta = data.session.user.user_metadata ?? {};
+  $("hello").textContent = (meta.full_name || meta.name || dash.admin.email || "admin").split(" ")[0];
+  // The signed-in admin, at the bottom of the menu.
+  const fullName = meta.full_name || meta.name || "Admin";
+  $("meName").textContent = fullName;
+  $("meEmail").textContent = data.session.user.email ?? dash.admin.email ?? "";
+  $("meInitial").textContent = fullName.trim().charAt(0).toUpperCase() || "A";
+  $("stamp").textContent = "Updated " + new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: tz }).format(new Date());
+  renderOverview();
+  renderChart();
+  renderNewUsers();
+  renderPlans();
+  renderPayments();
+  if (crashDays === 7) { crashData = null; renderCrashes(); } else loadCrashes(crashDays);
+  loadUsers();
+}
+$("refresh").addEventListener("click", load);
+
+// ---- Overview ----------------------------------------------------------------
+
+/** The change from [prev] to [cur] as "▲ 12%" / "▼ 8%", and its colour class. */
+function change(cur, prev) {
+  if (!prev) return cur > 0 ? ["New", "up"] : ["0%", "flat"];
+  const pct = Math.round(((cur - prev) / prev) * 100);
+  if (pct > 0) return [`▲ ${pct}%`, "up"];
+  if (pct < 0) return [`▼ ${Math.abs(pct)}%`, "down"];
+  return ["0%", "flat"];
+}
+function setDelta(id, [text, cls]) {
+  $(id).textContent = text;
+  $(id).className = `delta ${cls}`;
+}
+/** [part] as a share of [whole]: "1.4%". */
+const share = (part, whole) => `${whole > 0 ? (Math.round((part / whole) * 1000) / 10).toLocaleString("en-US") : 0}%`;
+
+function renderOverview() {
+  const o = dash.overview;
+  $("total").textContent = fmtNum(o.total);
+  // Growth this month: everyone now, against everyone before the 1st.
+  setDelta("totalDelta", change(o.total, o.total - o.newThisMonth));
+  $("google").textContent = fmtNum(o.google);
+  $("anonymous").textContent = fmtNum(o.anonymous);
+  $("googlePct").textContent = share(o.google, o.total);
+}
+
+// ---- New users per week (Monday to Sunday), month or year -------------------
+// Days are "YYYY-MM-DD" in the server's time zone; the date maths runs in UTC
+// so it never shifts a day.
+
+const dayAdd = (day, n) => { const d = new Date(`${day}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const monthAdd = (ym, n) => { const d = new Date(`${ym}-01T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 7); };
+const mondayOf = (day) => dayAdd(day, -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7));
+const daysIn = (ym) => new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).getUTCDate();
+
+/**
+ * Sign-ups per day and per month. From byDay (0004_admin_history_filters.sql) when
+ * the server sends it; otherwise only the last 30 days and 12 months.
+ */
+function history() {
+  const o = dash.overview;
+  if (o.byDay) {
+    const months = {};
+    for (const [d, n] of Object.entries(o.byDay)) months[d.slice(0, 7)] = (months[d.slice(0, 7)] ?? 0) + n;
+    const first = Object.keys(o.byDay).sort()[0] ?? o.today;
+    return { day: (d) => o.byDay[d] ?? 0, month: (m) => months[m] ?? 0, first };
+  }
+  const days = Object.fromEntries(o.daily.map((d) => [d.day, d.count]));
+  const months = Object.fromEntries(o.monthly.map((m) => [m.month, m.count]));
+  return { day: (d) => days[d] ?? 0, month: (m) => months[m] ?? 0, first: period === "year" ? `${o.monthly[0].month}-01` : o.daily[0].day };
+}
+
+/** The period [off] steps from now: its points (null = still to come), labels and name. */
+function windowAt(off) {
+  const today = dash.overview.today;
+  const h = history();
+  const fmt = (day, opts) => new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`)).replace(",", "").replace(/\bSept\b/, "Sep");
+  if (period === "year") {
+    const year = +today.slice(0, 4) + off;
+    const items = Array.from({ length: 12 }, (_, i) => {
+      const ym = `${year}-${String(i + 1).padStart(2, "0")}`;
+      return { n: `${ym}-01` > today ? null : h.month(ym), title: fmt(`${ym}-15`, { month: "long", year: "numeric" }), short: fmt(`${ym}-15`, { month: "short" }) };
+    });
+    return { items, start: `${year}-01-01`, end: `${year}-12-31`, name: String(year) };
+  }
+  if (period === "month") {
+    const ym = monthAdd(today.slice(0, 7), off);
+    const items = Array.from({ length: daysIn(ym) }, (_, i) => {
+      const d = `${ym}-${String(i + 1).padStart(2, "0")}`;
+      return { n: d > today ? null : h.day(d), title: fmt(d, { weekday: "short", day: "numeric", month: "short" }), short: fmt(d, { day: "numeric", month: "short" }) };
+    });
+    return { items, start: `${ym}-01`, end: `${ym}-${daysIn(ym)}`, name: fmt(`${ym}-15`, { month: "long", year: "numeric" }) };
+  }
+  const mon = dayAdd(mondayOf(today), off * 7);
+  const items = Array.from({ length: 7 }, (_, i) => {
+    const d = dayAdd(mon, i);
+    return { n: d > today ? null : h.day(d), title: fmt(d, { weekday: "short", day: "numeric", month: "short" }), short: fmt(d, { weekday: "short" }) };
+  });
+  const sun = dayAdd(mon, 6);
+  const name = `${fmt(mon, { weekday: "short", day: "numeric", ...(mon.slice(5, 7) !== sun.slice(5, 7) ? { month: "short" } : {}) })} – ${fmt(sun, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`;
+  return { items, start: mon, end: sun, name };
+}
+
+const canGoBack = () => windowAt(offset - 1).end >= history().first;
+const canGoForward = () => offset < 0;
+
+/** The chart card's number: new users in the period shown, and the change from the one before. */
+function renderNewUsers() {
+  const sum = (w) => w.items.reduce((a, it) => a + (it.n ?? 0), 0);
+  const count = sum(windowAt(offset)), prev = sum(windowAt(offset - 1));
+  const unit = { week: "week", month: "month", year: "year" }[period];
+  $("newCount").textContent = fmtNum(count);
+  setDelta("newDelta", change(count, prev));
+  $("newPrev").textContent = `vs ${offset === 0 ? `last ${unit}` : `the ${unit} before`} (${fmtNum(prev)})`;
+}
+
+/** A round top for the y-axis: 1, 2, 4, 6, 8, 10, 20, 40, 50, 100… (even, so the middle line is whole). */
+function niceTop(max) {
+  if (max <= 1) return 1;
+  if (max <= 2) return 2;
+  const pow = 10 ** Math.floor(Math.log10(max));
+  for (const m of [1, 2, 4, 5, 6, 8, 10]) if (m * pow >= max && (m * pow) % 2 === 0) return m * pow;
+  return 10 * pow;
+}
+
+/**
+ * The line through [vals] in a 600×200 box, 0 at the bottom and [top] at the
+ * top, the points spread over [slots] places (the rest of the period is
+ * still to come): a monotone cubic (Fritsch–Carlson), smooth but never
+ * dipping below 0 or overshooting a peak.
+ */
+const Y0 = 196, YTOP = 8;
+const yOf = (v, top) => Y0 - (v / top) * (Y0 - YTOP);
+function chartGeom(vals, top, slots) {
+  const n = vals.length;
+  const pts = vals.map((v, i) => [slots === 1 ? 300 : (i * 600) / (slots - 1), yOf(v, top)]);
+  const f = (x) => Math.round(x * 10) / 10;
+  if (n === 0) return { d: "", pts };
+  if (n === 1) return { d: `M${f(pts[0][0])},${f(pts[0][1])} L${f(pts[0][0]) + 0.1},${f(pts[0][1])}`, pts };
+  const s = [];
+  for (let i = 0; i < n - 1; i++) s.push((pts[i + 1][1] - pts[i][1]) / (pts[i + 1][0] - pts[i][0]));
+  const m = [s[0]];
+  for (let i = 1; i < n - 1; i++) m.push(s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2);
+  m.push(s[n - 2]);
+  for (let i = 0; i < n - 1; i++) {
+    if (s[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / s[i], b = m[i + 1] / s[i], h = a * a + b * b;
+    if (h > 9) { const t = 3 / Math.sqrt(h); m[i] = t * a * s[i]; m[i + 1] = t * b * s[i]; }
+  }
+  let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = (pts[i + 1][0] - pts[i][0]) / 3;
+    d += ` C${f(pts[i][0] + h)},${f(pts[i][1] + m[i] * h)} ${f(pts[i + 1][0] - h)},${f(pts[i + 1][1] - m[i + 1] * h)} ${f(pts[i + 1][0])},${f(pts[i + 1][1])}`;
+  }
+  return { d, pts };
+}
+
+/** The chart's points, for the hover tooltip. */
+let chartPoints = [];
+let chartSlots = 1;
+
+function renderChart() {
+  const w = windowAt(offset);
+  const items = w.items;
+  const narrow = $("chartBox").clientWidth < 420;
+  const step = period === "week" ? 1 : period === "month" ? (narrow ? 14 : 7) : (narrow ? 3 : 2);
+  const shown = items.filter((it) => it.n !== null);
+  const vals = shown.map((it) => it.n);
+  const top = niceTop(Math.max(...vals, 0));
+  const sum = vals.reduce((a, b) => a + b, 0);
+  const { d, pts } = chartGeom(vals, top, items.length);
+  const lastX = pts.length ? pts.at(-1)[0] : 0;
+  $("curve").setAttribute("d", d);
+  $("area").setAttribute("d", d ? `${d} L${lastX},${Y0} L0,${Y0} Z` : "");
+  // Grid lines and y labels at 0, half and the top: they match the line.
+  const ticks = top === 1 ? [0, 1] : [0, top / 2, top];
+  $("grid").replaceChildren(...ticks.map((t) => {
+    const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const y = yOf(t, top);
+    for (const [k, v] of Object.entries({ x1: 0, x2: 600, y1: y, y2: y, stroke: t === 0 ? "#D5D8DF" : "#E3E5EA", "vector-effect": "non-scaling-stroke" })) ln.setAttribute(k, v);
+    if (t !== 0) ln.setAttribute("stroke-dasharray", "4 5");
+    return ln;
+  }));
+  $("ylabels").replaceChildren(...ticks.map((t) => el("span", { style: `top:${(yOf(t, top) / 200) * 100}%` }, fmtNum(t))));
+  $("chart").setAttribute("aria-label", `Line chart of new users, ${w.name}; total ${sum}`);
+  $("chartNote").textContent = offset === 0 ? `This ${period} · ${w.name}` : w.name;
+  // X labels under their own points, from the first day (Monday, the 1st, January).
+  const last = items.length - 1;
+  $("xlabels").replaceChildren(...items.flatMap((it, i) => {
+    if (i % step !== 0) return [];
+    const x = last === 0 ? 50 : (i / last) * 100;
+    return [el("span", { class: i === 0 ? "first" : x > 96 ? "last" : "", style: `left:${x}%` }, it.short)];
+  }));
+  chartSlots = items.length;
+  chartPoints = shown.map((it, i) => ({ ...it, x: pts[i][0] / 600, y: pts[i][1] / 200 }));
+  $("chartPrev").disabled = !canGoBack();
+  $("chartNext").disabled = !canGoForward();
+  $("chartNow").hidden = offset === 0;
+  hideHover();
+  for (const b of document.querySelectorAll(".seg button[data-period]")) b.setAttribute("aria-pressed", String(b.dataset.period === period));
+}
+
+// Hover (or tap) the chart: a guide line, a dot and the day's number.
+function hideHover() {
+  for (const id of ["cguide", "cdot", "ctip"]) $(id).hidden = true;
+}
+function showHover(e) {
+  if (!chartPoints.length) return;
+  const r = $("chartBox").getBoundingClientRect();
+  const f = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  const p = chartPoints[Math.min(chartPoints.length - 1, Math.round(f * (chartSlots - 1)))];
+  const left = `${p.x * 100}%`, top = `${p.y * 100}%`;
+  $("cguide").style.left = left;
+  Object.assign($("cdot").style, { left, top });
+  const tip = $("ctip");
+  tip.replaceChildren(el("strong", {}, `${fmtNum(p.n)} new`), el("span", {}, p.title));
+  Object.assign(tip.style, { left, top });
+  tip.dataset.edge = p.x > 0.8 ? "right" : p.x < 0.2 ? "left" : "";
+  for (const id of ["cguide", "cdot", "ctip"]) $(id).hidden = false;
+}
+
+/** Moves to an earlier (-1) or later (+1) period, sliding the line across. */
+function go(dir) {
+  if (!dash || (dir < 0 && !canGoBack()) || (dir > 0 && !canGoForward())) { springBack(); return; }
+  offset += dir;
+  const slides = [$("chart"), $("xlabels")];
+  for (const e of slides) { e.classList.add("instant"); e.style.transform = `translateX(${dir < 0 ? -48 : 48}px)`; e.style.opacity = "0"; }
+  renderChart();
+  renderNewUsers();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const e of slides) { e.classList.remove("instant"); e.style.transform = ""; e.style.opacity = ""; }
+  }));
+}
+function springBack() {
+  for (const e of [$("chart"), $("xlabels")]) { e.style.transform = ""; e.style.opacity = ""; }
+}
+
+// Drag sideways: to the right for earlier, to the left for later.
+let drag = null;
+const plot = $("chartBox").closest(".plot");
+$("chartBox").addEventListener("pointerdown", (e) => {
+  drag = { x: e.clientX, y: e.clientY, dx: 0, moving: false };
+  showHover(e);
+});
+$("chartBox").addEventListener("pointermove", (e) => {
+  if (!drag) { if (e.pointerType === "mouse") showHover(e); return; }
+  drag.dx = e.clientX - drag.x;
+  if (!drag.moving && Math.abs(drag.dx) > 8 && Math.abs(drag.dx) > Math.abs(e.clientY - drag.y)) {
+    drag.moving = true;
+    $("chartBox").setPointerCapture(e.pointerId);
+    plot.classList.add("dragging");
+    hideHover();
+  }
+  if (drag.moving) {
+    // Resist past the ends (nothing earlier, or the future).
+    const blocked = (drag.dx > 0 && !canGoBack()) || (drag.dx < 0 && !canGoForward());
+    const dx = blocked ? drag.dx / 4 : drag.dx;
+    for (const el2 of [$("chart"), $("xlabels")]) el2.style.transform = `translateX(${dx}px)`;
+  } else {
+    showHover(e);
+  }
+});
+function endDrag() {
+  if (!drag) return;
+  const { dx, moving } = drag;
+  drag = null;
+  plot.classList.remove("dragging");
+  if (moving && Math.abs(dx) > 60) go(dx > 0 ? -1 : 1);
+  else springBack();
+}
+$("chartBox").addEventListener("pointerup", endDrag);
+$("chartBox").addEventListener("pointercancel", endDrag);
+$("chartBox").addEventListener("pointerleave", () => { if (!drag) hideHover(); });
+$("chartBox").addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+  if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+});
+$("chartPrev").addEventListener("click", () => go(-1));
+$("chartNext").addEventListener("click", () => go(1));
+$("chartNow").addEventListener("click", () => { offset = 0; renderChart(); renderNewUsers(); });
+
+// The labels depend on the chart's width: draw them again when it changes.
+let lastChartWidth = 0;
+new ResizeObserver(() => {
+  const w = $("chartBox").clientWidth;
+  if (dash && w && Math.abs(w - lastChartWidth) > 40) { lastChartWidth = w; renderChart(); }
+}).observe($("chartBox"));
+// Week / Month / Year: back to the one we are in.
+for (const b of document.querySelectorAll(".seg button[data-period]")) {
+  b.addEventListener("click", () => { period = b.dataset.period; offset = 0; if (dash) { renderChart(); renderNewUsers(); } });
+}
+
+// ---- Plans and payments ------------------------------------------------------
+
+/** One colour per plan, the same on the Overview and in the Users list. */
+const PLAN_COLOR = {
+  monthly: { solid: "#2F6FDB", tint: "#E3EDFD", ink: "#1D4FA8" },
+  semester: { solid: "#7A4BD1", tint: "#EEE7FB", ink: "#5A31A8" },
+  yearly: { solid: "#12936F", tint: "#DDF3EC", ink: "#0B6B51" },
+};
+const PLAN_ROWS = [
+  ["monthly", "Monthly", "₱49 / month"],
+  ["semester", "Semester", "₱199 / 6 months"],
+  ["yearly", "Yearly", "₱349 / year"],
+];
+
+function renderPlans() {
+  const p = dash.overview.plans;
+  const active = p.monthly + p.semester + p.yearly;
+  $("planActive").textContent = fmtNum(active);
+  $("planShare").textContent = share(active, dash.overview.total);
+  $("planEnding").textContent = fmtNum(p.endingIn7Days);
+  $("planFree").textContent = fmtNum(p.free);
+  // One row per plan: its price, how many, and its share of the active plans.
+  const rows = PLAN_ROWS.map(([key, label, price]) => {
+    const color = PLAN_COLOR[key].solid, ink = "#FFFFFF";
+    const n = p[key] ?? 0;
+    const pct = active > 0 ? Math.round((n / active) * 100) : 0;
+    return el("div", { class: "planrow" },
+      el("span", { class: "tag", style: `background:${color};color:${ink}`, "aria-hidden": "true" }, label.charAt(0)),
+      el("div", {}, el("span", { class: "name" }, label), el("span", { class: "price" }, price)),
+      el("div", { class: "count" }, fmtNum(n), el("small", {}, `${pct}%`)),
+      el("div", { class: "track" }, el("span", { style: `width:${pct}%;background:${color}` })));
+  });
+  if (active === 0) rows.push(el("div", { class: "planempty" }, "No one is on tAsikaso+ yet. Plans switched on from the app show here."));
+  $("planRows").replaceChildren(...rows);
+}
+
+function renderPayments() {
+  const pay = dash.payments;
+  $("payTotal").textContent = `₱${Math.round(Number(pay.monthTotalPhp ?? 0)).toLocaleString("en-US")}`;
+  // Share of all users who paid this month.
+  $("payShare").textContent = share(pay.monthCount, dash.overview.total);
+}
+
+// ---- Users -------------------------------------------------------------------
+
+async function loadUsers() {
+  const st = { ...userState };
+  const params = new URLSearchParams({ q: st.q, page: String(st.page) });
+  // Filters go only when set (they need 0004_admin_history_filters.sql).
+  if (st.account !== "all") params.set("account", st.account);
+  if (st.plan !== "all") params.set("plan", st.plan);
+  if (st.days !== "0") params.set("days", st.days);
+  if (st.sort !== "newest") params.set("sort", st.sort);
+  let res;
+  try {
+    res = await api(`/v1/admin/users?${params}`);
+  } catch (e) {
+    const hint = filtersOn() ? " Filters need supabase/migrations/0004_admin_history_filters.sql to be run once." : "";
+    $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error" }, `Couldn't load users: ${e.message}.${hint}`)));
+    return;
+  }
+  // A newer search or filter is on its way.
+  if (["q", "page", "account", "plan", "days", "sort"].some((k) => st[k] !== userState[k])) return;
+  userState.total = res.total;
+  userState.pageSize = res.pageSize;
+  $("userNote").textContent = st.q || filtersOn() ? `${fmtNum(res.total)} found` : `${fmtNum(res.total)} ${res.total === 1 ? "user" : "users"}`;
+  const rows = res.rows.map((u) => {
+    const plan = u.plan ? `tAsikaso+ ${PLAN_TITLE[u.plan]}` : "Free";
+    return el("tr", {},
+      el("td", {},
+        el("div", { style: "font-weight:600" }, u.anonymous ? "No account" : (u.email ?? u.name ?? "Google account")),
+        el("div", { class: "meta" }, u.anonymous ? `id ${u.id.slice(0, 13)}` : (u.name || "Google"))),
+      el("td", {}, el("span", { class: "pill", style: u.plan ? `background:${PLAN_COLOR[u.plan].tint};color:${PLAN_COLOR[u.plan].ink}` : "" }, plan)),
+      el("td", u.plan ? { "data-label": "Plan ends" } : { class: "noplan" }, u.plan ? fmtDate(u.planEndsAt) : "—"),
+      el("td", { "data-label": "Joined" }, fmtDate(u.createdAt)),
+    );
+  });
+  const empty = st.q || filtersOn() ? "No one matches. Try another search or clear the filters." : "No users yet.";
+  $("userRows").replaceChildren(...(rows.length ? rows : [el("tr", {}, el("td", { colspan: "4", class: "empty" }, empty))]));
+  const from = res.total ? (st.page - 1) * res.pageSize + 1 : 0;
+  const to = Math.min(st.page * res.pageSize, res.total);
+  $("pageNote").textContent = `Showing ${fmtNum(from)}–${fmtNum(to)} of ${fmtNum(res.total)}`;
+  $("prev").disabled = st.page <= 1;
+  $("next").disabled = to >= res.total;
+  $("users").querySelector(".tablebox").scrollTop = 0;
+}
+
+/** Shows which filters are on, and reloads the first page. */
+function applyFilters() {
+  userState.page = 1;
+  for (const b of document.querySelectorAll("[data-account]")) b.setAttribute("aria-pressed", String(b.dataset.account === userState.account));
+  $("fPlan").closest(".pick").classList.toggle("on", userState.plan !== "all");
+  $("fDays").closest(".pick").classList.toggle("on", userState.days !== "0");
+  $("fSort").closest(".pick").classList.toggle("on", userState.sort !== "newest");
+  $("fClear").hidden = !filtersOn();
+  if (dash) loadUsers();
+}
+for (const b of document.querySelectorAll("[data-account]")) {
+  b.addEventListener("click", () => { userState.account = b.dataset.account; applyFilters(); });
+}
+$("fPlan").addEventListener("change", (e) => { userState.plan = e.target.value; applyFilters(); });
+$("fDays").addEventListener("change", (e) => { userState.days = e.target.value; applyFilters(); });
+$("fSort").addEventListener("change", (e) => { userState.sort = e.target.value; applyFilters(); });
+$("fClear").addEventListener("click", () => {
+  Object.assign(userState, { account: "all", plan: "all", days: "0", sort: "newest" });
+  $("fPlan").value = "all"; $("fDays").value = "0"; $("fSort").value = "newest";
+  for (const id of ["fPlan", "fDays", "fSort"]) syncPick($(id));
+  applyFilters();
+});
+
+let searchTimer;
+$("search").addEventListener("input", (e) => {
+  $("searchClear").hidden = !e.target.value;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { userState.q = e.target.value.trim(); userState.page = 1; loadUsers(); }, 300);
+});
+$("searchClear").addEventListener("click", () => {
+  $("search").value = "";
+  $("searchClear").hidden = true;
+  userState.q = ""; userState.page = 1; loadUsers();
+  $("search").focus();
+});
+// "/" jumps to the search box (unless typing somewhere already).
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && !/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName ?? "")) {
+    e.preventDefault();
+    if (document.body.dataset.view !== "users") location.hash = "#users";
+    $("search").focus();
+  }
+});
+$("prev").addEventListener("click", () => { if (userState.page > 1) { userState.page--; loadUsers(); } });
+$("next").addEventListener("click", () => { userState.page++; loadUsers(); });
+
+// ---- Crash reports -------------------------------------------------------------
+
+let crashData = null;      // { days, crashReportsSaved, crashes }
+let crashDays = 7;
+
+function renderCrashes() {
+  if (!crashData) crashData = { days: 7, crashReportsSaved: dash.crashReportsSaved, crashes: dash.crashes };
+  const { crashes: c, crashReportsSaved: saved, days } = crashData;
+  const groups = c.groups ?? [];
+  for (const b of document.querySelectorAll("[data-days]")) b.setAttribute("aria-pressed", String(+b.dataset.days === crashDays));
+  const latest = groups.reduce((m, g) => (!m || g.lastAt > m ? g.lastAt : m), null);
+  $("cTotal").textContent = fmtNum(c.total ?? 0);
+  $("cUsers").textContent = fmtNum(c.users ?? 0);
+  $("cGroups").textContent = fmtNum(groups.length);
+  $("cLatest").textContent = latest ? fmtAgo(latest) : "—";
+  // Version and system choices from what came in (newest version first).
+  fillSelect("crashVersion", [...new Set(groups.map((g) => g.version))].sort().reverse(), (v) => `v${v}`);
+  fillSelect("crashSystem", [...new Set(groups.map((g) => systemName(g.platform)))].sort(), (v) => v);
+  const range = days === 1 ? "24 hours" : `${days} days`;
+  if (!saved && !c.total) {
+    $("crashTools").hidden = true;
+    $("crashList").replaceChildren(el("div", { class: "cempty" },
+      el("span", { class: "big-ico off" }, icon("i-alert", 26)),
+      el("strong", {}, "Crash reports aren't kept yet"),
+      el("div", {}, "They only go to the study server's log for now. Set ", el("code", {}, "STORE_CRASH_REPORTS=1"), " on Render to keep them here for 90 days.")));
+    return;
+  }
+  $("crashTools").hidden = groups.length === 0;
+  const q = $("crashSearch").value.trim().toLowerCase();
+  const ver = $("crashVersion").value, sys = $("crashSystem").value;
+  const shown = groups.filter((g) =>
+    (!ver || g.version === ver) && (!sys || systemName(g.platform) === sys) &&
+    (!q || `${g.message}\n${g.stack ?? ""}`.toLowerCase().includes(q)));
+  if (!groups.length) {
+    $("crashList").replaceChildren(el("div", { class: "cempty" },
+      el("span", { class: "big-ico" }, icon("i-check", 28)),
+      el("strong", {}, `No crashes in the last ${range}`),
+      el("div", {}, "Nothing went wrong that the app didn't handle.")));
+    return;
+  }
+  if (!shown.length) {
+    $("crashList").replaceChildren(el("div", { class: "cempty" }, el("strong", {}, "No crash matches"), el("div", {}, "Try another search, version or system.")));
+    return;
+  }
+  $("crashList").replaceChildren(...shown.map(crashRow));
+}
+
+/** "PlatformException(camera_error, …)" → ["PlatformException", "camera_error, …"]. */
+function splitError(message) {
+  // "SocketException: …" and "RangeError (index): …"
+  let m = /^([A-Za-z_$][\w$<>.]*)(?:\s*\([^)]*\))?\s*:\s*([\s\S]+)$/.exec(message);
+  if (m) return [m[1], m[2]];
+  // "PlatformException(camera_error, …)"
+  m = /^([A-Za-z_$][\w$<>.]*)\(([\s\S]*)\)$/.exec(message);
+  return m ? [m[1], m[2]] : ["Error", message];
+}
+/** "android 14 (UP1A…)" → "Android 14"; "web" → "Web". */
+function systemName(platform) {
+  const [os, ver] = String(platform ?? "").split(/\s+/);
+  const name = { android: "Android", ios: "iOS", web: "Web", windows: "Windows", macos: "macOS", linux: "Linux" }[os?.toLowerCase()] ?? os ?? "Unknown";
+  return /^\d/.test(ver ?? "") ? `${name} ${ver.split(".")[0]}` : name;
+}
+function icon(id, size = 20) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "i"); svg.setAttribute("aria-hidden", "true");
+  svg.style.width = svg.style.height = `${size}px`;
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", `#${id}`);
+  svg.append(use);
+  return svg;
+}
+function fillSelect(id, values, label) {
+  const sel = $(id), keep = sel.value;
+  sel.replaceChildren(el("option", { value: "" }, "All"), ...values.map((v) => el("option", { value: v }, label(v))));
+  sel.value = values.includes(keep) ? keep : "";
+  sel.closest(".pick").classList.toggle("on", !!sel.value);
+  syncPick(sel);
+}
+
+function crashRow(g) {
+  const [type, detail] = splitError(g.message);
+  const sev = g.count >= 5 ? "high" : g.count >= 2 ? "mid" : "";
+  const pre = el("pre", {});
+  const lines = (g.stack || "No stack trace was sent.").split("\n");
+  lines.forEach((line, i) => {
+    const ln = el("span", { class: "ln" }, String(i + 1));
+    // The app's own code stands out from Flutter's and the packages'.
+    const text = el("span", line.includes("package:tasikaso/") ? { class: "app" } : {}, line);
+    pre.append(ln, text, i < lines.length - 1 ? "\n" : "");
+  });
+  const copy = el("button", { type: "button", class: "copybtn" }, "Copy");
+  copy.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const text = `${g.message}\nv${g.version} · ${g.platform}\n\n${g.stack ?? ""}`;
+    try { await navigator.clipboard.writeText(text); copy.textContent = "Copied"; } catch { copy.textContent = "Couldn't copy"; }
+    setTimeout(() => { copy.textContent = "Copy"; }, 1500);
+  });
+  const users = g.users ?? 1;
+  return el("details", { class: "crash" },
+    el("summary", {},
+      el("div", { class: "what" },
+        el("div", { class: "type" }, type),
+        el("div", { class: "msg", title: g.message }, detail),
+        el("div", { class: "tags" }, el("span", {}, `v${g.version}`), el("span", { title: g.platform }, systemName(g.platform)), el("span", {}, `Last ${fmtAgo(g.lastAt)}`))),
+      el("div", { class: `num ${sev}` }, el("strong", {}, `${fmtNum(g.count)}×`), el("span", {}, `${fmtNum(users)} user${users === 1 ? "" : "s"}`)),
+      (() => { const c = icon("i-chev", 18); c.classList.add("chev"); return c; })()),
+    el("div", { class: "body" },
+      el("div", { class: "bodyhead" }, el("span", {}, "Where in the code"), copy),
+      pre));
+}
+
+async function loadCrashes(days) {
+  crashDays = days;
+  for (const b of document.querySelectorAll("[data-days]")) b.setAttribute("aria-pressed", String(+b.dataset.days === days));
+  try {
+    crashData = await api(`/v1/admin/crashes?days=${days}`);
+  } catch (e) {
+    $("crashList").replaceChildren(el("div", { class: "cempty" }, el("strong", {}, "Couldn't load crash reports"), el("div", {}, e.message)));
+    return;
+  }
+  if (crashDays === days) renderCrashes();
+}
+for (const b of document.querySelectorAll("[data-days]")) b.addEventListener("click", () => loadCrashes(+b.dataset.days));
+$("crashSearch").addEventListener("input", () => { if (crashData) renderCrashes(); });
+for (const id of ["crashVersion", "crashSystem"]) {
+  $(id).addEventListener("change", (e) => { e.target.closest(".pick").classList.toggle("on", !!e.target.value); renderCrashes(); });
+}
+
+// ---- Dropdowns ---------------------------------------------------------------
+
+/** Shows a select's current choice on its button. */
+function syncPick(sel) {
+  const pick = sel.closest(".pick");
+  if (!pick?._btn) return;
+  pick._btn.querySelector("b").textContent = sel.selectedOptions[0]?.textContent ?? "";
+}
+function closePicks(except) {
+  for (const p of document.querySelectorAll(".pick.open")) {
+    if (p === except) continue;
+    p.classList.remove("open");
+    p._btn.setAttribute("aria-expanded", "false");
+    p._menu.hidden = true;
+  }
+}
+/** Turns a <label class="pick"><span>Name</span><select></label> into a button and a menu. */
+function enhancePick(sel) {
+  const old = sel.closest(".pick");
+  const name = old.querySelector("span").textContent;
+  const pick = el("div", { class: old.className });
+  const btn = el("button", { type: "button", class: "pickbtn", "aria-haspopup": "listbox", "aria-expanded": "false" },
+    el("span", {}, name), el("b", {}), icon("i-chev", 14));
+  const menu = el("div", { class: "pickmenu", role: "listbox", "aria-label": name });
+  menu.hidden = true;
+  sel.tabIndex = -1;
+  sel.setAttribute("aria-hidden", "true");
+  old.replaceWith(pick);
+  pick.append(btn, menu, sel);
+  pick._btn = btn; pick._menu = menu;
+  const choose = (value) => {
+    closePicks();
+    btn.focus();
+    if (sel.value === value) return;
+    sel.value = value;
+    syncPick(sel);
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  const open = () => {
+    closePicks(pick);
+    menu.replaceChildren(...[...sel.options].map((o) => {
+      const b = el("button", { type: "button", role: "option", "aria-selected": String(o.value === sel.value), "data-value": o.value }, o.textContent, icon("i-tick", 16));
+      b.addEventListener("click", () => choose(o.value));
+      return b;
+    }));
+    menu.hidden = false;
+    pick.classList.add("open");
+    btn.setAttribute("aria-expanded", "true");
+    (menu.querySelector('[aria-selected="true"]') ?? menu.firstElementChild)?.focus();
+  };
+  btn.addEventListener("click", () => (pick.classList.contains("open") ? closePicks() : open()));
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); open(); } });
+  menu.addEventListener("keydown", (e) => {
+    const items = [...menu.children], i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); items[Math.min(i + 1, items.length - 1)]?.focus(); }
+    if (e.key === "ArrowUp") { e.preventDefault(); items[Math.max(i - 1, 0)]?.focus(); }
+    if (e.key === "Escape") { e.preventDefault(); closePicks(); btn.focus(); }
+    if (e.key === "Tab") closePicks();
+  });
+  sel.addEventListener("change", () => syncPick(sel));
+  syncPick(sel);
+}
+document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".pick")) closePicks(); });
+for (const sel of document.querySelectorAll(".pick select")) enhancePick(sel);
+
+// ---- Navigation highlight ------------------------------------------------------
+
+const navLinks = [...document.querySelectorAll("nav.pills a")];
+function markNav() {
+  const id = location.hash.slice(1) || "overview";
+  for (const a of navLinks) a.classList.toggle("on", a.getAttribute("href") === `#${id}`);
+  // Users and Crash reports are their own views, not on the Overview.
+  const view = id === "users" || id === "crashes" ? id : "overview";
+  if (document.body.dataset.view !== view) {
+    document.body.dataset.view = view;
+    if (view !== "overview") window.scrollTo(0, 0);
+  }
+}
+window.addEventListener("hashchange", markNav);
+markNav();
+
+initGoogle();
+load();
+</script>
+</body>
+</html>

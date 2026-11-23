@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tAsikaso Privacy Policy</title>
+  <meta name="description" content="What the tAsikaso study app keeps, where it goes, and how to delete it.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    :root { --bg: #ffffff; --text: #23263A; --muted: #6B7085; --accent: #1E3A6E; --line: #E6EAF1; --tint: #E7F2FD; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0F1320; --text: #EEF0F7; --muted: #A3A9BD; --accent: #A9D2F7; --line: #2A3143; --tint: #1C2A45; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { color: var(--accent); font-size: 1.9rem; line-height: 1.2; margin: 0 0 4px; }
+    h2 { color: var(--accent); font-size: 1.2rem; margin: 2rem 0 0.5rem; }
+    p, li { margin: 0.4rem 0; }
+    ul { padding-left: 1.25rem; }
+    .muted { color: var(--muted); }
+    .box { background: var(--tint); border-radius: 12px; padding: 12px 16px; margin: 1rem 0; }
+    table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.95rem; }
+    th, td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; }
+    a { color: var(--accent); }
+    code { font-size: 0.9em; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>tAsikaso Privacy Policy</h1>
+  <p class="muted">Last updated 24 November 2026 · applies to the tAsikaso app for Android and the web version at yumemicutiee.github.io/tAsikaso</p>
+
+  <div class="box">
+    <strong>In short:</strong> your notes, scanned pages and flashcards are kept on your phone.
+    Only when you use <strong>Smart Study</strong> are the photos of the pages you scan (so Claude can read the text in them) and the
+    text from your notes sent to our study server and to Anthropic (the company that makes Claude) to write your study materials.
+    Neither keeps them for us. With <em>Read Photos with Claude</em> off, only text is sent; with Smart Study off, nothing is.
+    Your tAsikaso account, kept with Supabase, holds your name and photo, settings, tasks, Pomodoro statistics, plan and daily Smart Study
+    use, so they come back when you sign in again; never your notes. If you sign in with Google, a copy of your data is kept in a private folder of <em>your own</em> Google Drive.
+    We don't sell data, show ads, or track you.
+  </div>
+
+  <h2>What stays on your phone</h2>
+  <p>Folders, notes (PDFs), photos you scan, flashcards and quizzes are saved only in the app's own storage on your phone (or, on the web,
+     in your browser). Your name, settings, tasks and Pomodoro statistics are saved there too, and copied to your account (below).
+     Uninstalling the app or <em>Settings → Delete All Data</em> removes them from the phone.</p>
+  <p>These features work entirely on your phone, with no internet:</p>
+  <ul>
+    <li><strong>Finding the page edges</strong> (auto-crop) uses AI models built into the app (DocAligner). Your photos are not sent anywhere.</li>
+    <li><strong>Finding the lines of text</strong> in your photos (the blue boxes while a page is read) uses Google's ML Kit text recognition,
+        which runs on the phone. Without Smart Study, or with <em>Read Photos with Claude</em> off, ML Kit also reads the text itself.</li>
+    <li><strong>Timer alerts and reminders</strong> are scheduled on the phone.</li>
+  </ul>
+  <p>On Android, the <em>Smart Scanner</em> button opens Google's document scanner, provided by Google Play services on your phone.
+     Google's own terms apply to that screen.</p>
+
+  <h2>Smart Study (Claude)</h2>
+  <p>When Smart Study is on and you scan pages, save a scan, ask for AI flashcards or a quiz, type up a note, or check a typed quiz answer,
+     the app sends:</p>
+  <ul>
+    <li>with <em>Read Photos with Claude</em> on (the default), the <strong>photo of each page you scan</strong>, cropped to the page,
+        so Claude can write out the text on it (it reads handwriting much better than the phone can),</li>
+    <li>the <strong>text</strong> of your pages, the note's title, your flashcards, and your typed quiz answers,</li>
+    <li>to our <strong>study server</strong> (hosted by Render, in Singapore), which passes them to <strong>Anthropic's Claude API</strong> and sends back
+        the text on a page, typed-up notes, a summary, key concepts, flashcards, quiz questions or a verdict on your answer.</li>
+  </ul>
+  <p>Anthropic handles these photos and this text under its commercial terms and privacy policy: it doesn't use it to train its models, and it keeps API
+     inputs and outputs only for a limited time (normally up to 30 days) for safety and abuse monitoring. See
+     <a href="https://www.anthropic.com/legal/privacy">anthropic.com/legal/privacy</a>.</p>
+  <p>Our study server keeps <strong>none of your photos or text</strong>. For each request it writes one log line: the time, which feature was used,
+     whether it worked, how long it took, how many tokens Claude used and what that cost, and a short one-way code made from your internet
+     address (not the address itself). Your internet address is kept only in the server's memory, to apply the daily limits, and is gone
+     when the server restarts. Our host keeps these log lines for a limited time.</p>
+  <p>You can turn <em>Read Photos with Claude</em> off in <em>Settings → Smart Study</em>; then your photos aren't sent, only text read on the phone.
+     You can turn Smart Study off there too; then nothing is sent and the app reads text, makes flashcards and quizzes on the phone instead.</p>
+
+  <h2>Your tAsikaso account</h2>
+  <p>So that your settings and statistics come back when you sign in again, and Smart Study's daily limits and your tAsikaso+ plan follow
+     <em>you</em> (and can't be used up by someone else), the app makes a tAsikaso account: without a name or email at first, or linked to
+     your Google account once you <em>Continue with Google</em>. It is kept by <strong>Supabase</strong> (our account provider) in Singapore
+     and holds only:</p>
+  <ul>
+    <li>an account id, and for a Google account your Google <strong>name and email address</strong>,</li>
+    <li>your <strong>profile</strong>: the name and photo you use in the app,</li>
+    <li>your <strong>settings</strong> (colours, theme, timer and alarm choices, reminder, Smart Study switches) and Pomodoro lengths,</li>
+    <li>your <strong>Pomodoro tasks and statistics</strong>: each finished Pomodoro and break (when and how long, and the task's name), and how
+        many minutes you focused and cards you reviewed each day,</li>
+    <li>your <strong>plan</strong> (which one, from when, until when); while payments aren't connected, switching a plan on also saves a
+        pretend payment record for our demo (the plan and its price; no money is involved and no payment details are asked for),</li>
+    <li>how many Smart Study requests, answer checks and pages read by Claude you used <strong>each day</strong>, and their estimated cost.</li>
+  </ul>
+  <p>It is saved a few seconds after a change and before you log out. When you <em>Log Out</em> of a Google account, these are cleared from the
+     phone and come back when you continue with Google again. Your notes, scanned pages and flashcards are <strong>not</strong> stored there.
+     Only you can read or change your own account data. The app's owner can see, on a private admin page, the list of accounts (Google email
+     and name, or just an id without an account), when each was made, each plan, the pretend payments, and totals; never your settings'
+     details beyond these, your photo, notes or flashcards. <em>Settings &rarr; Your Data &rarr; Delete Account</em>
+     deletes the account, its data, plan and usage at once (records of payments, once real payments exist, are kept without your name,
+     for the books). Supabase's privacy policy: <a href="https://supabase.com/privacy">supabase.com/privacy</a>.</p>
+
+  <h2>Google sign-in and Drive sync</h2>
+  <p>Signing in with Google is optional. If you do, the app receives your Google <strong>name, email address and profile photo</strong> (to show on
+     your Profile) and permission for <strong>one private folder in your Google Drive</strong> that only tAsikaso can see
+     (<code>drive.appdata</code>). It cannot see or change any of your other Drive files.</p>
+  <p>Backup &amp; Sync puts a copy of your tAsikaso data (folders, notes, photos, flashcards, tasks, statistics, settings) in that folder so you can
+     restore it on another phone. It goes straight from your phone to Google; it doesn't pass through our server. Google's privacy policy applies to
+     your Google account and Drive.</p>
+  <p>To remove that copy: in Google Drive on the web, open <em>Settings → Manage apps</em>, find tAsikaso and choose <em>Delete hidden app data</em>.
+     Signing out of the app or Delete All Data leaves the Drive copy alone, on purpose, so you don't lose it by accident.</p>
+
+  <h2>Backup files</h2>
+  <p><em>Back Up Now</em> makes a single file with your data and opens your phone's share sheet. Where it goes (Google Drive, email, a chat) is your
+     choice. The file never includes your study server token.</p>
+
+  <h2>Crash reports</h2>
+  <p>If the app runs into an error, it can send a short report to our study server so we can fix it: the error message and where in the app's code
+     it happened, the app version and the Android or browser version. It never includes your notes, photos, flashcards, name or email.
+     The report is kept for <strong>90 days</strong> with Supabase, linked to your account id if you're signed in, so the app's owner can see
+     on a private admin page which errors happen and how often; then it is deleted. Deleting your account removes the link.
+     You can turn this off in <em>Settings → Your Data → Send Crash Reports</em>.</p>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>No advertising, no analytics or tracking SDKs, no selling or sharing data with advertisers.</li>
+    <li>No profiles for advertising: the only account data we keep is described under <em>Your tAsikaso account</em>.</li>
+    <li>Payments for tAsikaso+ aren't connected yet; when they are, this page will say how they're handled.</li>
+  </ul>
+
+  <h2>Permissions the Android app asks for</h2>
+  <table>
+    <tr><th>Permission</th><th>Why</th></tr>
+    <tr><td>Camera</td><td>The app's own camera, when you take a photo of your notes.</td></tr>
+    <tr><td>Notifications, alarms &amp; reminders</td><td>Timer alerts when a Pomodoro or break ends, and the daily study reminder.</td></tr>
+    <tr><td>Run at startup</td><td>To set your alerts again after the phone restarts.</td></tr>
+    <tr><td>Vibration</td><td>To vibrate when time is up, if you switch that on.</td></tr>
+    <tr><td>Internet</td><td>Smart Study and Google Drive sync.</td></tr>
+  </table>
+  <p>The app doesn't ask for your microphone, contacts, location or fingerprint.</p>
+
+  <h2>Children</h2>
+  <p>tAsikaso is made for students. If you are under 13, please use it with a parent's or guardian's permission, especially Smart Study and Google sign-in.</p>
+
+  <h2>Changes and contact</h2>
+  <p>If this policy changes, the new version will be on this page with a new date. Questions or requests:
+     <a href="https://github.com/yumemicutiee/tAsikaso/issues">open an issue on GitHub</a>.</p>
+</main>
+</body>
+</html>
