@@ -310,7 +310,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _gcashNumberStep() => _page([
         const _TestPaymentNote(),
         const SizedBox(height: 18),
-        _StepHeader(
+        const _StepHeader(
           icon: AppIcons.phone,
           title: 'Your GCash number',
           text: "We'll send a one-time code to confirm it's you.",
