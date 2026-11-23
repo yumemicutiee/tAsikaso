@@ -11,6 +11,7 @@ import {
   type PlanName,
   type StoredCrash,
   type TokenVerifier,
+  type UserFilters,
 } from "../src/accounts.js";
 import { type AppOptions, createApp } from "../src/app.js";
 import { ConfigError, emailsFromEnv, readConfig } from "../src/config.js";
@@ -46,8 +47,9 @@ class FakeAdminStore implements AdminStore {
     this.calls.push(`overview ${tz}`);
     return { total: 3 };
   }
-  async users(q: string, limit: number, offset: number) {
-    this.calls.push(`users "${q}" ${limit} ${offset}`);
+  async users(q: string, limit: number, offset: number, filters: UserFilters = {}) {
+    const f = Object.entries(filters).filter(([, v]) => v !== undefined).map(([k, v]) => `${k}=${v}`).join(" ");
+    this.calls.push(`users "${q}" ${limit} ${offset}${f ? ` ${f}` : ""}`);
     return { total: 1, rows: [{ id: STUDENT }] };
   }
   async payments(tz: string, limit: number) {
@@ -143,6 +145,14 @@ test("the user list is searched and paged on the server", async () => {
   await call("GET", "/v1/admin/users?page=-4", "owner.tok.en");
   assert.equal(admin.calls[1], 'users "" 25 0');
   assert.equal((await call("GET", "/v1/admin/users", "student.tok.en")).status, 403);
+});
+
+test("the user list takes filters, and ignores ones it doesn't know", async () => {
+  const { call, admin } = await start();
+  await call("GET", "/v1/admin/users?account=google&plan=ending&days=30&sort=oldest", "owner.tok.en");
+  assert.equal(admin.calls[0], 'users "" 25 0 account=google plan=ending days=30 sort=oldest');
+  await call("GET", "/v1/admin/users?account=robots&plan=gold&days=-3&sort=random", "owner.tok.en");
+  assert.equal(admin.calls[1], 'users "" 25 0');
 });
 
 test("without ADMIN_EMAILS the admin routes don't exist", async () => {

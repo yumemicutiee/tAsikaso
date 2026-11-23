@@ -41,6 +41,7 @@ import {
   type TierLimits,
   tierOf,
   type TokenVerifier,
+  type UserFilters,
 } from "./accounts.js";
 import { DEFAULTS } from "./config.js";
 import {
@@ -283,7 +284,19 @@ export function createApp(options: AppOptions = {}) {
       const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
       const page = Math.min(Math.max(Number.parseInt(String(req.query.page ?? "1"), 10) || 1, 1), 10_000);
       const pageSize = 25;
-      const result = (await reports.users(q, pageSize, (page - 1) * pageSize)) as Record<string, unknown> | null;
+      // Filters: anything unknown counts as "all" (or "newest").
+      const pick = <T extends string>(name: string, allowed: readonly T[]): T | undefined => {
+        const v = req.query[name];
+        return typeof v === "string" && (allowed as readonly string[]).includes(v) ? (v as T) : undefined;
+      };
+      const days = Number.parseInt(String(req.query.days ?? "0"), 10);
+      const filters: UserFilters = {
+        account: pick("account", ["google", "anonymous"] as const),
+        plan: pick("plan", ["free", "plus", "monthly", "semester", "yearly", "ending"] as const),
+        days: Number.isFinite(days) && days > 0 ? Math.min(days, 36_500) : undefined,
+        sort: pick("sort", ["oldest", "ending"] as const),
+      };
+      const result = (await reports.users(q, pageSize, (page - 1) * pageSize, filters)) as Record<string, unknown> | null;
       res.setHeader("Cache-Control", "no-store");
       res.json({ ...(result ?? { total: 0, rows: [] }), page, pageSize });
     });

@@ -95,7 +95,6 @@ h1 span{color:var(--muted);font-weight:500}
 .barlabels div{flex:1;text-align:center;font-size:12px;color:var(--muted)}
 .meta{font-size:12px;color:var(--muted)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--good)}
-.search{font:inherit;font-size:14px;padding:11px 18px;border:0;background:var(--well);border-radius:999px;width:260px;max-width:100%}
 .tablebox{overflow-x:auto}
 table{width:100%;border-collapse:separate;border-spacing:0 4px}
 th{font-size:13px;font-weight:500;color:var(--muted);text-align:left;padding:8px 12px;white-space:nowrap}
@@ -129,7 +128,6 @@ details.crash pre{margin:10px 0 0;font-size:12px;white-space:pre-wrap;word-break
   nav.pills a{white-space:nowrap;padding:10px 14px}
   h1{font-size:28px}
   .big{font-size:34px}
-  .search{width:100%}
 }
 /* Icons */
 svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -241,6 +239,36 @@ main.content{container-type:inline-size;display:flex;flex-direction:column;gap:2
 .planfoot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin-top:auto}
 .planfoot strong{color:var(--ink)}
 .planempty{font-size:13px;color:var(--muted);background:var(--row);border-radius:12px;padding:10px 12px}
+/* ---- Users ------------------------------------------------------------------
+   A card the height of the window: search and filters stay at the top, the
+   pager at the bottom, and only the list scrolls (with its header row). */
+#users{flex:1 1 auto;min-width:0}
+.searchbox{display:flex;align-items:center;gap:8px;height:44px;width:340px;max-width:100%;padding:0 8px 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--muted);transition:border-color .15s,box-shadow .15s}
+.searchbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.searchbox input{flex:1;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:14px;color:var(--ink);height:100%}
+.searchbox input::-webkit-search-cancel-button{display:none}
+.searchbox input::placeholder{color:var(--faint)}
+.searchbox .clear{border:0;background:var(--well);width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);padding:0}
+.searchbox .clear svg{width:14px;height:14px}
+.searchbox kbd{font:600 12px 'Plus Jakarta Sans',sans-serif;color:var(--faint);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
+.searchbox:focus-within kbd{display:none}
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.seg.small button{padding:6px 14px;min-height:34px;font-size:13px}
+.pick{display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 6px 0 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:13px;color:var(--muted);cursor:pointer}
+.pick:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.pick.on{border-color:var(--accent);background:var(--accent-tint)}
+.pick.on span{color:var(--accent)}
+.pick select{appearance:none;-webkit-appearance:none;border:0;outline:0;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2361646E' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;font:inherit;font-size:13px;font-weight:600;color:var(--ink);padding:0 28px 0 0;height:100%;cursor:pointer}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;padding:8px 6px;text-decoration:underline;text-underline-offset:3px}
+#users thead th{position:sticky;top:0;z-index:1;background:var(--card)}
+@media (min-width:641px){
+  body[data-view="users"] .wrap{height:100dvh;min-height:560px;padding-bottom:24px}
+  body[data-view="users"] main.content{flex:1 1 auto;min-height:0}
+  body[data-view="users"] main.content > .row{flex:1 1 auto;min-height:0}
+  #users{height:100%;min-height:0}
+  #users .tablebox{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -8px;padding:0 8px}
+  #users .pager{padding-top:12px;border-top:1px solid var(--line)}
+}
 /* Short menu labels on phones. */
 .short{display:none}
 @media (max-width:640px){
@@ -255,7 +283,12 @@ main.content{container-type:inline-size;display:flex;flex-direction:column;gap:2
   .chartcard .seg button{flex:1}
   .plot .chart{height:170px}
   /* Users: each row a small card (user and plan on top, dates under). */
-  #users .cardhead label{width:100%}
+  #users .searchbox{width:100%}
+  .filters .seg.small{width:100%}
+  .filters .seg.small button{flex:1}
+  .pick{flex:1 1 140px;min-width:0}
+  .pick select{flex:1;min-width:0;width:100%;text-overflow:ellipsis}
+  .searchbox kbd{display:none}
   #users .tablebox{overflow:visible}
   #users table{border-spacing:0 8px}
   #users thead{display:none}
@@ -298,6 +331,8 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     <symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.4 3.3-5.5 6.5-5.5 1.6 0 3 .5 4.1 1.4"/><path d="M18 14v6M15 17h6"/></symbol>
     <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></symbol>
     <symbol id="i-google" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
     <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 8l4 3.5L12 5l4 6.5L20 8l-1.8 10H5.8z"/><path d="M6 21h12"/></symbol>
   </svg>
 
@@ -397,10 +432,52 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
   </div>
 
   <div class="row">
-    <section class="card" style="flex:999 1 640px" id="users">
+    <section class="card" id="users">
       <div class="cardhead">
         <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><div><h2 class="ttl">Users</h2><p class="sub" id="userNote">Newest first</p></div></div>
-        <label><span class="sr">Search users</span><input class="search" id="search" type="search" placeholder="Search email, name or id" autocomplete="off"></label>
+        <div class="searchbox">
+          <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+          <label class="sr" for="search">Search users</label>
+          <input id="search" type="search" placeholder="Search email, name or id" autocomplete="off" spellcheck="false">
+          <button type="button" id="searchClear" class="clear" aria-label="Clear search" hidden><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+          <kbd aria-hidden="true">/</kbd>
+        </div>
+      </div>
+      <div class="filters" role="group" aria-label="Filter users">
+        <div class="seg small" role="group" aria-label="Account">
+          <button type="button" data-account="all" aria-pressed="true">All</button>
+          <button type="button" data-account="google" aria-pressed="false">Google</button>
+          <button type="button" data-account="anonymous" aria-pressed="false">No account</button>
+        </div>
+        <label class="pick"><span>Plan</span>
+          <select id="fPlan">
+            <option value="all">All</option>
+            <option value="free">Free</option>
+            <option value="plus">Any tAsikaso+</option>
+            <option value="monthly">Monthly</option>
+            <option value="semester">Semester</option>
+            <option value="yearly">Yearly</option>
+            <option value="ending">Ending in 7 days</option>
+          </select>
+        </label>
+        <label class="pick"><span>Joined</span>
+          <select id="fDays">
+            <option value="0">Any time</option>
+            <option value="1">Last 24 hours</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last year</option>
+          </select>
+        </label>
+        <label class="pick"><span>Sort</span>
+          <select id="fSort">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="ending">Plan ending soonest</option>
+          </select>
+        </label>
+        <button type="button" class="linkbtn" id="fClear" hidden>Clear filters</button>
       </div>
       <div class="tablebox">
         <table>
@@ -459,7 +536,8 @@ let dash = null;
 let period = "month";
 /** 0: the week, month or year we are in; -1 the one before, and so on. */
 let offset = 0;
-const userState = { q: "", page: 1, total: 0, pageSize: 25 };
+const userState = { q: "", page: 1, total: 0, pageSize: 25, account: "all", plan: "all", days: "0", sort: "newest" };
+const filtersOn = () => userState.account !== "all" || userState.plan !== "all" || userState.days !== "0" || userState.sort !== "newest";
 
 const fmtNum = (n) => Number(n ?? 0).toLocaleString("en-US");
 const fmtDate = (iso) => iso ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: tz }).format(new Date(iso)) : "—";
@@ -601,7 +679,7 @@ const mondayOf = (day) => dayAdd(day, -((new Date(`${day}T00:00:00Z`).getUTCDay(
 const daysIn = (ym) => new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).getUTCDate();
 
 /**
- * Sign-ups per day and per month. From byDay (0004_admin_history.sql) when
+ * Sign-ups per day and per month. From byDay (0004_admin_history_filters.sql) when
  * the server sends it; otherwise only the last 30 days and 12 months.
  */
 function history() {
@@ -744,7 +822,7 @@ function renderChart() {
   $("chartNext").disabled = !canGoForward();
   $("chartNow").hidden = offset === 0;
   hideHover();
-  for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.period === period));
+  for (const b of document.querySelectorAll(".seg button[data-period]")) b.setAttribute("aria-pressed", String(b.dataset.period === period));
 }
 
 // Hover (or tap) the chart: a guide line, a dot and the day's number.
@@ -833,7 +911,7 @@ new ResizeObserver(() => {
   if (dash && w && Math.abs(w - lastChartWidth) > 40) { lastChartWidth = w; renderChart(); }
 }).observe($("chartBox"));
 // Week / Month / Year: back to the one we are in.
-for (const b of document.querySelectorAll(".seg button")) {
+for (const b of document.querySelectorAll(".seg button[data-period]")) {
   b.addEventListener("click", () => { period = b.dataset.period; offset = 0; if (dash) { renderChart(); renderNewUsers(); } });
 }
 
@@ -877,18 +955,27 @@ function renderPayments() {
 // ---- Users -------------------------------------------------------------------
 
 async function loadUsers() {
-  const { q, page } = userState;
+  const st = { ...userState };
+  const params = new URLSearchParams({ q: st.q, page: String(st.page) });
+  // Filters go only when set (they need 0004_admin_history_filters.sql).
+  if (st.account !== "all") params.set("account", st.account);
+  if (st.plan !== "all") params.set("plan", st.plan);
+  if (st.days !== "0") params.set("days", st.days);
+  if (st.sort !== "newest") params.set("sort", st.sort);
   let res;
   try {
-    res = await api(`/v1/admin/users?q=${encodeURIComponent(q)}&page=${page}`);
+    res = await api(`/v1/admin/users?${params}`);
   } catch (e) {
-    $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error" }, `Couldn't load users: ${e.message}`)));
+    const hint = filtersOn() ? " Filters need supabase/migrations/0004_admin_history_filters.sql to be run once." : "";
+    $("userRows").replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "error" }, `Couldn't load users: ${e.message}.${hint}`)));
     return;
   }
-  if (q !== userState.q || page !== userState.page) return; // a newer search is on its way
+  // A newer search or filter is on its way.
+  if (["q", "page", "account", "plan", "days", "sort"].some((k) => st[k] !== userState[k])) return;
   userState.total = res.total;
   userState.pageSize = res.pageSize;
-  $("userNote").textContent = q ? `${fmtNum(res.total)} found` : `Newest first · ${fmtNum(res.total)} in total`;
+  const sortName = { newest: "Newest first", oldest: "Oldest first", ending: "Plan ending soonest" }[st.sort];
+  $("userNote").textContent = st.q || filtersOn() ? `${fmtNum(res.total)} found · ${sortName.toLowerCase()}` : `${sortName} · ${fmtNum(res.total)} in total`;
   const rows = res.rows.map((u) => {
     const plan = u.plan ? `${u.test ? "Test · " : "tAsikaso+ "}${PLAN_TITLE[u.plan]}` : "Free";
     return el("tr", {},
@@ -900,17 +987,57 @@ async function loadUsers() {
       el("td", { "data-label": "Joined" }, fmtDate(u.createdAt)),
     );
   });
-  $("userRows").replaceChildren(...(rows.length ? rows : [el("tr", {}, el("td", { colspan: "4", class: "empty" }, q ? "No one matches that search." : "No users yet."))]));
-  const from = res.total ? (page - 1) * res.pageSize + 1 : 0;
-  const to = Math.min(page * res.pageSize, res.total);
+  const empty = st.q || filtersOn() ? "No one matches. Try another search or clear the filters." : "No users yet.";
+  $("userRows").replaceChildren(...(rows.length ? rows : [el("tr", {}, el("td", { colspan: "4", class: "empty" }, empty))]));
+  const from = res.total ? (st.page - 1) * res.pageSize + 1 : 0;
+  const to = Math.min(st.page * res.pageSize, res.total);
   $("pageNote").textContent = `Showing ${fmtNum(from)}–${fmtNum(to)} of ${fmtNum(res.total)}`;
-  $("prev").disabled = page <= 1;
+  $("prev").disabled = st.page <= 1;
   $("next").disabled = to >= res.total;
+  $("users").querySelector(".tablebox").scrollTop = 0;
 }
+
+/** Shows which filters are on, and reloads the first page. */
+function applyFilters() {
+  userState.page = 1;
+  for (const b of document.querySelectorAll("[data-account]")) b.setAttribute("aria-pressed", String(b.dataset.account === userState.account));
+  $("fPlan").closest(".pick").classList.toggle("on", userState.plan !== "all");
+  $("fDays").closest(".pick").classList.toggle("on", userState.days !== "0");
+  $("fSort").closest(".pick").classList.toggle("on", userState.sort !== "newest");
+  $("fClear").hidden = !filtersOn();
+  if (dash) loadUsers();
+}
+for (const b of document.querySelectorAll("[data-account]")) {
+  b.addEventListener("click", () => { userState.account = b.dataset.account; applyFilters(); });
+}
+$("fPlan").addEventListener("change", (e) => { userState.plan = e.target.value; applyFilters(); });
+$("fDays").addEventListener("change", (e) => { userState.days = e.target.value; applyFilters(); });
+$("fSort").addEventListener("change", (e) => { userState.sort = e.target.value; applyFilters(); });
+$("fClear").addEventListener("click", () => {
+  Object.assign(userState, { account: "all", plan: "all", days: "0", sort: "newest" });
+  $("fPlan").value = "all"; $("fDays").value = "0"; $("fSort").value = "newest";
+  applyFilters();
+});
+
 let searchTimer;
 $("search").addEventListener("input", (e) => {
+  $("searchClear").hidden = !e.target.value;
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => { userState.q = e.target.value.trim(); userState.page = 1; loadUsers(); }, 300);
+});
+$("searchClear").addEventListener("click", () => {
+  $("search").value = "";
+  $("searchClear").hidden = true;
+  userState.q = ""; userState.page = 1; loadUsers();
+  $("search").focus();
+});
+// "/" jumps to the search box (unless typing somewhere already).
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && !/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName ?? "")) {
+    e.preventDefault();
+    if (document.body.dataset.view !== "users") location.hash = "#users";
+    $("search").focus();
+  }
 });
 $("prev").addEventListener("click", () => { if (userState.page > 1) { userState.page--; loadUsers(); } });
 $("next").addEventListener("click", () => { userState.page++; loadUsers(); });
