@@ -62,8 +62,8 @@ void _copyLauncherIcons(Directory from, Directory to) {
 }
 
 /// What shows while the app starts, before its own loading screen: the
-/// logo on the app's background (white, or dark blue in dark mode), so the
-/// hand-over to lib/screens/loading_screen.dart is seamless. Android 12+
+/// logo on the loading screen's background (pale sky, or dark blue in dark
+/// mode; lib/widgets/brand_mark.dart), so the hand-over is seamless. Android 12+
 /// draws its own splash from the launcher icon; it gets the same background.
 /// Always written, replacing `flutter create`'s plain white screen.
 void _writeLaunchScreen(Directory res) {
@@ -91,7 +91,7 @@ void _writeLaunchScreen(Directory res) {
     <color name="splash_background">$hex</color>
 </resources>
 ''';
-  write('values/splash_colors.xml', color('#FFFFFF'));
+  write('values/splash_colors.xml', color('#F4F8FD'));
   write('values-night/splash_colors.xml', color('#0F1320'));
   String v31(String parent) => '''
 <?xml version="1.0" encoding="utf-8"?>

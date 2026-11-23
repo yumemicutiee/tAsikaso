@@ -346,7 +346,6 @@ void main() {
         minimum: const Duration(milliseconds: 800),
       ));
       expect(find.byType(LoadingScreen), findsOneWidget);
-      expect(find.text(LoadingScreen.tagline), findsOneWidget);
       expect(find.bySemanticsLabel('Loading tAsikaso'), findsOneWidget);
 
       await tester.pump(const Duration(milliseconds: 500));

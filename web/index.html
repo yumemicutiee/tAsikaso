@@ -44,48 +44,40 @@
       font-family: "Plus Jakarta Sans"; font-weight: 800; font-display: block;
       src: url(assets/assets/fonts/PlusJakartaSans-ExtraBold.ttf) format("truetype");
     }
-    html, body { margin: 0; height: 100%; background: #FFFFFF; }
+    html, body { margin: 0; height: 100%; background: #F4F8FD; }
     #loading {
-      position: fixed; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; background: #FFFFFF;
+      position: fixed; inset: 0; background: #F4F8FD;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       transition: opacity .3s ease; z-index: 10;
     }
     #loading.done { opacity: 0; pointer-events: none; }
-    #loading .mark { display: flex; flex-direction: column; align-items: flex-start; }
+    /* Placed as the app places it (lib/widgets/brand_mark.dart): the top
+       of the name 25px above the middle, the bar 26px under the name. */
+    #loading .mark { position: absolute; left: 50%; top: calc(50% - 25px); transform: translateX(-50%); }
     #loading .word {
-      display: flex; align-items: flex-start; line-height: 1;
+      display: flex; align-items: flex-start; height: 50px;
       font: 800 50px/1 "Plus Jakarta Sans", system-ui, sans-serif;
       letter-spacing: -1px; color: #1E3A6E;
     }
-    #loading .word span { display: inline-block; animation: rise 2.4s infinite both; }
+    #loading .word span { display: inline-block; animation: rise .35s cubic-bezier(.2,.8,.2,1) both; }
     #loading .word .cap { color: #4F80BF; }
-    #loading .plus { width: 26px; height: 26px; margin-right: 4px; animation: pop 2.4s infinite both; }
-    #loading .line {
-      margin: 14px 0 0 30px; width: 206px; height: 4px; border-radius: 2px;
-      background: #9FCBF5; transform-origin: left center;
-      animation: draw 2.4s infinite both;
+    #loading .plus { width: 26px; height: 26px; margin-right: 4px; animation: pop .3s cubic-bezier(.2,.8,.2,1) both; }
+    #loading .bar {
+      position: relative; margin: 26px 0 0 30px; width: 206px; height: 4px;
+      border-radius: 2px; overflow: hidden; background: #E7F2FD;
+      animation: fade .25s .55s both;
     }
-    #loading .tagline {
-      position: absolute; left: 0; right: 0; bottom: 72px; text-align: center;
-      font-size: 13px; font-weight: 500; letter-spacing: .4px; color: #6B7085;
+    /* How long the download takes isn't known: a stretch of the bar moves
+       along it until the app is up and its own bar takes over. */
+    #loading .bar::after {
+      content: ""; position: absolute; top: 0; bottom: 0; width: 40%;
+      border-radius: 2px; background: #9FCBF5;
+      animation: slide 1.2s .7s ease-in-out infinite both;
     }
-    /* The same timing as the app's (lib/screens/loading_screen.dart). */
-    @keyframes pop {
-      0% { opacity: 0; transform: rotate(-90deg) scale(.3); }
-      11.7% { opacity: 1; transform: none; }
-      87.5% { opacity: 1; transform: none; } 100% { opacity: 0; }
-    }
-    @keyframes rise {
-      0% { opacity: 0; transform: translateY(16px); }
-      14.6% { opacity: 1; transform: none; }
-      87.5% { opacity: 1; transform: none; } 100% { opacity: 0; }
-    }
-    @keyframes draw {
-      0%, 25.8% { transform: scaleX(0); }
-      50% { transform: scaleX(1); }
-      87.5% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; }
-    }
+    @keyframes pop { from { opacity: 0; transform: rotate(-90deg) scale(.3); } to { opacity: 1; transform: none; } }
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slide { from { left: -40%; } to { left: 100%; } }
     #loading .word span:nth-of-type(1) { animation-delay: .12s; }
     #loading .word span:nth-of-type(2) { animation-delay: .19s; }
     #loading .word span:nth-of-type(3) { animation-delay: .26s; }
@@ -94,15 +86,14 @@
     #loading .word span:nth-of-type(6) { animation-delay: .47s; }
     #loading .word span:nth-of-type(7) { animation-delay: .54s; }
     #loading .word span:nth-of-type(8) { animation-delay: .61s; }
-    #loading .line { animation-delay: 0s; }
     @media (prefers-color-scheme: dark) {
       html, body, #loading { background: #0F1320; }
       #loading .word { color: #EEF0F7; }
       #loading .word .cap { color: #9FCBF5; }
-      #loading .tagline { color: #A3A9BD; }
+      #loading .bar { background: #1C2A45; }
     }
     @media (prefers-reduced-motion: reduce) {
-      #loading .word span, #loading .plus, #loading .line { animation: none; }
+      #loading .word span, #loading .plus, #loading .bar, #loading .bar::after { animation: none; }
     }
   </style>
 </head>
@@ -113,9 +104,8 @@
         <svg class="plus" viewBox="0 0 26 26"><path d="M13 3v20M3 13h20" stroke="#9FCBF5" stroke-width="6" stroke-linecap="round" fill="none"/></svg>
         <span>t</span><span class="cap">A</span><span>s</span><span>i</span><span>k</span><span>a</span><span>s</span><span>o</span>
       </div>
-      <div class="line"></div>
+      <div class="bar"></div>
     </div>
-    <div class="tagline">Snap. Study. Recall.</div>
   </div>
   <script>
     // Flutter's first frame: the app's own loading screen is up.

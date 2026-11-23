@@ -9,7 +9,8 @@ Write down: phone model ________  Android version ________  APK: debug / release
 Mark each line ✅ works · ⚠️ partly · ❌ broken, and note what you saw.
 
 ## First launch
-- [ ] The loading screen (the + pops in, "tAsikaso" rises letter by letter and is underlined, "Snap. Study. Recall.") shows, then the welcome screen.
+- [ ] The loading screen: the + pops in, "tAsikaso" rises letter by letter, the bar under it fills.
+- [ ] Then, without a jump: the bar drops, the two buttons appear as it passes, "Snap. Study. Recall." and "Welcome to" appear, the three cards pop out and float.
 - [ ] Continue with Google signs in (needs the signed APK and a test user); the name comes from Google.
 - [ ] Or Continue without an account → type a name → Continue.
 - [ ] The slides about the app show; Next goes through them; Skip or Get Started opens the app.

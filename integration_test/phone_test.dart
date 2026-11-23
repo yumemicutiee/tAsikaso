@@ -36,6 +36,7 @@ import 'package:study_app/screens/focus_screen.dart';
 import 'package:study_app/screens/flashcards/set_screen.dart';
 import 'package:study_app/screens/note_viewer_screen.dart';
 import 'package:study_app/screens/folder_screen.dart';
+import 'package:study_app/screens/welcome/welcome_screen.dart';
 import 'package:study_app/services/notification_service.dart';
 import 'package:study_app/services/scan_service.dart';
 import 'package:study_app/services/study_ai.dart';
@@ -50,6 +51,8 @@ void main() {
   // First: it is what reports the results to `flutter drive` (a binding
   // started by testWidgets instead never does, and the run waits forever).
   binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // The welcome's cards float forever; the tests wait for screens to settle.
+  WelcomeScreen.floating = false;
 
   testWidgets('saves to the phone and still has it after a restart',
       (tester) async {

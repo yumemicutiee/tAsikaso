@@ -455,11 +455,16 @@ it. The emulator tests run debug builds, without R8.
 - **Slides** (`intro_slides.dart`): five, Skip / Next / Get Started; then
   `welcomed` is saved and the app opens with no way back.
 - **Loading screen** (`lib/screens/loading_screen.dart`): `main` runs
-  `AppLoader`, which shows it while the data loads (at least 1.4 s, so the name is spelled out and underlined; the
-  "Wordmark Reveal" design, tagline "Snap. Study. Recall."), then
-  fades to the app. `web/index.html` shows the same screen until Flutter's
-  first frame; `tool/setup_android.dart` writes Android's launch screen
-  (logo on white / dark blue, and the Android 12+ splash background).
+  `AppLoader`, which shows it while the data loads (at least 1.4 s): the
+  name is spelled out and the bar under it fills; once loaded it fills to
+  the end. The name and bar (`lib/widgets/brand_mark.dart`) sit at the same
+  spot on the welcome screen, so a new install switches to it with no fade
+  and the welcome's intro continues from there (the bar drops, the buttons
+  appear as it passes, the tagline and "Welcome to" appear, the cards pop
+  out and float; `WelcomeScreen.floating` is off in tests). `web/index.html`
+  shows the name and a moving bar until Flutter's first frame;
+  `tool/setup_android.dart` writes Android's launch screen (logo on the
+  same pale sky / dark blue, and the Android 12+ splash background).
 - **Google sign-in on Android** needs the APK signed with the registered
   upload key (SHA-1 `34:1D:FC:8F:…:66:3C`) and, while the consent screen is
   in Testing, the user added as a test user. The GitHub Actions APK is

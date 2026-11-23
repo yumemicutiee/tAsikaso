@@ -183,10 +183,14 @@ API key; on the free plan it is capped by the 20 suggested cards a month,
 but typing up notes (Text Notes) isn't limited.
 
 **Opening the app.** A loading screen shows while the saved data is read:
-the logo's plus pops in, "tAsikaso" rises letter by letter and is
-underlined, with "Snap. Study. Recall." below. The web page shows the same
-animation while the app downloads; Android first shows the logo on the same
-background. A new install
+the logo's plus pops in, "tAsikaso" rises letter by letter, and the bar
+under it fills. On a new install the welcome screen takes over from there:
+the full bar drops down the screen and the sign-in buttons appear as it
+passes them, "Snap. Study. Recall." takes the bar's place, "Welcome to"
+appears above the name, and cards from the app (Today's Focus, a note, a
+flashcard) pop out above and keep floating. The web page shows the name and
+a moving bar while the app downloads; Android first shows the logo on the
+same background. A new install
 starts empty, with no sample data, on the welcome screen: **Continue with
 Google** (signs up or logs in; a copy of the account's data on Google Drive
 can be brought back) or **Continue without an account** (asks only for a

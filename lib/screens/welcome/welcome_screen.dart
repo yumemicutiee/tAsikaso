@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
@@ -5,16 +7,25 @@ import '../../services/drive_sync.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/brand.dart';
-import '../../widgets/app_logo.dart';
+import '../../widgets/brand_mark.dart';
 import '../actions.dart';
-import '../loading_screen.dart';
 import 'intro_slides.dart';
 
 /// The first screen of a new install: sign up or log in with Google, or
 /// carry on without an account (then the name to greet the user by). After
 /// it come the slides about the app ([IntroSlides]), once.
+///
+/// It takes over from the loading screen where that ends, the name and the
+/// full bar in the same place, then: the bar drops down the screen and the
+/// buttons appear as it passes them, the tagline takes the bar's place,
+/// "Welcome to" appears above the name, and a peek at the app (Today's
+/// Focus, a note, a flashcard) pops out above and keeps floating.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
+
+  /// The cards keep floating after the intro (off in tests, which wait for
+  /// the screen to stop moving).
+  static bool floating = true;
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -22,7 +33,17 @@ class WelcomeScreen extends StatefulWidget {
 
 enum _Step { choose, name }
 
-class _WelcomeScreenState extends State<WelcomeScreen> {
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with TickerProviderStateMixin {
+  /// The intro, once: the bar dropping, then everything else appearing.
+  late final AnimationController _intro = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1600));
+
+  /// The cards floating, after the intro: periods of 4, 3 and 6 s.
+  late final AnimationController _float = AnimationController(
+      vsync: this, duration: const Duration(seconds: 12));
+
+  bool _started = false;
   final _store = AppStore.instance;
   final _sync = DriveSync.instance;
   final _name = TextEditingController();
@@ -34,7 +55,24 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   bool _withGoogle = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final still = MediaQuery.of(context).disableAnimations;
+    if (still) {
+      _intro.value = 1;
+      return;
+    }
+    _intro.forward().whenComplete(() {
+      if (mounted && WelcomeScreen.floating) _float.repeat();
+    });
+  }
+
+  @override
   void dispose() {
+    _intro.dispose();
+    _float.dispose();
     _name.dispose();
     super.dispose();
   }
@@ -124,75 +162,150 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     ));
   }
 
+  /// Milliseconds into the intro.
+  double get _ms => _intro.value * 1600;
+
+  /// 0 → 1 from [start] over [length] ms of the intro, eased.
+  double _at(double start, double length, [Curve curve = Curves.easeOutCubic]) =>
+      curve.transform(((_ms - start) / length).clamp(0.0, 1.0));
+
   @override
   Widget build(BuildContext context) {
-    final background =
-        AppColors.isDark ? AppColors.background : const Color(0xFFF4F8FD);
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: brandGround,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: LayoutBuilder(
-          builder: (context, box) {
-            // The picture of the app shrinks on short screens.
-            final scale = ((box.maxHeight - 470) / _AppPeek.height)
-                .clamp(0.55, 1.0)
-                .clamp(0.0, (box.maxWidth - 48) / _AppPeek.width);
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: box.maxHeight - 38),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const _Header(),
-                      // Out of the way while the name is typed.
-                      if (_step == _Step.choose) ...[
-                        const SizedBox(height: 10),
-                        Center(child: _AppPeek(scale: scale)),
-                      ],
-                      const SizedBox(height: 10),
-                      Text(LoadingScreen.tagline,
-                          style: TextStyle(
-                            fontFamily: kHeadingFont,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                            height: 1.2,
-                            color: AppColors.ink,
-                          )),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Your timer, your class notes and your flashcards '
-                        'in one place.',
-                        style: TextStyle(
-                            fontSize: 14,
-                            height: 1.5,
-                            color: AppColors.textSecondary),
-                      ),
-                      const Spacer(),
-                      const SizedBox(height: 24),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 220),
-                        child: _step == _Step.choose ? _choose() : _askName(),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+          builder: (context, box) => AnimatedBuilder(
+            animation: Listenable.merge([_intro, _float]),
+            builder: (context, _) => _layout(context, box),
+          ),
         ),
       ),
     );
   }
 
-  Widget _choose() {
+  Widget _layout(BuildContext context, BoxConstraints box) {
+    final h = box.maxHeight;
+    final w = box.maxWidth;
+    final naming = _step == _Step.name;
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final centreTop = BrandMark.topIn(h);
+    final barTop = centreTop + BrandMark.barOffset;
+
+    // The bar drops from its place to below the screen in 600 ms, speeding
+    // up; each button appears as the bar passes it.
+    final drop = h - barTop + 24;
+    final fall = (_ms / 600).clamp(0.0, 1.0);
+    final barDrop = drop * fall * fall;
+    final barOpacity = fall < 0.8 ? 1.0 : 1 - (fall - 0.8) / 0.2;
+    double passed(double y) {
+      final t = 600 * math.sqrt(((y - barTop) / drop).clamp(0.0, 1.0));
+      return _at(t, 280);
+    }
+
+    final blockTop = h - 20 - 150; // about where the buttons start
+    final reveals = [passed(blockTop), passed(blockTop + 58), passed(blockTop + 110)];
+
+    // The peek at the app: as big as the room above "Welcome to" allows.
+    final room = centreTop - 12 - 46;
+    final scale = math
+        .min(1.0, math.min(room / _AppPeek.height, (w - 32) / _AppPeek.width))
+        .clamp(0.35, 1.0);
+    final seconds = _float.value * 12;
+    double bob(double period) =>
+        -3.5 * (1 - math.cos(2 * math.pi * seconds / period));
+
+    // While the name is typed the name moves up out of the keyboard's way.
+    final markTop = naming ? 24.0 : centreTop;
+
+    return Stack(
+      children: [
+        Positioned(
+          top: 12,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: AnimatedOpacity(
+              opacity: naming ? 0 : 1,
+              duration: const Duration(milliseconds: 200),
+              child: _AppPeek(
+                scale: scale,
+                pops: [_at(650, 450, Curves.linear), _at(800, 450, Curves.linear), _at(950, 450, Curves.linear)],
+                floats: [bob(4), bob(3), bob(6)],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: centreTop - 36,
+          left: 0,
+          right: 0,
+          child: AnimatedOpacity(
+            opacity: naming ? 0 : 1,
+            duration: const Duration(milliseconds: 200),
+            child: Opacity(
+              opacity: _at(350, 300),
+              child: Transform.translate(
+                offset: Offset(0, (1 - _at(350, 300)) * -8),
+                child: Text('Welcome to',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary)),
+              ),
+            ),
+          ),
+        ),
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
+          top: markTop,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Semantics(
+              label: kAppName,
+              child: ExcludeSemantics(
+                child: BrandMark(
+                  barDrop: barDrop,
+                  barOpacity: barOpacity,
+                  tagline: _at(250, 300),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 24,
+          right: 24,
+          bottom: 20 + (naming ? keyboard : 0),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: naming ? _askName() : _choose(reveals),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _choose(List<double> reveals) {
+    // Each part appears (and can be tapped) once the dropping bar passes it.
+    Widget appear(int i, Widget child) => IgnorePointer(
+          ignoring: reveals[i] < 0.5,
+          child: Opacity(
+            opacity: reveals[i],
+            child: Transform.translate(
+                offset: Offset(0, (1 - reveals[i]) * 10), child: child),
+          ),
+        );
     return Column(
       key: const ValueKey('choose'),
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _GoogleButton(busy: _busy, onPressed: _busy ? null : _google),
+        appear(0, _GoogleButton(busy: _busy, onPressed: _busy ? null : _google)),
         if (_error case final error?) ...[
           const SizedBox(height: 10),
           Text(error,
@@ -201,7 +314,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   fontSize: 12, height: 1.35, color: AppColors.streakText)),
         ],
         const SizedBox(height: 6),
-        SizedBox(
+        appear(1, SizedBox(
           height: 46,
           child: TextButton(
             onPressed: _busy ? null : _withoutAccount,
@@ -209,9 +322,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             child: const Text('Continue without an account',
                 style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
           ),
-        ),
+        )),
         const SizedBox(height: 4),
-        Center(
+        appear(2, Center(
           child: Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -230,7 +343,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             ],
           ),
-        ),
+        )),
       ],
     );
   }
@@ -239,6 +352,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final signedIn = _withGoogle ? _sync.email : null;
     return Column(
       key: const ValueKey('name'),
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('What should we call you?',
@@ -297,33 +411,33 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 }
 
-/// The small logo and the name, top left.
-class _Header extends StatelessWidget {
-  const _Header();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const AppLogo(size: 34),
-        const SizedBox(width: 8),
-        Text(kAppName,
-            style: TextStyle(
-              fontFamily: kHeadingFont,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-              color: AppColors.ink,
-            )),
-      ],
-    );
-  }
-}
-
 /// A peek at the app: Today's Focus, a note whose text was found and a
 /// flashcard, tilted on top of each other.
 class _AppPeek extends StatelessWidget {
-  const _AppPeek({required this.scale});
+  const _AppPeek({
+    required this.scale,
+    this.pops = const [1, 1, 1],
+    this.floats = const [0, 0, 0],
+  });
+
+  /// Each card popping out, 0 to 1, and how far up it has floated.
+  final List<double> pops;
+  final List<double> floats;
+
+  /// Card [i] as it pops out (overshooting a little) and floats.
+  Widget _animated(int i, Widget card) {
+    final t = pops[i].clamp(0.0, 1.0);
+    return Opacity(
+      opacity: (t * 1.8).clamp(0.0, 1.0),
+      child: Transform.translate(
+        offset: Offset(0, floats[i]),
+        child: Transform.scale(
+          scale: 0.4 + 0.6 * Curves.easeOutBack.transform(t),
+          child: card,
+        ),
+      ),
+    );
+  }
 
   static const double width = 342;
   static const double height = 370;
@@ -373,7 +487,7 @@ class _AppPeek extends StatelessWidget {
                 Positioned(
                   left: 8,
                   top: 24,
-                  child: Transform.rotate(
+                  child: _animated(0, Transform.rotate(
                     angle: -6 * _deg,
                     child: Container(
                       width: 210,
@@ -433,13 +547,13 @@ class _AppPeek extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ),
+                  )),
                 ),
                 // A note, its text found.
                 Positioned(
                   right: 4,
                   top: 64,
-                  child: Transform.rotate(
+                  child: _animated(1, Transform.rotate(
                     angle: 5 * _deg,
                     child: Container(
                       width: 170,
@@ -488,13 +602,13 @@ class _AppPeek extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ),
+                  )),
                 ),
                 // A flashcard.
                 Positioned(
                   left: 34,
                   top: 188,
-                  child: Transform.rotate(
+                  child: _animated(2, Transform.rotate(
                     angle: -2 * _deg,
                     child: Container(
                       width: 220,
@@ -541,7 +655,7 @@ class _AppPeek extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ),
+                  )),
                 ),
               ],
             ),
