@@ -359,7 +359,8 @@ void main() {
     await tester.tap(find.text('Chemistry Check'));
     await tester.pumpAndSettle();
     expect(find.byType(FolderScreen), findsOneWidget);
-    expect(find.textContaining('latest: ${note.title}'), findsOneWidget);
+    // The Notebook card shows the latest note's title.
+    expect(find.text(note.title), findsOneWidget);
     await shot(tester, '13-folder');
     await tester.tap(find.text('Notebook'));
     await tester.pumpAndSettle();
