@@ -82,9 +82,9 @@ void main() {
     expect(store.prefs.welcomed, isFalse);
     await tester.pumpWidget(const StudyApp());
     await tester.pumpAndSettle();
-    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.bySemanticsLabel('Continue with Google'), findsOneWidget);
     await shot(tester, '0a-welcome');
-    await tester.tap(find.text('Continue without an account'));
+    await tester.tap(find.bySemanticsLabel('Continue without an account'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Emulator');
     await tester.testTextInput.receiveAction(TextInputAction.done);

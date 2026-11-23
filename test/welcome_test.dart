@@ -156,8 +156,8 @@ void main() {
       expect(find.byType(HomeShell), findsNothing);
       expect(find.text('Snap. Study. Recall.'), findsOneWidget);
       expect(find.textContaining('Google signs you up'), findsOneWidget);
-      expect(find.text('Continue with Google'), findsOneWidget);
-      expect(find.text('Continue without an account'), findsOneWidget);
+      expect(find.bySemanticsLabel('Continue with Google'), findsOneWidget);
+      expect(find.bySemanticsLabel('Continue without an account'), findsOneWidget);
     });
 
     testWidgets('without an account: a name, the slides once, then the app',
@@ -167,7 +167,7 @@ void main() {
       await tester.pumpWidget(const StudyApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Continue without an account'));
+      await tester.tap(find.bySemanticsLabel('Continue without an account'));
       await tester.pumpAndSettle();
       expect(find.text('What should we call you?'), findsOneWidget);
       await tester.enterText(find.byType(TextField), '  Budi Santoso ');
@@ -212,13 +212,13 @@ void main() {
       await newInstall();
       await tester.pumpWidget(const StudyApp());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Continue without an account'));
+      await tester.tap(find.bySemanticsLabel('Continue without an account'));
       await tester.pumpAndSettle();
       // Back to the choice, and on again.
       await tester.tap(find.text('Back'));
       await tester.pumpAndSettle();
-      expect(find.text('Continue with Google'), findsOneWidget);
-      await tester.tap(find.text('Continue without an account'));
+      expect(find.bySemanticsLabel('Continue with Google'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Continue without an account'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
@@ -249,7 +249,7 @@ void main() {
         await tester.pumpWidget(const StudyApp());
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Continue with Google'));
+        await tester.tap(find.bySemanticsLabel('Continue with Google'));
         await tester.pumpAndSettle();
 
         expect(DriveSync.instance.isSignedIn, isTrue);
@@ -264,7 +264,7 @@ void main() {
         await tester.pumpWidget(const StudyApp());
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Continue with Google'));
+        await tester.tap(find.bySemanticsLabel('Continue with Google'));
         await tester.pumpAndSettle();
         expect(find.text('What should we call you?'), findsOneWidget);
         expect(find.text('Signed in as student@example.com'), findsOneWidget);
@@ -293,7 +293,7 @@ void main() {
         await tester.pumpWidget(const StudyApp());
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Continue with Google'));
+        await tester.tap(find.bySemanticsLabel('Continue with Google'));
         await tester.pumpAndSettle();
         expect(find.text('Welcome Back'), findsOneWidget);
         await tester.tap(find.text('Bring It Back'));
@@ -316,7 +316,7 @@ void main() {
         await newInstall();
         await tester.pumpWidget(const StudyApp());
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Continue without an account'));
+        await tester.tap(find.bySemanticsLabel('Continue without an account'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Continue'));
         await tester.pumpAndSettle();

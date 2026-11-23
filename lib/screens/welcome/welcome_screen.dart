@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../data/app_store.dart';
 import '../../services/drive_sync.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_icons.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/brand.dart';
 import '../../widgets/brand_mark.dart';
@@ -204,8 +205,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       return _at(t, 280);
     }
 
-    final blockTop = h - 20 - 150; // about where the buttons start
-    final reveals = [passed(blockTop), passed(blockTop + 58), passed(blockTop + 110)];
+    final blockTop = h - 20 - 160; // about where "Continue with" starts
+    final reveals = [passed(blockTop), passed(blockTop + 30), passed(blockTop + 128)];
 
     // The peek at the app: as big as the room above "Welcome to" allows.
     final room = centreTop - 12 - 46;
@@ -305,7 +306,35 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        appear(0, _GoogleButton(busy: _busy, onPressed: _busy ? null : _google)),
+        appear(
+          0,
+          Text('Continue with',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary)),
+        ),
+        const SizedBox(height: 12),
+        appear(
+          1,
+          Row(
+            children: [
+              Expanded(
+                child: _ChoiceButton.google(
+                  busy: _busy,
+                  onPressed: _busy ? null : _google,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ChoiceButton.noAccount(
+                  onPressed: _busy ? null : _withoutAccount,
+                ),
+              ),
+            ],
+          ),
+        ),
         if (_error case final error?) ...[
           const SizedBox(height: 10),
           Text(error,
@@ -313,37 +342,30 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               style: TextStyle(
                   fontSize: 12, height: 1.35, color: AppColors.streakText)),
         ],
-        const SizedBox(height: 6),
-        appear(1, SizedBox(
-          height: 46,
-          child: TextButton(
-            onPressed: _busy ? null : _withoutAccount,
-            style: TextButton.styleFrom(foregroundColor: AppColors.primaryDeep),
-            child: const Text('Continue without an account',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 14),
+        appear(
+          2,
+          Center(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text('Google signs you up or logs you in. Your notes stay on your phone. ',
+                    textAlign: TextAlign.center,
+                    style: AppText.itemMeta.copyWith(fontSize: 11)),
+                GestureDetector(
+                  onTap: () => openPrivacyPolicy(context),
+                  child: Text('Privacy Policy',
+                      style: AppText.itemMeta.copyWith(
+                          fontSize: 11,
+                          color: AppColors.primaryDeep,
+                          decoration: TextDecoration.underline,
+                          decorationColor: AppColors.primaryDeep)),
+                ),
+              ],
+            ),
           ),
-        )),
-        const SizedBox(height: 4),
-        appear(2, Center(
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text('New here? Google signs you up. Your notes stay on your phone. ',
-                  textAlign: TextAlign.center,
-                  style: AppText.itemMeta.copyWith(fontSize: 11)),
-              GestureDetector(
-                onTap: () => openPrivacyPolicy(context),
-                child: Text('Privacy Policy',
-                    style: AppText.itemMeta.copyWith(
-                        fontSize: 11,
-                        color: AppColors.primaryDeep,
-                        decoration: TextDecoration.underline,
-                        decorationColor: AppColors.primaryDeep)),
-              ),
-            ],
-          ),
-        )),
+        ),
       ],
     );
   }
@@ -666,43 +688,79 @@ class _AppPeek extends StatelessWidget {
   }
 }
 
-/// "Continue with Google": the Google "G" on a white button, as Google's
-/// sign-in branding asks.
-class _GoogleButton extends StatelessWidget {
-  const _GoogleButton({required this.busy, required this.onPressed});
+/// One of the two big square choices under "Continue with": Google (the
+/// "G" on white, as Google's sign-in branding asks), or no account.
+class _ChoiceButton extends StatelessWidget {
+  const _ChoiceButton.google({required this.busy, required this.onPressed})
+      : google = true;
+  const _ChoiceButton.noAccount({required this.onPressed})
+      : google = false,
+        busy = false;
 
+  final bool google;
   final bool busy;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.isDark ? AppColors.raised : Colors.white,
-          foregroundColor: AppColors.ink,
-          side: BorderSide(color: AppColors.border, width: 1.2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (busy)
-              SizedBox(
-                width: 20,
-                height: 20,
+    final dark = AppColors.isDark;
+    final Color background;
+    final Color foreground;
+    final BorderSide side;
+    if (google) {
+      background = Colors.white;
+      foreground = const Color(0xFF1F1F1F);
+      side = dark ? BorderSide.none : BorderSide(color: AppColors.border, width: 1.2);
+    } else if (dark) {
+      background = const Color(0xFF181D2C);
+      foreground = AppColors.ink;
+      side = const BorderSide(color: Color(0xFF2F3850), width: 1.2);
+    } else {
+      background = AppColors.primarySoft;
+      foreground = AppColors.heroTop;
+      side = BorderSide.none;
+    }
+    final icon = google
+        ? (busy
+            ? const SizedBox(
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2.2, color: AppColors.primaryDeep),
+                    strokeWidth: 2.4, color: Color(0xFF1E3A6E)),
               )
-            else
-              Image.asset('assets/brand/google_g.png', width: 20, height: 20),
-            const SizedBox(width: 12),
-            Text(busy ? 'Signing in…' : 'Continue with Google',
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w700)),
-          ],
+            : Image.asset('assets/brand/google_g.png', width: 24, height: 24))
+        : Icon(AppIcons.profile, size: 26, color: dark ? const Color(0xFFA9D2F7) : AppColors.heroTop);
+    return Semantics(
+      button: true,
+      label: google ? 'Continue with Google' : 'Continue without an account',
+      excludeSemantics: true,
+      child: SizedBox(
+        height: 84,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: background,
+            foregroundColor: foreground,
+            disabledBackgroundColor: background,
+            disabledForegroundColor: foreground,
+            side: side,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              icon,
+              const SizedBox(height: 8),
+              Text(
+                google ? (busy ? 'Signing in…' : 'Google') : 'No account',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w700, color: foreground),
+              ),
+            ],
+          ),
         ),
       ),
     );

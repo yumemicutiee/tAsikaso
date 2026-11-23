@@ -158,21 +158,48 @@ class BrandMark extends StatelessWidget {
                 Positioned(
                   left: -40,
                   right: -40,
-                  top: barOffset - wordHeight - 9,
+                  top: barOffset - wordHeight - 10,
                   child: Opacity(
                     opacity: tagline.clamp(0.0, 1.0),
                     child: Transform.translate(
                       offset: Offset(0, (1 - tagline) * 10),
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(words,
-                            style: TextStyle(
+                        // Rising weight: light "Snap.", medium "Study.",
+                        // bold sky "Recall.".
+                        child: Text.rich(
+                          TextSpan(
+                            style: const TextStyle(
                               fontFamily: kHeadingFont,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.2,
-                              color: AppColors.ink,
-                            )),
+                              fontSize: 21,
+                              letterSpacing: -0.3,
+                              height: 1.2,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Snap. ',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w400,
+                                    color: AppColors.textSecondary),
+                              ),
+                              TextSpan(
+                                text: 'Study. ',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: dark
+                                        ? const Color(0xFFD5DBE8)
+                                        : const Color(0xFF3A3F55)),
+                              ),
+                              TextSpan(
+                                text: 'Recall.',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: capital),
+                              ),
+                            ],
+                          ),
+                          semanticsLabel: words,
+                        ),
                       ),
                     ),
                   ),

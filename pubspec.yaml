@@ -65,6 +65,10 @@ flutter:
     # both SIL Open Font License 1.1 (see assets/fonts/*_OFL.txt).
     - family: PlusJakartaSans
       fonts:
+        # Regular: Latin letters only (from the same 2.071 release), for the
+        # light "Snap." of the welcome screen's tagline.
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
         - asset: assets/fonts/PlusJakartaSans-Medium.ttf
           weight: 500
         - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
