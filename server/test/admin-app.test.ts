@@ -11,6 +11,7 @@ import {
   type PlanName,
   type StoredCrash,
   type TokenVerifier,
+  type UserFilters,
 } from "../src/accounts.js";
 import { type AppOptions, createApp } from "../src/app.js";
 import { ConfigError, emailsFromEnv, readConfig } from "../src/config.js";
@@ -46,8 +47,9 @@ class FakeAdminStore implements AdminStore {
     this.calls.push(`overview ${tz}`);
     return { total: 3 };
   }
-  async users(q: string, limit: number, offset: number) {
-    this.calls.push(`users "${q}" ${limit} ${offset}`);
+  async users(q: string, limit: number, offset: number, filters: UserFilters = {}) {
+    const f = Object.entries(filters).filter(([, v]) => v !== undefined).map(([k, v]) => `${k}=${v}`).join(" ");
+    this.calls.push(`users "${q}" ${limit} ${offset}${f ? ` ${f}` : ""}`);
     return { total: 1, rows: [{ id: STUDENT }] };
   }
   async payments(tz: string, limit: number) {
@@ -143,6 +145,27 @@ test("the user list is searched and paged on the server", async () => {
   await call("GET", "/v1/admin/users?page=-4", "owner.tok.en");
   assert.equal(admin.calls[1], 'users "" 25 0');
   assert.equal((await call("GET", "/v1/admin/users", "student.tok.en")).status, 403);
+});
+
+test("crash reports for 1 to 90 days, admins only", async () => {
+  const { call, admin } = await start();
+  const r = await call("GET", "/v1/admin/crashes?days=30", "owner.tok.en");
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { days: 30, crashReportsSaved: false, crashes: { total: 0 } });
+  await call("GET", "/v1/admin/crashes?days=900", "owner.tok.en");
+  await call("GET", "/v1/admin/crashes?days=nope", "owner.tok.en");
+  await call("GET", "/v1/admin/crashes?days=0", "owner.tok.en");
+  assert.deepEqual(admin.calls, ["crashes 30", "crashes 90", "crashes 7", "crashes 1"]);
+  assert.equal((await call("GET", "/v1/admin/crashes", "student.tok.en")).status, 403);
+  assert.equal(admin.calls.length, 4);
+});
+
+test("the user list takes filters, and ignores ones it doesn't know", async () => {
+  const { call, admin } = await start();
+  await call("GET", "/v1/admin/users?account=google&plan=ending&days=30&sort=oldest", "owner.tok.en");
+  assert.equal(admin.calls[0], 'users "" 25 0 account=google plan=ending days=30 sort=oldest');
+  await call("GET", "/v1/admin/users?account=robots&plan=gold&days=-3&sort=random", "owner.tok.en");
+  assert.equal(admin.calls[1], 'users "" 25 0');
 });
 
 test("without ADMIN_EMAILS the admin routes don't exist", async () => {

@@ -163,12 +163,23 @@ export interface StoredCrash {
 }
 
 /**
+ * The admin page's user filters (0004_admin_history_filters.sql). Left out
+ * (or all "all", 0 and "newest"), the list is unfiltered, newest first.
+ */
+export interface UserFilters {
+  account?: "all" | "google" | "anonymous";
+  plan?: "all" | "free" | "plus" | "monthly" | "semester" | "yearly" | "ending";
+  days?: number;
+  sort?: "newest" | "oldest" | "ending";
+}
+
+/**
  * What the admin page reads, and the rows behind it (0003_admin.sql). Each
  * read returns the admin_* function's JSON as it is.
  */
 export interface AdminStore {
   overview(timeZone: string): Promise<unknown>;
-  users(query: string, limit: number, offset: number): Promise<unknown>;
+  users(query: string, limit: number, offset: number, filters?: UserFilters): Promise<unknown>;
   payments(timeZone: string, limit: number): Promise<unknown>;
   crashes(days: number): Promise<unknown>;
   saveCrash(userId: string | null, crash: StoredCrash): Promise<void>;
@@ -292,8 +303,15 @@ export class SupabaseStore implements AccountStore, AdminStore {
     return this.call("POST", "/rest/v1/rpc/admin_overview", { p_tz: timeZone });
   }
 
-  users(query: string, limit: number, offset: number) {
-    return this.call("POST", "/rest/v1/rpc/admin_users", { p_query: query, p_limit: limit, p_offset: offset });
+  users(query: string, limit: number, offset: number, filters: UserFilters = {}) {
+    // Filters go only when set, so the call also works before
+    // 0004_admin_history_filters.sql has been run.
+    const extra: Record<string, unknown> = {};
+    if (filters.account && filters.account !== "all") extra.p_account = filters.account;
+    if (filters.plan && filters.plan !== "all") extra.p_plan = filters.plan;
+    if (filters.days && filters.days > 0) extra.p_days = filters.days;
+    if (filters.sort && filters.sort !== "newest") extra.p_sort = filters.sort;
+    return this.call("POST", "/rest/v1/rpc/admin_users", { p_query: query, p_limit: limit, p_offset: offset, ...extra });
   }
 
   payments(timeZone: string, limit: number) {

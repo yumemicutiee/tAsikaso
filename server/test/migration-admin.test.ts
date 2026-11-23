@@ -45,6 +45,7 @@ before(async () => {
   await db.exec(read("0001_accounts.sql"));
   await db.exec(read("0002_user_data.sql"));
   await db.exec(read("0003_admin.sql"));
+  await db.exec(read("0004_admin_history_filters.sql"));
   await db.exec(`
     insert into auth.users (id, email, raw_user_meta_data) values
       ('${A}', 'kristine@example.com', '{"full_name": "Kristine Degamo"}'),
@@ -81,6 +82,7 @@ type Overview = {
   newLastYear: number;
   daily: { day: string; count: number }[];
   monthly: { month: string; count: number }[];
+  byDay: Record<string, number>;
   plans: Record<string, number>;
 };
 
@@ -96,8 +98,32 @@ test("the overview counts users, new users per period, and active plans", async 
   assert.equal(o.daily.at(-1)!.count, 3);
   assert.equal(o.monthly.length, 12);
   assert.equal(o.monthly.at(-1)!.count, 3);
+  // Every day with sign-ups, including OLD's from over a year ago.
+  assert.equal(Object.keys(o.byDay).length, 2);
+  assert.equal(o.byDay[o.daily.at(-1)!.day], 3);
+  assert.equal(Object.values(o.byDay).reduce((a, b) => a + b, 0), 4);
   // B's plan ended: only A's (a test plan) is active.
   assert.deepEqual(o.plans, { free: 3, monthly: 0, semester: 1, yearly: 0, test: 1, endingIn7Days: 0 });
+});
+
+test("users: filtered by account, plan and when they joined, and sorted", async () => {
+  type Page = { total: number; rows: { id: string }[] };
+  const ids = async (args: string) => (await call<Page>(`select public.admin_users('', 25, 0, ${args}) as r`)).rows.map((r) => r.id);
+  assert.deepEqual((await ids("p_account => 'anonymous'")).sort(), [ANON]);
+  assert.equal((await ids("p_account => 'google'")).length, 3);
+  // Only A has a plan still running (B's ended); it ends in 6 months.
+  assert.deepEqual(await ids("p_plan => 'plus'"), [A]);
+  assert.deepEqual(await ids("p_plan => 'semester'"), [A]);
+  assert.deepEqual(await ids("p_plan => 'monthly'"), []);
+  assert.deepEqual(await ids("p_plan => 'ending'"), []);
+  assert.equal((await ids("p_plan => 'free'")).length, 3);
+  // OLD joined 400 days ago.
+  assert.equal((await ids("p_days => 30")).includes(OLD), false);
+  assert.equal((await ids("p_days => 0")).includes(OLD), true);
+  assert.equal((await ids("p_sort => 'oldest'"))[0], OLD);
+  assert.equal((await ids("p_sort => 'ending'"))[0], A);
+  // Filters and search together; total counts the filtered rows.
+  assert.equal((await call<Page>("select public.admin_users('example', 25, 0, p_account => 'google', p_days => 30) as r")).total, 2);
 });
 
 test("users: newest first, searchable by email, name or id, and paged", async () => {
