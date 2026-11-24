@@ -672,6 +672,13 @@ void main() {
     expect(shown.where((n) => n.id == 1).map((n) => n.title),
         contains('Pomodoro done!'));
 
+    // The alarm keeps going until the student stops it: still there after
+    // more than the minute it used to be limited to.
+    await Future<void>.delayed(const Duration(seconds: 75));
+    expect((await android.getActiveNotifications()).map((n) => n.id),
+        contains(1),
+        reason: 'the alarm must keep going until Stop is tapped');
+
     await tester.tap(find.byTooltip('Close Focus Mode'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
