@@ -1,7 +1,7 @@
 tAsikaso - Milestones and progress
 ==================================
 Updated: 24 November 2026
-Latest version: 0.8.0 (Android APK, version code 18)
+Latest version: 0.8.1 (Android APK, version code 19)
 Download: https://github.com/yumemicutiee/tAsikaso/releases
 Web app: https://yumemicutiee.github.io/tAsikaso/
 Study server (Claude): https://tasikaso-study-server.onrender.com
@@ -129,6 +129,10 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
+0.8.1  24 Nov  New intro slides; Log Out without an account asks "Save your progress
+               first?" (keep it with Google, or log out and delete everything); the
+               app says "AI" instead of "Claude"; no "test mode" notices on the plans
+               and checkout screens (payments are still not charged).
 0.8.0  24 Nov  Accounts: a tAsikaso account in Supabase for every user (anonymous
                at first, the Google account after Continue with Google); daily
                Claude limits per account (no account 20 pages, 10 kits, 50 checks;
