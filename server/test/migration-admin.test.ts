@@ -46,6 +46,7 @@ before(async () => {
   await db.exec(read("0002_user_data.sql"));
   await db.exec(read("0003_admin.sql"));
   await db.exec(read("0004_admin_history_filters.sql"));
+  await db.exec(read("0005_admin_user_names.sql"));
   await db.exec(`
     insert into auth.users (id, email, raw_user_meta_data) values
       ('${A}', 'kristine@example.com', '{"full_name": "Kristine Degamo"}'),
@@ -146,6 +147,22 @@ test("users: newest first, searchable by email, name or id, and paged", async ()
   const second = await call<Page>("select public.admin_users('', 2, 2) as r");
   assert.equal(second.total, 4);
   assert.equal(second.rows.length, 2);
+});
+
+test("users: a student without an account shows the name from their settings", async () => {
+  type Page = { rows: { id: string; name: string | null; anonymous: boolean }[] };
+  const nameOf = async (id: string) =>
+    (await call<Page>("select public.admin_users('', 25, 0) as r")).rows.find((r) => r.id === id)!.name;
+  assert.equal(await nameOf(ANON), null);
+  await db.exec(`insert into public.user_data (user_id, data)
+    values ('${ANON}', '{"v": 1, "prefs": {"name": " Maria "}}')`);
+  assert.equal(await nameOf(ANON), "Maria");
+  // Searchable by that name, and the Google name still wins when there is one.
+  assert.deepEqual((await call<Page>("select public.admin_users('maria', 25, 0) as r")).rows.map((r) => r.id), [ANON]);
+  await db.exec(`insert into public.user_data (user_id, data)
+    values ('${A}', '{"v": 1, "prefs": {"name": "Tin"}}')`);
+  assert.equal(await nameOf(A), "Kristine Degamo");
+  await db.exec(`delete from public.user_data where user_id in ('${ANON}', '${A}')`);
 });
 
 test("payments: this month's paid total and the latest, demo ones marked", async () => {

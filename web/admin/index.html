@@ -1082,8 +1082,10 @@ async function loadUsers() {
     const plan = u.plan ? `tAsikaso+ ${PLAN_TITLE[u.plan]}` : "Free";
     return el("tr", {},
       el("td", {},
-        el("div", { style: "font-weight:600" }, u.anonymous ? "No account" : (u.email ?? u.name ?? "Google account")),
-        el("div", { class: "meta" }, u.anonymous ? `id ${u.id.slice(0, 13)}` : (u.name || "Google"))),
+        // No account: the name typed in the app (from its synced settings,
+        // 0005_admin_user_names.sql) when there is one, and its id.
+        el("div", { style: "font-weight:600" }, u.anonymous ? (u.name || "No account") : (u.email ?? u.name ?? "Google account")),
+        el("div", { class: "meta" }, u.anonymous ? `${u.name ? "No account · " : ""}id ${u.id.slice(0, 13)}` : (u.name || "Google"))),
       el("td", {}, el("span", { class: "pill", style: u.plan ? `background:${PLAN_COLOR[u.plan].tint};color:${PLAN_COLOR[u.plan].ink}` : "" }, plan)),
       el("td", u.plan ? { "data-label": "Plan ends" } : { class: "noplan" }, u.plan ? fmtDate(u.planEndsAt) : "—"),
       el("td", { "data-label": "Joined" }, fmtDate(u.createdAt)),

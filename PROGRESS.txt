@@ -134,7 +134,10 @@ VERSION HISTORY (recent)
                ever asking), with a dialog to the phone's settings after "Don't
                allow"; exact alarms asked for with a dialog; the alert is set as an
                alarm clock alarm when allowed. Google sign-in errors show Google's
-               reason (from 0.8.1's last build).
+               reason (from 0.8.1's last build). Accounts: "No account" students
+               are recorded with their name (admin page, 0005_admin_user_names.sql);
+               switching to a Google account that already exists deletes the
+               anonymous one left behind, so no student is counted twice.
 0.8.1  24 Nov  New intro slides; Log Out without an account asks "Save your progress
                first?" (keep it with Google, or log out and delete everything); the
                app says "AI" instead of "Claude"; no "test mode" notices on the plans

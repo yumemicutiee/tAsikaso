@@ -16,6 +16,7 @@ import 'accounts.dart';
 import 'crash_reporter.dart';
 import 'drive_store.dart';
 import 'plan_sync.dart';
+import 'study_ai.dart' show StudyAi;
 
 /// Keeps the user's data in their own Google Drive and brings it back on
 /// any device: sign in with Google once, then every change is uploaded
@@ -373,6 +374,14 @@ class DriveSync extends ChangeNotifier {
       // A different account (signing back in, a new phone): its
       // preferences, statistics and tasks come back.
       if (result == GoogleAccountResult.switched) {
+        // The anonymous account this phone had until now is left behind:
+        // deleted, so the student is one account (the Google one), not two.
+        final left = Accounts.instance.takeLeftAnonymousToken();
+        if (left != null) {
+          unawaited(StudyAi.deleteLeftAccount(left).catchError((Object e) {
+            debugPrint('Old anonymous account not deleted: $e');
+          }));
+        }
         await AccountData.instance.bringIn();
       }
       await PlanSync.refresh();

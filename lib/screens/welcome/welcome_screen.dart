@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
+import '../../services/account_data.dart';
+import '../../services/accounts.dart';
 import '../../services/drive_sync.dart';
+import '../../services/study_ai.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_icons.dart';
 import '../../theme/app_theme.dart';
@@ -151,8 +155,19 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     if (name.isNotEmpty) {
       _store.updatePrefs(_store.prefs.copyWith(userName: name));
     }
+    // Without an account the student still gets a tAsikaso account (an
+    // anonymous one, usually made on the first run already), so the admin
+    // page has them, with this name; saved now in case it was only made here.
+    if (!_withGoogle) unawaited(_recordAccount());
     FocusScope.of(context).unfocus();
     _finish();
+  }
+
+  static Future<void> _recordAccount() async {
+    final accounts = Accounts.instance;
+    if (!accounts.enabled || !StudyAi.usesAccounts) return;
+    if (!accounts.hasSession && await accounts.token() == null) return;
+    await AccountData.instance.save();
   }
 
   void _finish() {

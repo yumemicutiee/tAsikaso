@@ -328,6 +328,37 @@ void main() {
       expect(Accounts.instance.userId, 'google-user');
     });
 
+    test('switching to an existing Google account hands over the anonymous '
+        "account's token, once, so it can be deleted", () async {
+      await Accounts.instance.token(); // the anonymous account
+      accounts.googleAccount = 'google-user';
+      expect(await Accounts.instance.signInWithGoogle(idToken: 'tok'),
+          GoogleAccountResult.switched);
+      expect(Accounts.instance.takeLeftAnonymousToken(), 'account-token-1');
+      expect(Accounts.instance.takeLeftAnonymousToken(), isNull);
+    });
+
+    test('linking keeps the one account: nothing is left to delete', () async {
+      await Accounts.instance.token();
+      expect(await Accounts.instance.signInWithGoogle(idToken: 'tok'),
+          GoogleAccountResult.linked);
+      expect(Accounts.instance.takeLeftAnonymousToken(), isNull);
+    });
+
+    test('the left anonymous account is deleted with its own token, never '
+        'retried with the new one', () async {
+      server((_) => (401, {
+            'error': {'code': 'session_expired', 'message': 'expired'}
+          }));
+      await expectLater(StudyAi.deleteLeftAccount('old-anon-token'),
+          throwsA(isA<StudyAiException>()));
+      expect(requests, hasLength(1));
+      expect(requests.single.method, 'DELETE');
+      expect(requests.single.url.path, '/v1/me');
+      expect(requests.single.headers['authorization'], 'Bearer old-anon-token');
+      expect(accounts.refreshes, 0);
+    });
+
     test('no ID token (e.g. the web) leaves the account as it is', () async {
       expect(await Accounts.instance.signInWithGoogle(idToken: null),
           GoogleAccountResult.failed);

@@ -136,14 +136,38 @@ class Accounts {
     if (backend.userId != null && !backend.isAnonymous) {
       return GoogleAccountResult.unchanged;
     }
+    // The anonymous account's token, kept in case this Google account
+    // already has its own: then the anonymous one is left behind and must
+    // be deleted with it (see [takeLeftAnonymousToken]), or the admin page
+    // would count this student twice.
+    String? anonymousToken;
+    if (backend.userId != null) {
+      try {
+        anonymousToken = await backend.accessToken();
+      } catch (_) {
+        // Without it the old account can't be removed; signing in goes on.
+      }
+    }
     try {
       final switched = await backend.signInWithGoogle(
           idToken: idToken, accessToken: accessToken);
+      if (switched) _leftAnonymousToken = anonymousToken;
       return switched ? GoogleAccountResult.switched : GoogleAccountResult.linked;
     } catch (e) {
       debugPrint('Linking the Google account failed: $e');
       return GoogleAccountResult.failed;
     }
+  }
+
+  String? _leftAnonymousToken;
+
+  /// After [signInWithGoogle] switched to a Google account that already
+  /// existed: the token of the anonymous account left behind (once), so it
+  /// can be deleted on the study server. Null otherwise.
+  String? takeLeftAnonymousToken() {
+    final t = _leftAnonymousToken;
+    _leftAnonymousToken = null;
+    return t;
   }
 
   /// The account's saved data, or null when it has none yet. Throws when

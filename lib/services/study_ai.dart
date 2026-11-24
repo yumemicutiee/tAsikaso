@@ -292,6 +292,16 @@ class StudyAi {
     await _post('/v1/me', null, method: 'DELETE');
   }
 
+  /// Deletes the anonymous account left behind when signing in with a
+  /// Google account that already had one, with that account's own
+  /// [anonymousToken]. Never retried with a fresh token: that would be the
+  /// Google account's, and delete it instead.
+  static Future<void> deleteLeftAccount(String anonymousToken) async {
+    if (!usesAccounts || anonymousToken.isEmpty) return;
+    await _send('/v1/me', null,
+        timeout: timeout, method: 'DELETE', bearer: anonymousToken);
+  }
+
   /// The bearer token for a request: the account's, else the typed or
   /// built-in one.
   static Future<String> _bearer() async {
@@ -454,14 +464,15 @@ class StudyAi {
   static Future<Json> _send(String path, Json? body,
       {CancelToken? cancel,
       required Duration timeout,
-      required String method}) async {
+      required String method,
+      String? bearer}) async {
     final base = serverUrl;
     if (!isValidUrl(base)) {
       throw const StudyAiException('not_set',
           'No study server is set. Add its address in Settings → Smart Study.');
     }
     if (cancel != null && cancel.isCancelled) throw StudyAiException.cancelled;
-    final bearer = await _bearer();
+    bearer ??= await _bearer();
     final client = (debugClient ?? http.Client.new)();
     try {
       final request = http.Request(method, _uri(base, path))
