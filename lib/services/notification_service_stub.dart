@@ -19,4 +19,10 @@ Future<void> scheduleTimerEnd(DateTime at, String title, String body,
 
 Future<void> cancelTimerEnd() async {}
 
+void Function(String message)? problemHook;
+
+Future<bool> ringNow(String title, String body,
+        {required bool isBreak, required bool sound, required bool vibrate}) async =>
+    false;
+
 Future<void> setDailyReminder(int? minuteOfDay) async {}

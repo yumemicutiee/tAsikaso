@@ -227,6 +227,8 @@ void _patchManifest(File file) {
     'android.permission.POST_NOTIFICATIONS',
     'android.permission.RECEIVE_BOOT_COMPLETED',
     'android.permission.SCHEDULE_EXACT_ALARM',
+    // A timer app's alarm, granted at install on Android 13+.
+    'android.permission.USE_EXACT_ALARM',
     'android.permission.VIBRATE',
     // The timer's alarm, rung by the app itself (TimerAlarm.kt).
     'android.permission.FOREGROUND_SERVICE',

@@ -21,6 +21,7 @@ ALLOWED = {
     "android.permission.POST_NOTIFICATIONS": "timer alerts, daily reminder",
     "android.permission.RECEIVE_BOOT_COMPLETED": "reschedule alerts after a restart",
     "android.permission.SCHEDULE_EXACT_ALARM": "timer alerts on time",
+    "android.permission.USE_EXACT_ALARM": "the timer's alarm clock alarm, granted at install (Android 13+)",
     "android.permission.VIBRATE": "vibrate when time is up",
     "android.permission.FOREGROUND_SERVICE": "the timer's alarm rings until Stop (TimerAlarm.kt)",
     "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK": "the alarm's service plays the alarm sound",

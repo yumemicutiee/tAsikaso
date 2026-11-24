@@ -81,6 +81,35 @@ object TimerAlarm {
         }
     }
 
+    /**
+     * Rings alarm [id] now: when the timer ends with the app on screen (a
+     * foreground app may always start the ringing; no alarm permission is
+     * needed). False if Android refused.
+     */
+    fun ringNow(
+        context: Context, id: Int, title: String, body: String,
+        sound: Boolean, vibrate: Boolean,
+    ): Boolean {
+        val ring = Intent(context, TimerAlarmService::class.java)
+            .setAction(TimerAlarmService.ACTION_RING)
+            .putExtra(EXTRA_ID, id)
+            .putExtra(EXTRA_TITLE, title)
+            .putExtra(EXTRA_BODY, body)
+            .putExtra(EXTRA_SOUND, sound)
+            .putExtra(EXTRA_VIBRATE, vibrate)
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(ring)
+            } else {
+                context.startService(ring)
+            }
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't ring now", e)
+            false
+        }
+    }
+
     /** Takes back alarm [id] if it hasn't gone off yet. */
     fun cancel(context: Context, id: Int) {
         val am = context.getSystemService(AlarmManager::class.java) ?: return

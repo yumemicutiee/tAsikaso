@@ -276,6 +276,39 @@ Future<void> _cancelOwnAlarm(int id) async {
   }
 }
 
+/// Told when the timer's alarm can't be rung the reliable way (set in
+/// main.dart to send a report, so problems on real phones are seen).
+void Function(String message)? problemHook;
+
+/// Rings the app's own alarm now (the timer ended with the app on screen),
+/// taking back the scheduled one for [isBreak]'s slot. False if it couldn't.
+Future<bool> ringNow(String title, String body,
+    {required bool isBreak, required bool sound, required bool vibrate}) async {
+  if (!Platform.isAndroid || (!sound && !vibrate)) return false;
+  final id = isBreak ? _breakEndId : _focusEndId;
+  bool rang;
+  try {
+    rang = await _alarm.invokeMethod<bool>('ringNow', {
+          'id': id,
+          'title': title,
+          'body': body,
+          'sound': sound,
+          'vibrate': vibrate,
+        }) ??
+        false;
+  } catch (e) {
+    rang = false;
+  }
+  if (rang) {
+    // Rung already: the scheduled one for this moment mustn't ring again.
+    await _cancelOwnAlarm(id);
+    await _plugin.cancel(id: id);
+  } else {
+    problemHook?.call('Timer alarm: could not ring with the app open');
+  }
+  return rang;
+}
+
 /// Stops the app's own alarm if it is ringing.
 Future<void> stopRinging() async {
   if (!Platform.isAndroid) return;
@@ -298,6 +331,11 @@ Future<void> scheduleTimerEnd(DateTime at, String title, String body,
   // notification below, which Android may deliver late.
   if (await _scheduleOwnAlarm(id, at, title, body, sound: sound, vibrate: vibrate)) {
     return;
+  }
+  if (Platform.isAndroid) {
+    problemHook?.call('Timer alarm: fell back to a notification '
+        '(exact alarms allowed: ${await exactTimingAllowed()}, '
+        'notifications on: ${await notificationsEnabled()})');
   }
   await _plugin.zonedSchedule(
     id: id,

@@ -36,6 +36,10 @@ Future<void> _load() async {
   await Accounts.init();
   // After the saved settings are loaded: they say whether reports may go.
   CrashReporter.install();
+  // When the timer's alarm can't ring the reliable way on a phone, a report
+  // says why (no notes or names; Settings → Send Crash Reports).
+  NotificationService.onProblem =
+      (message) => unawaited(CrashReporter.report(message, null, source: 'alarm'));
   // A Pomodoro that was running when the app was closed carries on.
   PomodoroController.instance.restore();
 }

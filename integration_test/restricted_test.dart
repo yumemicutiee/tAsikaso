@@ -1,11 +1,13 @@
 // The permission states most students will really have, which the main
 // emulator run (everything allowed) doesn't see. tool/emulator_tests.sh
 // sets the phone up with adb and runs this file once per state:
-//   RESTRICTED=exact          Android 14's default: exact alarms not allowed
+//   RESTRICTED=exact          Android 14's default: Alarms & reminders off
+//                             (the alarm still rings: USE_EXACT_ALARM)
 //   RESTRICTED=notifications  the student tapped "Don't allow" for
 //                             notifications (fixed, so no dialog appears)
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -32,8 +34,8 @@ void main() {
     await NotificationService.init();
   });
 
-  testWidgets('exact alarms not allowed: the alert still comes, and Settings '
-      'offers Allow Exact Timing', (tester) async {
+  testWidgets("Android 14's default (Alarms & reminders off): the alarm still "
+      'rings on time, thanks to USE_EXACT_ALARM', (tester) async {
     if (mode != 'exact') {
       markTestSkipped('Runs with RESTRICTED=exact.');
       return;
@@ -41,8 +43,10 @@ void main() {
     final plugin = FlutterLocalNotificationsPlugin();
     final android = plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>()!;
-    expect(await NotificationService.exactTimingAllowed(), isFalse,
-        reason: "exact alarms are allowed: the test script's setup didn't take");
+    // The script switched "Alarms & reminders" off; the timer app's own
+    // permission, granted at install, still allows the alarm clock alarm.
+    expect(await NotificationService.exactTimingAllowed(), isTrue,
+        reason: 'USE_EXACT_ALARM must allow exact alarms without the setting');
     // The script grants notifications when it sees this (a grant doesn't
     // restart the app; tool/emulator_tests.sh).
     debugPrint('TASIKASO_SETUP grant-notifications');
@@ -54,34 +58,33 @@ void main() {
     expect(await android.areNotificationsEnabled(), isTrue,
         reason: 'the test script grants notifications for this run');
 
-    // Settings shows the row that leads to the phone's own setting.
+    // Settings no longer needs to offer Allow Exact Timing.
     await tester.pumpWidget(const StudyApp());
     await tester.pumpAndSettle();
     openSettings(tester.element(find.byType(HomeShell)),
         section: SettingsSection.notifications);
     await tester.pumpAndSettle(const Duration(seconds: 2));
-    expect(find.text('Allow Exact Timing'), findsOneWidget);
-    expect(find.text('Alerts may be late'), findsOneWidget);
+    expect(find.text('Allow Exact Timing'), findsNothing);
 
-    // An alert due in 5 s still arrives without exact timing; how late it is
-    // goes to the log (a real phone in a pocket can be later still).
+    // An alarm due in 5 s rings on time: the app's own, not a notification.
+    const alarm = MethodChannel('tasikaso/alarm');
     final due = clock.now().add(const Duration(seconds: 5));
-    await NotificationService.scheduleTimerEnd(due, 'Pomodoro done', 'Late check.',
-        isBreak: false, sound: false, vibrate: true);
-    var shown = <ActiveNotification>[];
+    await NotificationService.scheduleTimerEnd(due, 'Pomodoro done', 'On time.',
+        isBreak: false, sound: true, vibrate: true);
     final waited = Stopwatch()..start();
-    while (waited.elapsed < const Duration(minutes: 12) &&
-        !shown.any((n) => n.id == 1)) {
-      await Future<void>.delayed(const Duration(seconds: 2));
-      shown = await android.getActiveNotifications();
+    while (waited.elapsed < const Duration(seconds: 60) &&
+        !(await alarm.invokeMethod<bool>('ringing') ?? false)) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     }
     final late = clock.now().difference(due).inSeconds;
-    debugPrint('Alert without exact timing arrived about $late s after it was due');
-    expect(shown.map((n) => n.id), contains(1),
-        reason: 'the alert must still come, just maybe later');
+    debugPrint('Alarm rang about $late s after it was due');
+    expect(await alarm.invokeMethod<bool>('ringing'), isTrue,
+        reason: 'the alarm must ring without Alarms & reminders switched on');
+    expect(late, lessThan(15), reason: 'on time, not held back');
     await NotificationService.cancelTimerEnd();
+    expect(await alarm.invokeMethod<bool>('ringing'), isFalse);
     await plugin.cancelAll();
-  }, timeout: const Timeout(Duration(minutes: 15)));
+  }, timeout: const Timeout(Duration(minutes: 5)));
 
   testWidgets('notifications refused: START says why the timer cannot ring, '
       'and keeps Timer Alerts on for when they are allowed', (tester) async {

@@ -53,6 +53,18 @@ class NotificationService {
 
   static Future<void> cancelTimerEnd() => _guard(impl.cancelTimerEnd);
 
+  /// Rings the alarm now, the app's own (Android), when a phase ends with
+  /// the app on screen. False when it couldn't (the scheduled one rings).
+  static Future<bool> ringNow(String title, String body,
+          {required bool isBreak, required bool sound, required bool vibrate}) =>
+      _ask(() => impl.ringNow(title, body,
+          isBreak: isBreak, sound: sound, vibrate: vibrate));
+
+  /// Told when the alarm can't be rung the reliable way (main.dart sends a
+  /// report).
+  static set onProblem(void Function(String message)? hook) =>
+      impl.problemHook = hook;
+
   /// Every day at [minuteOfDay] (e.g. 19:00 = 1140), or off when null.
   static Future<void> setDailyReminder(int? minuteOfDay) =>
       _guard(() => impl.setDailyReminder(minuteOfDay));

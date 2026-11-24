@@ -57,6 +57,16 @@ class MainActivity : FlutterActivity() {
                                 call.argument<Boolean>("vibrate") ?: true,
                             ),
                         )
+                        "ringNow" -> result.success(
+                            TimerAlarm.ringNow(
+                                this,
+                                call.argument<Int>("id")!!,
+                                call.argument<String>("title") ?: "",
+                                call.argument<String>("body") ?: "",
+                                call.argument<Boolean>("sound") ?: true,
+                                call.argument<Boolean>("vibrate") ?: true,
+                            ),
+                        )
                         "cancel" -> {
                             TimerAlarm.cancel(this, call.argument<Int>("id")!!)
                             result.success(null)

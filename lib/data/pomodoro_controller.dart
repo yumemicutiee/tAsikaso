@@ -419,8 +419,24 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
               'Ready for the next Pomodoro?');
       return;
     }
+    // On screen: the alarm rings now, the app's own (sound on the alarm
+    // volume, vibration, until Stop), whatever the phone's alarm permission;
+    // the scheduled one is taken back. Off the screen the scheduled one rings.
+    final alert = _store.prefs.timeUpAlert;
+    if (alert != TimeUpAlert.off &&
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+      unawaited(NotificationService.ringNow(
+        wasFocus ? 'Pomodoro done!' : 'Break over',
+        wasFocus
+            ? 'Nice work. Time for a ${next.label}.'
+            : 'Ready for the next Pomodoro?',
+        isBreak: !wasFocus,
+        sound: alert.sound,
+        vibrate: alert.vibrate,
+      ));
+    }
     // Only when the choice includes vibration ("Off" means no buzz either).
-    if (_store.prefs.timeUpAlert.vibrate) unawaited(Haptics.timeIsUp());
+    if (alert.vibrate) unawaited(Haptics.timeIsUp());
     _say(wasFocus
         ? 'Pomodoro done! Time for a ${next.label}.'
         : 'Break over. Ready for the next Pomodoro?');
