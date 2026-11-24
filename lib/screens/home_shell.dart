@@ -93,9 +93,9 @@ class _HomeShellState extends State<HomeShell> {
         final allow = await showConfirmDialog(
           context,
           title: 'Ring on Time',
-          message: 'Your phone may hold the timer alarm back for several '
-              'minutes. On the next screen, allow $kAppName to set alarms and '
-              'reminders, so it rings the moment your time is up.',
+          message: 'So the timer can ring like an alarm clock (loud, even on '
+              'silent, until you tap Stop) the moment your time is up: on the '
+              'next screen, allow $kAppName to set alarms and reminders.',
           confirmLabel: 'Allow',
           cancelLabel: 'Not Now',
           danger: false,

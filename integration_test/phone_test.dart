@@ -7,12 +7,12 @@
 //     --target=integration_test/phone_test.dart
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:camera/camera.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -46,6 +46,9 @@ import 'model_photos.dart';
 
 late final IntegrationTestWidgetsFlutterBinding binding;
 final store = AppStore.instance;
+
+/// The app's own alarm (android/.../TimerAlarm.kt): whether it is ringing.
+const alarmChannel = MethodChannel('tasikaso/alarm');
 
 void main() {
   // First: it is what reports the results to `flutter drive` (a binding
@@ -131,8 +134,8 @@ void main() {
     final android = plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>()!;
     expect(await android.areNotificationsEnabled(), isTrue);
-    debugPrint('Exact timing allowed: '
-        '${await NotificationService.exactTimingAllowed()}');
+    final exact = await NotificationService.exactTimingAllowed();
+    debugPrint('Exact timing allowed: $exact');
 
     await NotificationService.scheduleTimerEnd(
       clock.now().add(const Duration(seconds: 5)),
@@ -142,8 +145,10 @@ void main() {
       sound: true,
       vibrate: true,
     );
+    // With exact alarms allowed the app rings the alarm itself
+    // (TimerAlarm.kt), so no notification is scheduled; without, one is.
     expect((await plugin.pendingNotificationRequests()).map((r) => r.id),
-        contains(1));
+        exact ? isNot(contains(1)) : contains(1));
 
     // The other "When Time Is Up" choices make their own channels.
     for (final (sound, vibrate) in [(true, false), (false, true)]) {
@@ -191,6 +196,13 @@ void main() {
     debugPrint('Timer alert after ${waited.elapsed.inSeconds} s');
     expect(shown.where((n) => n.id == 1).map((n) => n.title),
         contains('Pomodoro done'));
+    if (exact) {
+      expect(await alarmChannel.invokeMethod<bool>('ringing'), isTrue,
+          reason: 'the app rings the alarm and vibrates itself');
+      await NotificationService.cancelTimerEnd();
+      expect(await alarmChannel.invokeMethod<bool>('ringing'), isFalse,
+          reason: 'Stop ends the ringing');
+    }
 
     await NotificationService.setDailyReminder(19 * 60);
     expect((await plugin.pendingNotificationRequests()).map((r) => r.id),
@@ -672,12 +684,16 @@ void main() {
     expect(shown.where((n) => n.id == 1).map((n) => n.title),
         contains('Pomodoro done!'));
 
-    // The alarm keeps going until the student stops it: still there after
-    // more than the minute it used to be limited to.
+    // The alarm keeps going until the student stops it: still there (and
+    // ringing) after more than the minute it used to be limited to.
     await Future<void>.delayed(const Duration(seconds: 75));
     expect((await android.getActiveNotifications()).map((n) => n.id),
         contains(1),
         reason: 'the alarm must keep going until Stop is tapped');
+    expect(await alarmChannel.invokeMethod<bool>('ringing'), isTrue,
+        reason: 'still ringing and vibrating');
+    await NotificationService.cancelTimerEnd();
+    expect(await alarmChannel.invokeMethod<bool>('ringing'), isFalse);
 
     await tester.tap(find.byTooltip('Close Focus Mode'));
     await tester.pump();

@@ -228,6 +228,10 @@ void _patchManifest(File file) {
     'android.permission.RECEIVE_BOOT_COMPLETED',
     'android.permission.SCHEDULE_EXACT_ALARM',
     'android.permission.VIBRATE',
+    // The timer's alarm, rung by the app itself (TimerAlarm.kt).
+    'android.permission.FOREGROUND_SERVICE',
+    'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+    'android.permission.WAKE_LOCK',
   ];
   final missing = [
     for (final p in permissions)
@@ -290,6 +294,18 @@ void _patchManifest(File file) {
 ''';
     final i = text.lastIndexOf('</application>');
     text = '${text.substring(0, i)}$receiver    ${text.substring(i)}';
+    changed = true;
+  }
+
+  // The timer's alarm: rung by the app itself until Stop (TimerAlarm.kt).
+  if (!text.contains('.TimerAlarmService')) {
+    const alarm = '''
+        <receiver android:exported="false" android:name=".TimerAlarmReceiver" />
+        <service android:exported="false" android:name=".TimerAlarmService"
+            android:foregroundServiceType="mediaPlayback" />
+''';
+    final i = text.lastIndexOf('</application>');
+    text = '${text.substring(0, i)}$alarm    ${text.substring(i)}';
     changed = true;
   }
 

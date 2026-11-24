@@ -1,7 +1,7 @@
 tAsikaso - Milestones and progress
 ==================================
 Updated: 24 November 2026
-Latest version: 0.8.3 (Android APK, version code 21)
+Latest version: 0.8.4 (Android APK, version code 22)
 Download: https://github.com/yumemicutiee/tAsikaso/releases
 Web app: https://yumemicutiee.github.io/tAsikaso/
 Study server (Claude): https://tasikaso-study-server.onrender.com
@@ -129,6 +129,13 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
+0.8.4  24 Nov  The app rings the timer's alarm itself, like the Clock app
+               (android/.../TimerAlarm.kt): an alarm clock alarm starts a
+               foreground service that plays the alarm sound on the ALARM volume
+               and an ALARM vibration until Stop, so silent mode, the
+               notification volume and muted notification channels (some phone
+               makers' defaults) can't silence it. Without exact alarms allowed,
+               the notification is used as before.
 0.8.3  24 Nov  When Time Is Up: the alarm and the vibration keep going until the
                student taps Stop on the alert (or taps or swipes it away); no
                more one-minute limit, and Vibration Only repeats too.

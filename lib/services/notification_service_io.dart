@@ -233,14 +233,57 @@ Future<bool> requestExactTiming() async {
   return await _android?.requestExactAlarmsPermission() ?? false;
 }
 
-/// When Android allows exact timing (see [requestExactTiming]), the timer's
-/// end is set like an alarm clock's alarm: it goes off on the second, also
-/// in deep sleep and under the battery savers some phone makers add.
-/// Otherwise Android may deliver it late.
+/// For the notification fallback (the app's own alarm is used when exact
+/// timing is allowed, see [scheduleTimerEnd]): set like an alarm clock's
+/// alarm when allowed, otherwise Android may deliver it late.
 Future<AndroidScheduleMode> _mode() async {
   return await exactTimingAllowed()
       ? AndroidScheduleMode.alarmClock
       : AndroidScheduleMode.inexactAllowWhileIdle;
+}
+
+/// The timer's alarm rung by the app itself on Android (TimerAlarm.kt):
+/// the alarm sound on the ALARM volume and an ALARM vibration, repeating
+/// until Stop, so silent mode or a muted notification can't silence it.
+const _alarm = MethodChannel('tasikaso/alarm');
+
+/// Sets the app's own alarm; false when it can't (no exact alarms allowed,
+/// or not Android), and the notification is scheduled instead.
+Future<bool> _scheduleOwnAlarm(int id, DateTime at, String title, String body,
+    {required bool sound, required bool vibrate}) async {
+  if (!Platform.isAndroid) return false;
+  try {
+    return await _alarm.invokeMethod<bool>('schedule', {
+          'id': id,
+          'at': at.millisecondsSinceEpoch,
+          'title': title,
+          'body': body,
+          'sound': sound,
+          'vibrate': vibrate,
+        }) ??
+        false;
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<void> _cancelOwnAlarm(int id) async {
+  if (!Platform.isAndroid) return;
+  try {
+    await _alarm.invokeMethod<void>('cancel', {'id': id});
+  } catch (_) {
+    // Nothing set.
+  }
+}
+
+/// Stops the app's own alarm if it is ringing.
+Future<void> stopRinging() async {
+  if (!Platform.isAndroid) return;
+  try {
+    await _alarm.invokeMethod<void>('stop');
+  } catch (_) {
+    // Not ringing.
+  }
 }
 
 Future<void> scheduleTimerEnd(DateTime at, String title, String body,
@@ -248,8 +291,14 @@ Future<void> scheduleTimerEnd(DateTime at, String title, String body,
   await init();
   final id = isBreak ? _breakEndId : _focusEndId;
   await _plugin.cancel(id: id);
+  await _cancelOwnAlarm(id);
   final details = _timerDetailsFor(sound: sound, vibrate: vibrate);
   if (details == null || !at.isAfter(clock.now())) return;
+  // The app's own alarm when the phone allows exact alarms; otherwise the
+  // notification below, which Android may deliver late.
+  if (await _scheduleOwnAlarm(id, at, title, body, sound: sound, vibrate: vibrate)) {
+    return;
+  }
   await _plugin.zonedSchedule(
     id: id,
     scheduledDate: tz.TZDateTime.from(at.toUtc(), tz.UTC),
@@ -264,6 +313,9 @@ Future<void> cancelTimerEnd() async {
   await init();
   await _plugin.cancel(id: _focusEndId);
   await _plugin.cancel(id: _breakEndId);
+  await _cancelOwnAlarm(_focusEndId);
+  await _cancelOwnAlarm(_breakEndId);
+  await stopRinging();
 }
 
 Future<void> setDailyReminder(int? minuteOfDay) async {
