@@ -1,0 +1,35 @@
+permission ok  android.permission.ACCESS_NETWORK_STATE
+permission ok  android.permission.CAMERA
+permission ok  android.permission.FOREGROUND_SERVICE
+permission ok  android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
+permission ok  android.permission.INTERNET
+permission ok  android.permission.POST_NOTIFICATIONS
+permission ok  android.permission.READ_EXTERNAL_STORAGE
+permission ok  android.permission.RECEIVE_BOOT_COMPLETED
+permission ok  android.permission.SCHEDULE_EXACT_ALARM
+permission ok  android.permission.USE_EXACT_ALARM
+permission ok  android.permission.VIBRATE
+permission ok  android.permission.WAKE_LOCK
+permission ok  android.permission.WRITE_EXTERNAL_STORAGE
+permission ok  com.tasikaso.study_app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+16 KB pages ok   65536 lib/arm64-v8a/libapp.so
+16 KB pages ok   16384 lib/arm64-v8a/libdartjni.so
+16 KB pages ok   16384 lib/arm64-v8a/libdatastore_shared_counter.so
+16 KB pages ok   65536 lib/arm64-v8a/libflutter.so
+16 KB pages ok   16384 lib/arm64-v8a/libimage_processing_util_jni.so
+16 KB pages ok   16384 lib/arm64-v8a/libmlkit_google_ocr_pipeline.so
+16 KB pages ok   16384 lib/arm64-v8a/libonnxruntime.so
+16 KB pages ok   16384 lib/arm64-v8a/libonnxruntime4j_jni.so
+16 KB pages ok   16384 lib/arm64-v8a/libsurface_util_jni.so
+16 KB pages ok   65536 lib/x86_64/libapp.so
+16 KB pages ok   16384 lib/x86_64/libdartjni.so
+16 KB pages ok   16384 lib/x86_64/libdatastore_shared_counter.so
+16 KB pages ok   65536 lib/x86_64/libflutter.so
+16 KB pages ok   16384 lib/x86_64/libimage_processing_util_jni.so
+16 KB pages ok   16384 lib/x86_64/libmlkit_google_ocr_pipeline.so
+16 KB pages ok   16384 lib/x86_64/libonnxruntime.so
+16 KB pages ok   16384 lib/x86_64/libonnxruntime4j_jni.so
+16 KB pages ok   16384 lib/x86_64/libsurface_util_jni.so
+zip 16 KB alignment ok
+
+APK check passed.
