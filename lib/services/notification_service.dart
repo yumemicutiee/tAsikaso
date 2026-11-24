@@ -37,9 +37,9 @@ class NotificationService {
 
   /// Shows [title]/[body] at [at]. Pomodoro and break alerts use separate
   /// slots, so starting a break never cancels the Pomodoro alert that is
-  /// just going off. [sound] (the phone's alarm sound, ringing until the
-  /// alert is tapped, at most a minute) and [vibrate] follow Settings → When
-  /// Time Is Up; with neither, nothing is scheduled.
+  /// just going off. [sound] (the phone's alarm sound) and [vibrate] follow
+  /// Settings → When Time Is Up, and keep going until the student taps Stop
+  /// (or the alert); with neither, nothing is scheduled.
   static Future<void> scheduleTimerEnd(
     DateTime at,
     String title,

@@ -21,19 +21,24 @@ const _breakEndId = 3;
 // "When Time Is Up" (Settings): Android fixes a channel's sound and
 // vibration when it is first created, so each choice has its own channel.
 // The alarm channels use the phone's own alarm sound on the alarm volume
-// (it rings even on silent, like an alarm clock) and keep ringing until the
-// notification is tapped or dismissed (FLAG_INSISTENT), for at most a minute.
+// (it rings even on silent, like an alarm clock). The alarm and the
+// vibration keep going, like an alarm clock's, until the student stops them:
+// Stop on the notification, tapping it, or swiping it away (FLAG_INSISTENT,
+// no time limit).
 
 /// The phone's alarm sound, as chosen in its Clock app.
 const _alarmSound = UriAndroidNotificationSound('content://settings/system/alarm_alert');
 
-/// Android's Notification.FLAG_INSISTENT: the sound repeats until the user
-/// does something with the notification.
+/// Android's Notification.FLAG_INSISTENT: the sound and the vibration repeat
+/// until the user does something with the notification.
 final _insistent = Int32List.fromList([4]);
 final _buzz = Int64List.fromList([0, 600, 300, 600, 300, 600]);
 
-/// How long an alarm may ring before it stops by itself.
-const _ringFor = 60 * 1000;
+/// Silences the alert without opening the app (needs the plugin's
+/// ActionBroadcastReceiver in AndroidManifest.xml; tool/setup_android.dart).
+const _stopAction = <AndroidNotificationAction>[
+  AndroidNotificationAction('stop', 'Stop', cancelNotification: true),
+];
 
 final _alarmAndVibrationDetails = NotificationDetails(
   android: AndroidNotificationDetails(
@@ -48,7 +53,7 @@ final _alarmAndVibrationDetails = NotificationDetails(
     enableVibration: true,
     vibrationPattern: _buzz,
     additionalFlags: _insistent,
-    timeoutAfter: _ringFor,
+    actions: _stopAction,
   ),
   iOS: const DarwinNotificationDetails(presentSound: true),
 );
@@ -65,7 +70,7 @@ final _alarmDetails = NotificationDetails(
     audioAttributesUsage: AudioAttributesUsage.alarm,
     enableVibration: false,
     additionalFlags: _insistent,
-    timeoutAfter: _ringFor,
+    actions: _stopAction,
   ),
   iOS: const DarwinNotificationDetails(presentSound: true),
 );
@@ -81,6 +86,9 @@ final _vibrationDetails = NotificationDetails(
     playSound: false,
     enableVibration: true,
     vibrationPattern: _buzz,
+    // Keeps vibrating until stopped, like the alarm.
+    additionalFlags: _insistent,
+    actions: _stopAction,
   ),
   iOS: const DarwinNotificationDetails(presentSound: false),
 );

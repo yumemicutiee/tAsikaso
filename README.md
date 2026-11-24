@@ -138,9 +138,10 @@ lecture-note capture → text notes → flashcards.
   50–10–30, or Custom, which remembers your own lengths), lengths you can type
   or step, auto-start and **Reset to Default** (with Undo); Focus Mode (keep screen on);
   **When Time Is Up**: Alarm Clock (the phone's own alarm sound, on the alarm
-  volume so it rings on silent too, until the alert is tapped, up to a
-  minute), Vibration Only, Alarm Clock and Vibration (default) or Off, even
-  when the app is closed; notifications (a daily
+  volume so it rings on silent too), Vibration Only, Alarm Clock and
+  Vibration (default) or Off, even when the app is closed. The alarm and the
+  vibration keep going until the alert's **Stop** is tapped (or the alert is
+  tapped or swiped away); notifications (a daily
   study reminder at a time you pick, and on Android 14+ an **Allow Exact
   Timing** row while the phone would deliver alerts late); Smart Scanner;
   Smart Study (the AI switch, the study server's address — checked when you

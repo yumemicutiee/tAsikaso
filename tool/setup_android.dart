@@ -282,6 +282,17 @@ void _patchManifest(File file) {
     changed = true;
   }
 
+  // The timer alert's Stop button (it silences the alarm without opening
+  // the app) is handled by this receiver of the notifications plugin.
+  if (!text.contains('ActionBroadcastReceiver')) {
+    const receiver = '''
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+''';
+    final i = text.lastIndexOf('</application>');
+    text = '${text.substring(0, i)}$receiver    ${text.substring(i)}';
+    changed = true;
+  }
+
   // The name under the icon on the home screen.
   const label = 'android:label="tAsikaso"';
   if (!text.contains(label)) {

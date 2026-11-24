@@ -1,7 +1,7 @@
 tAsikaso - Milestones and progress
 ==================================
 Updated: 24 November 2026
-Latest version: 0.8.2 (Android APK, version code 20)
+Latest version: 0.8.3 (Android APK, version code 21)
 Download: https://github.com/yumemicutiee/tAsikaso/releases
 Web app: https://yumemicutiee.github.io/tAsikaso/
 Study server (Claude): https://tasikaso-study-server.onrender.com
@@ -129,6 +129,9 @@ HOUSEKEEPING FOR THE OWNER
 
 VERSION HISTORY (recent)
 ------------------------
+0.8.3  24 Nov  When Time Is Up: the alarm and the vibration keep going until the
+               student taps Stop on the alert (or taps or swipes it away); no
+               more one-minute limit, and Vibration Only repeats too.
 0.8.2  24 Nov  The timer rings: notification permission is checked on the phone
                each run (a synced "already asked" flag had stopped new phones from
                ever asking), with a dialog to the phone's settings after "Don't

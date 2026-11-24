@@ -128,8 +128,8 @@ class _HomeShellState extends State<HomeShell> {
       context,
       title: 'Timer Alerts Ring Like an Alarm Now',
       message: "When a Pomodoro or a break ends, your phone's alarm sound "
-          'plays, even when the phone is on silent, until you tap it (up to '
-          'a minute). To keep your phone quiet in class, choose Vibration '
+          'plays, even when the phone is on silent, and keeps ringing until you '
+          'tap Stop. To keep your phone quiet in class, choose Vibration '
           'Only in Settings → When Time Is Up.',
       confirmLabel: 'Change',
       cancelLabel: 'Keep Alarm',

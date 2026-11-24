@@ -522,10 +522,9 @@ class SettingsScreen extends StatelessWidget {
 
   static String _timeUpAlertNote(TimeUpAlert a) => switch (a) {
         TimeUpAlert.alarmAndVibration =>
-          "Your phone's alarm sound and vibration, until you tap it (up to a minute)",
-        TimeUpAlert.alarm =>
-          "Your phone's alarm sound, until you tap it (up to a minute)",
-        TimeUpAlert.vibration => 'Vibration, no sound',
+          "Your phone's alarm sound and vibration, until you tap Stop",
+        TimeUpAlert.alarm => "Your phone's alarm sound, until you tap Stop",
+        TimeUpAlert.vibration => 'Vibration, no sound, until you tap Stop',
         TimeUpAlert.off => 'No sound, no vibration, no notification',
       };
 
