@@ -47,6 +47,7 @@ before(async () => {
   await db.exec(read("0003_admin.sql"));
   await db.exec(read("0004_admin_history_filters.sql"));
   await db.exec(read("0005_admin_user_names.sql"));
+  await db.exec(read("0006_admin_payments_google.sql"));
   await db.exec(`
     insert into auth.users (id, email, raw_user_meta_data) values
       ('${A}', 'kristine@example.com', '{"full_name": "Kristine Degamo"}'),
@@ -172,14 +173,24 @@ test("payments: this month's paid total and the latest, demo ones marked", async
              ('${B}', 'demo', 'monthly', 49, 'paid', true);
     insert into public.payments (user_id, provider, plan, amount_php, status, created_at)
       values ('${B}', 'gcash', 'monthly', 49, 'paid', now() - interval '70 days');
+    -- Not counted (0006): a student without an account, a deleted account,
+    -- and A's second payment counts in the total but A is one payer.
+    insert into public.payments (user_id, provider, plan, amount_php, status, demo)
+      values ('${ANON}', 'demo', 'yearly', 349, 'paid', true),
+             (null, 'demo', 'yearly', 349, 'paid', true),
+             ('${A}', 'demo', 'monthly', 49, 'paid', true);
   `);
-  type Pay = { monthTotalPhp: number; monthCount: number; anyDemo: boolean; recent: { email: string; demo: boolean }[] };
+  type Pay = { monthTotalPhp: number; monthCount: number; payers: number; googleUsers: number; anyDemo: boolean; recent: { email: string; demo: boolean }[] };
   const p = await call<Pay>("select public.admin_payments($1, 10) as r", [TZ]);
-  assert.equal(Number(p.monthTotalPhp), 248);
-  assert.equal(p.monthCount, 2);
+  assert.equal(Number(p.monthTotalPhp), 297);
+  assert.equal(p.monthCount, 3);
+  assert.equal(p.payers, 2);
+  assert.equal(p.googleUsers, 3);
   assert.equal(p.anyDemo, true);
-  assert.equal(p.recent.length, 3);
-  assert.equal(p.recent.filter((r) => r.demo).length, 2);
+  assert.equal(p.recent.length, 4);
+  assert.ok(p.recent.every((r) => r.email), "only Google accounts are listed");
+  await db.exec(`delete from public.payments where user_id = '${ANON}' or user_id is null
+    or (user_id = '${A}' and plan = 'monthly')`);
 });
 
 test("crash reports are grouped, and old ones pruned", async () => {

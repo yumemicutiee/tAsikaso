@@ -445,7 +445,7 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
     <section class="card stat">
       <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments</h2><p class="sub">This month</p></div></div>
       <div class="kv"><span class="big" id="payTotal">–</span></div>
-      <div class="statline"><span class="delta flat" id="payShare">–</span><span>of users paid this month</span></div>
+      <div class="statline"><span class="delta flat" id="payShare">–</span><span>of Google users paid this month</span></div>
     </section>
   </div>
 
@@ -1041,8 +1041,11 @@ function renderPlans() {
 function renderPayments() {
   const pay = dash.payments;
   $("payTotal").textContent = `₱${Math.round(Number(pay.monthTotalPhp ?? 0)).toLocaleString("en-US")}`;
-  // Share of all users who paid this month.
-  $("payShare").textContent = share(pay.monthCount, dash.overview.total);
+  // Payments of Google accounts only (0006_admin_payments_google.sql): the
+  // share of Google users who paid this month, each counted once.
+  $("payShare").textContent = pay.payers != null
+    ? share(pay.payers, pay.googleUsers ?? dash.overview.google)
+    : share(pay.monthCount, dash.overview.google);
 }
 
 // ---- Users -------------------------------------------------------------------
