@@ -48,6 +48,7 @@ before(async () => {
   await db.exec(read("0004_admin_history_filters.sql"));
   await db.exec(read("0005_admin_user_names.sql"));
   await db.exec(read("0006_admin_payments_google.sql"));
+  await db.exec(read("0007_admin_payments_active.sql"));
   await db.exec(`
     insert into auth.users (id, email, raw_user_meta_data) values
       ('${A}', 'kristine@example.com', '{"full_name": "Kristine Degamo"}'),
@@ -189,6 +190,11 @@ test("payments: this month's paid total and the latest, demo ones marked", async
   assert.equal(p.anyDemo, true);
   assert.equal(p.recent.length, 4);
   assert.ok(p.recent.every((r) => r.email), "only Google accounts are listed");
+  // Active right now (0007): only A's plan (semester) is active; its own
+  // payment counts, not A's later monthly one or B's (B's plan ended).
+  const active = p as Pay & { activeTotalPhp: number; activePayers: number };
+  assert.equal(Number(active.activeTotalPhp), 199);
+  assert.equal(active.activePayers, 1);
   await db.exec(`delete from public.payments where user_id = '${ANON}' or user_id is null
     or (user_id = '${A}' and plan = 'monthly')`);
 });

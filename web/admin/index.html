@@ -443,9 +443,9 @@ body[data-view="crashes"] .ov, body[data-view="crashes"] #users { display:none }
       <div class="statline"><span class="delta flat" id="googlePct">–</span><span>signed in with Google</span></div>
     </section>
     <section class="card stat">
-      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments</h2><p class="sub">This month</p></div></div>
+      <div class="ttlrow"><span class="ico"><svg class="i"><use href="#i-peso"/></svg></span><div><h2 class="ttl">Payments</h2><p class="sub">Active plans right now</p></div></div>
       <div class="kv"><span class="big" id="payTotal">–</span></div>
-      <div class="statline"><span class="delta flat" id="payShare">–</span><span>of Google users paid this month</span></div>
+      <div class="statline"><span class="delta flat" id="payShare">–</span><span>of Google users have a paid plan</span></div>
     </section>
   </div>
 
@@ -1040,12 +1040,14 @@ function renderPlans() {
 
 function renderPayments() {
   const pay = dash.payments;
-  $("payTotal").textContent = `₱${Math.round(Number(pay.monthTotalPhp ?? 0)).toLocaleString("en-US")}`;
-  // Payments of Google accounts only (0006_admin_payments_google.sql): the
-  // share of Google users who paid this month, each counted once.
-  $("payShare").textContent = pay.payers != null
-    ? share(pay.payers, pay.googleUsers ?? dash.overview.google)
-    : share(pay.monthCount, dash.overview.google);
+  // What the plans active right now were paid, Google accounts only
+  // (0007_admin_payments_active.sql), and the share of Google users with an
+  // active, paid plan.
+  const active = pay.activeTotalPhp != null;
+  $("payTotal").textContent = `₱${Math.round(Number((active ? pay.activeTotalPhp : pay.monthTotalPhp) ?? 0)).toLocaleString("en-US")}`;
+  $("payShare").textContent = active
+    ? share(pay.activePayers, pay.googleUsers ?? dash.overview.google)
+    : share(pay.payers ?? pay.monthCount, pay.googleUsers ?? dash.overview.google);
 }
 
 // ---- Users -------------------------------------------------------------------
