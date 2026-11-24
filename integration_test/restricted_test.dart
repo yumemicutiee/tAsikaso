@@ -83,8 +83,8 @@ void main() {
     await plugin.cancelAll();
   }, timeout: const Timeout(Duration(minutes: 15)));
 
-  testWidgets('notifications refused: START switches Timer Alerts off and '
-      'says why', (tester) async {
+  testWidgets('notifications refused: START says why the timer cannot ring, '
+      'and keeps Timer Alerts on for when they are allowed', (tester) async {
     if (mode != 'notifications') {
       markTestSkipped('Runs with RESTRICTED=notifications.');
       return;
@@ -99,30 +99,24 @@ void main() {
     debugPrint('TASIKASO_SETUP fix-notifications-refused');
     await Future<void>.delayed(const Duration(seconds: 8));
 
-    // As on a fresh install: alerts on, never asked yet.
+    // Alerts on, and "already asked" as in settings brought back from an
+    // account or a backup: the phone's real permission is checked anyway.
     store.updatePrefs(store.prefs
-        .copyWith(timerAlerts: true, askedNotifications: false));
+        .copyWith(timerAlerts: true, askedNotifications: true));
     final timer = PomodoroController.instance..resetForTesting();
     final said = <String>[];
     timer.onMessage = said.add;
 
     timer.start();
     final waited = Stopwatch()..start();
-    // Until the switch is off and the message has come (and the alert has
-    // been taken back, a moment later).
-    while (waited.elapsed < const Duration(seconds: 20) &&
-        (store.prefs.timerAlerts || said.isEmpty)) {
+    while (waited.elapsed < const Duration(seconds: 20) && said.isEmpty) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
-    await Future<void>.delayed(const Duration(seconds: 1));
     timer.pause();
     timer.reset();
 
-    expect(store.prefs.timerAlerts, isFalse,
-        reason: "the switch mustn't promise alerts that can't be shown");
     expect(said.join(' '), contains("notifications aren't allowed"));
-    expect((await FlutterLocalNotificationsPlugin().pendingNotificationRequests())
-        .where((r) => r.id == 1), isEmpty,
-        reason: 'the scheduled alert was taken back');
+    expect(store.prefs.timerAlerts, isTrue,
+        reason: 'allowing notifications later must make the timer ring');
   });
 }

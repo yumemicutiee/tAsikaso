@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -183,6 +184,29 @@ Future<bool> requestPermission() async {
   return await ios?.requestPermissions(alert: true, sound: true) ?? false;
 }
 
+/// Whether the phone lets this app show notifications right now (the
+/// student can turn them off in the phone's settings at any time).
+Future<bool> notificationsEnabled() async {
+  await init();
+  if (Platform.isAndroid) {
+    return await _android?.areNotificationsEnabled() ?? true;
+  }
+  final ios = _plugin.resolvePlatformSpecificImplementation<
+      IOSFlutterLocalNotificationsPlugin>();
+  final granted = await ios?.checkPermissions();
+  return granted?.isEnabled ?? true;
+}
+
+const _settingsChannel = MethodChannel('tasikaso/settings');
+
+/// Opens the phone's notification settings for the app (Android). After a
+/// "Don't allow", Android never shows its question again; this is the way.
+Future<bool> openNotificationSettings() async {
+  if (!Platform.isAndroid) return false;
+  return await _settingsChannel.invokeMethod<bool>('openNotificationSettings') ??
+      false;
+}
+
 AndroidFlutterLocalNotificationsPlugin? get _android =>
     _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
@@ -201,11 +225,13 @@ Future<bool> requestExactTiming() async {
   return await _android?.requestExactAlarmsPermission() ?? false;
 }
 
-/// Exact timing when Android allows it (see [requestExactTiming]);
-/// otherwise Android may deliver it a little late.
+/// When Android allows exact timing (see [requestExactTiming]), the timer's
+/// end is set like an alarm clock's alarm: it goes off on the second, also
+/// in deep sleep and under the battery savers some phone makers add.
+/// Otherwise Android may deliver it late.
 Future<AndroidScheduleMode> _mode() async {
   return await exactTimingAllowed()
-      ? AndroidScheduleMode.exactAllowWhileIdle
+      ? AndroidScheduleMode.alarmClock
       : AndroidScheduleMode.inexactAllowWhileIdle;
 }
 

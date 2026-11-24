@@ -573,9 +573,13 @@ class SettingsScreen extends StatelessWidget {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(
-          content: Text('Notifications are turned off for this app. You can '
-              "allow them in your phone's settings."),
-          showCloseIcon: true,
+          content: Text('Notifications are turned off for this app. You '
+              "can allow them in your phone's settings."),
+          action: SnackBarAction(
+            label: 'Open Settings',
+            onPressed: NotificationService.openNotificationSettings,
+          ),
+          duration: Duration(seconds: 8),
         ));
     }
     return ok;

@@ -20,6 +20,13 @@ class NotificationService {
   /// Returns false if the user said no.
   static Future<bool> requestPermission() => _ask(impl.requestPermission);
 
+  /// Whether the phone lets the app show notifications right now.
+  static Future<bool> notificationsEnabled() => _ask(impl.notificationsEnabled);
+
+  /// Opens the phone's notification settings for the app (Android).
+  static Future<bool> openNotificationSettings() =>
+      _ask(impl.openNotificationSettings);
+
   /// Whether alerts can go off at the exact second. Android 14 and newer
   /// deny that by default, and then an alert can arrive minutes late.
   static Future<bool> exactTimingAllowed() => _ask(impl.exactTimingAllowed);

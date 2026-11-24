@@ -6,6 +6,10 @@ Future<void> init() async {}
 
 Future<bool> requestPermission() async => false;
 
+Future<bool> notificationsEnabled() async => false;
+
+Future<bool> openNotificationSettings() async => false;
+
 Future<bool> exactTimingAllowed() async => true;
 
 Future<bool> requestExactTiming() async => true;

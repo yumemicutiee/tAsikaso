@@ -14,6 +14,15 @@ import 'app_store.dart';
 ///
 /// Its state is saved with the app's data, so a running or paused phase
 /// carries on after the app was closed (see [restore]).
+/// What the phone must allow before the time-up alert can ring on time.
+enum AlertNeed {
+  /// Notifications are off for the app: nothing can show or ring.
+  notifications,
+
+  /// Android 14+ default: no exact alarms, so the alert can come late.
+  exactTiming,
+}
+
 class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   PomodoroController._() {
     _setMode(TimerMode.pomodoro);
@@ -30,6 +39,14 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
   /// A message from before it was set waits in [takePendingMessage].
   void Function(String message)? onMessage;
   String? _pendingMessage;
+
+  /// Explains and asks for what the time-up alert still needs from the
+  /// phone (a dialog). Set by the app shell; without it, a message says it.
+  Future<void> Function(AlertNeed need)? onAlertNeed;
+
+  /// The phone's permissions are checked once per run of the app, when a
+  /// timer first starts (a "no" today is asked again next time).
+  bool _alertsChecked = false;
 
   TimerMode _mode = TimerMode.pomodoro;
   int _phaseTotal = 25 * 60; // seconds
@@ -225,6 +242,8 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
     _completed = 0;
     _setMode(TimerMode.pomodoro);
     onMessage = null;
+    onAlertNeed = null;
+    _alertsChecked = false;
     _pendingMessage = null;
     _lastCurrentTaskId = _store.currentTask?.id;
     notifyListeners();
@@ -294,32 +313,50 @@ class PomodoroController extends ChangeNotifier with WidgetsBindingObserver {
       sound: alert.sound,
       vibrate: alert.vibrate,
     );
-    // Timer Alerts are on by default, so ask for permission the first time
-    // they would be used (Android 13+ and iOS need it).
-    final prefs = _store.prefs;
-    if (!prefs.askedNotifications && NotificationService.isSupported) {
-      _store.updatePrefs(prefs.copyWith(askedNotifications: true));
-      unawaited(_askPermissionOnce());
+    // Timer Alerts are on by default, so the phone's permissions are checked
+    // when a timer starts: what the phone really allows, not a "we asked
+    // once" flag (that flag came back with synced or restored settings, and
+    // a new phone then never asked, so the alarm never rang).
+    if (!_alertsChecked && NotificationService.isSupported) {
+      _alertsChecked = true;
+      unawaited(_checkAlerts());
     }
   }
 
-  /// The first-time permission question. A "no" switches Timer Alerts off,
-  /// so the setting never claims alerts that can't be shown.
-  Future<void> _askPermissionOnce() async {
-    if (!await NotificationService.requestPermission()) {
-      // Said with the switch going off, not after Android has taken the
-      // alert back (a platform call that can take a moment).
-      _store.updatePrefs(_store.prefs.copyWith(timerAlerts: false));
-      _say("Timer alerts are off because notifications aren't allowed for "
-          "$kAppName. You can allow them in your phone's settings.");
-      await NotificationService.cancelTimerEnd();
-      return;
+  /// Makes sure the alert can ring: asks for notifications (Android's own
+  /// question), then for exact timing. When Android won't ask any more
+  /// ("Don't allow" earlier), [onAlertNeed] explains and opens the phone's
+  /// settings. Timer Alerts stay on, so allowing it later just works.
+  Future<void> _checkAlerts() async {
+    if (!await NotificationService.notificationsEnabled()) {
+      if (!await NotificationService.requestPermission()) {
+        await _need(AlertNeed.notifications);
+        return;
+      }
     }
     if (!await NotificationService.exactTimingAllowed()) {
-      _say('Alerts may arrive a little late on this phone. To fix that, '
-          'allow exact timing in Settings → Notifications.');
+      await _need(AlertNeed.exactTiming);
     }
   }
+
+  Future<void> _need(AlertNeed need) async {
+    final ask = onAlertNeed;
+    if (ask != null) {
+      await ask(need);
+      return;
+    }
+    _say(switch (need) {
+      AlertNeed.notifications =>
+        "The timer can't ring because notifications aren't allowed for "
+            "$kAppName. You can allow them in your phone's settings.",
+      AlertNeed.exactTiming => 'Alerts may arrive late on this phone. To fix '
+          'that, allow exact timing in Settings → Notifications.',
+    });
+  }
+
+  /// Checks the phone's permissions again the next time a timer starts.
+  @visibleForTesting
+  void debugCheckAlertsAgain() => _alertsChecked = false;
 
   void _tick() {
     final end = _endsAt;

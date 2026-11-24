@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../data/app_store.dart';
 import '../data/pomodoro_controller.dart';
+import '../services/notification_service.dart';
+import '../theme/brand.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -38,6 +40,7 @@ class _HomeShellState extends State<HomeShell> {
     // messages are shown from here. So are problems with saved data.
     final timer = PomodoroController.instance;
     timer.onMessage = _showMessage;
+    timer.onAlertNeed = _askForAlerts;
     AppStore.instance.problem.addListener(_showProblem);
     // Whatever happened while the app was starting, once the screen is up.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -54,6 +57,9 @@ class _HomeShellState extends State<HomeShell> {
     if (PomodoroController.instance.onMessage == _showMessage) {
       PomodoroController.instance.onMessage = null;
     }
+    if (PomodoroController.instance.onAlertNeed == _askForAlerts) {
+      PomodoroController.instance.onAlertNeed = null;
+    }
     AppStore.instance.problem.removeListener(_showProblem);
     super.dispose();
   }
@@ -63,6 +69,42 @@ class _HomeShellState extends State<HomeShell> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message), showCloseIcon: true));
+  }
+
+  /// What the timer's alarm still needs from the phone: said in a dialog
+  /// (also over Focus Mode), with a button that goes to the phone's setting.
+  Future<void> _askForAlerts(AlertNeed need) async {
+    if (!mounted) return;
+    final timer = PomodoroController.instance;
+    switch (need) {
+      case AlertNeed.notifications:
+        final open = await showConfirmDialog(
+          context,
+          title: 'Let the Timer Ring',
+          message: 'Notifications are turned off for $kAppName, so your phone '
+              "can't ring when a Pomodoro or a break ends. Open your phone's "
+              'settings and turn on notifications for $kAppName.',
+          confirmLabel: 'Open Settings',
+          cancelLabel: 'Not Now',
+          danger: false,
+        );
+        if (open) await NotificationService.openNotificationSettings();
+      case AlertNeed.exactTiming:
+        final allow = await showConfirmDialog(
+          context,
+          title: 'Ring on Time',
+          message: 'Your phone may hold the timer alarm back for several '
+              'minutes. On the next screen, allow $kAppName to set alarms and '
+              'reminders, so it rings the moment your time is up.',
+          confirmLabel: 'Allow',
+          cancelLabel: 'Not Now',
+          danger: false,
+        );
+        if (!allow) return;
+        await NotificationService.requestExactTiming();
+        // Set again, now as an exact alarm, if it was allowed.
+        timer.refreshAlert();
+    }
   }
 
   /// Data that couldn't be read or saved: the user must know, so it's a
