@@ -1,0 +1,2 @@
+set up: pm grant com.tasikaso.study_app android.permission.POST_NOTIFICATIONS
+set up: pm set-permission-flags com.tasikaso.study_app android.permission.POST_NOTIFICATIONS user-fixed

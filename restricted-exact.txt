@@ -1,0 +1,42 @@
+Running Gradle task 'assembleDebug'...                          
+WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): flutter_onnxruntime
+Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+
+Please check the changelogs of these plugins and upgrade to a version that supports Built-in Kotlin.
+If no such version exists, report the issue to the plugin. If necessary, here is a guide on filing
+an issue against a plugin: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers#report-incompatible-kotlin-gradle-plugin-usage-to-plugin-authors
+
+If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+Running Gradle task 'assembleDebug'...                             28.2s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+Installing build/app/outputs/flutter-apk/app-debug.apk...        2,759ms
+I/Choreographer( 7080): Skipped 43 frames!  The application may be doing too much work on its main thread.
+D/FlutterJNI( 7080): Sending viewport metrics to the engine.
+VMServiceFlutterDriver: Connecting to Flutter application at http://127.0.0.1:37985/FosJyF45408=/
+VMServiceFlutterDriver: Isolate found with number: 454258452700363
+VMServiceFlutterDriver: Isolate 454258452700363 is runnable.
+VMServiceFlutterDriver: Isolate is paused at start.
+VMServiceFlutterDriver: Attempting to resume isolate
+I/flutter ( 7080): 00:00 +0: (setUpAll)
+VMServiceFlutterDriver: Connected to Flutter application.
+I/flutter ( 7080): 00:00 +1: Android 14's default (Alarms & reminders off): the alarm still rings on time, thanks to USE_EXACT_ALARM
+I/flutter ( 7080): TASIKASO_SETUP grant-notifications
+D/FlutterJNI( 7080): Sending viewport metrics to the engine.
+D/ProfileInstaller( 7080): Installing profile for com.tasikaso.study_app
+D/EGL_emulation( 7080): app_time_stats: avg=1476.72ms min=73.15ms max=2323.13ms count=3
+W/WindowOnBackDispatcher( 7080): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 7080): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+VMServiceFlutterDriver: request_data message is taking a long time to complete...
+D/EGL_emulation( 7080): app_time_stats: avg=2340.28ms min=2340.28ms max=2340.28ms count=1
+D/EGL_emulation( 7080): app_time_stats: avg=1860.82ms min=1860.82ms max=1860.82ms count=1
+D/CompatibilityChangeReporter( 7080): Compat change id reported: 160794467; UID 10193; state: ENABLED
+D/EGL_emulation( 7080): app_time_stats: avg=1987.03ms min=1987.03ms max=1987.03ms count=1
+I/flutter ( 7080): Alarm rang about 0 s after it was due
+V/MediaPlayer( 7080): resetDrmState:  mDrmInfo=null mDrmProvisioningThread=null mPrepareDrmInProgress=false mActiveDrmScheme=false
+V/MediaPlayer( 7080): cleanDrmObj: mDrmObj=null mDrmSessionId=null
+W/MediaPlayer( 7080): mediaplayer went away with unhandled events
+I/flutter ( 7080): 00:16 +2: notifications refused: START says why the timer cannot ring, and keeps Timer Alerts on for when they are allowed
+I/flutter ( 7080):   Runs with RESTRICTED=notifications.
+I/flutter ( 7080): 00:16 +3: (tearDownAll)
+I/flutter ( 7080): 00:16 +4: All tests passed!
+All tests passed.
