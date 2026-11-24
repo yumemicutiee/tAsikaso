@@ -13,6 +13,7 @@ import '../data/app_store.dart';
 import '../utils/profile_photo.dart';
 import 'account_data.dart';
 import 'accounts.dart';
+import 'crash_reporter.dart';
 import 'drive_store.dart';
 import 'plan_sync.dart';
 
@@ -172,12 +173,18 @@ class DriveSync extends ChangeNotifier {
     }
   }
 
+  /// Google's code and reason when the last [signIn] failed, even when it
+  /// looked like the user backing out ("canceled: …"); null otherwise.
+  String? lastSignInProblem;
+
   /// Signs in with Google and asks for Drive access. Returns null when it
   /// worked (or the user backed out), else what went wrong, in words.
   Future<String?> signIn() async {
     if (!isSupported) return 'Google sign-in works in the Android app and on the web.';
     if (!_initialized) await init();
     _setBusy(true);
+    lastSignInProblem = null;
+    var step = 'account';
     try {
       if (debugStore != null) {
         final info = await debugStore!.accountInfo();
@@ -188,10 +195,12 @@ class DriveSync extends ChangeNotifier {
       if (GoogleSignIn.instance.supportsAuthenticate()) {
         final account =
             await GoogleSignIn.instance.authenticate(scopeHint: scopes);
+        step = 'drive';
         final client = account.authorizationClient;
         if (await client.authorizationForScopes(scopes) == null) {
           await client.authorizeScopes(scopes);
         }
+        step = 'done';
         await _signedIn(account.email, account);
       } else {
         // Web: asking for the Drive scope signs the user in as well; Drive
@@ -209,9 +218,21 @@ class DriveSync extends ChangeNotifier {
             name: info?.name, photoUrl: info?.photoUrl);
       }
       return null;
-    } on GoogleSignInException catch (e) {
+    } on GoogleSignInException catch (e, stack) {
+      // Google's own code and reason: "canceled" also covers Android quietly
+      // refusing (a wrong signing key, Play services), so it is kept for the
+      // welcome screen and sent like a crash report, to be read on the
+      // server instead of guessed.
+      lastSignInProblem =
+          '${e.code.name}${e.description == null ? '' : ': ${e.description}'}';
+      unawaited(CrashReporter.report(
+          'Google sign-in ($step step) $lastSignInProblem', stack,
+          source: 'google-sign-in'));
       return _describe(e);
-    } catch (e) {
+    } catch (e, stack) {
+      lastSignInProblem = '$e';
+      unawaited(CrashReporter.report('Google sign-in ($step step) $e', stack,
+          source: 'google-sign-in'));
       debugPrint('Google sign-in failed: $e');
       return "Couldn't sign in to Google. Check your internet connection and "
           'try again.';

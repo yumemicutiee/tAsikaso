@@ -88,9 +88,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     if (!_sync.isSignedIn) {
       setState(() {
         _busy = false;
+        final reason = _sync.lastSignInProblem;
         _error = (error == null || error.isEmpty)
             ? "Google sign-in didn't finish. Try again, or continue without "
-                'an account.'
+                'an account.${reason == null ? '' : '\n($reason)'}'
             : error;
       });
       return;
